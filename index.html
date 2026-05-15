@@ -6,295 +6,352 @@
 <title>Guides de Pêche IA — Mastigouche</title>
 <style>
 :root {
-  --bg: #0a0e1a;
-  --card: #111827;
-  --border: rgba(148,163,184,0.12);
-  --accent: #06b6d4;
-  --accent2: #3b82f6;
-  --text: #f1f5f9;
-  --dim: #94a3b8;
-  --muted: #64748b;
-  --green: #10b981;
-  --radius: 16px;
+  --bg: #0a0e1a; --card: #111827; --border: rgba(148,163,184,0.12);
+  --accent: #06b6d4; --accent2: #3b82f6; --text: #f1f5f9;
+  --dim: #94a3b8; --muted: #64748b; --green: #10b981;
+  --yellow: #f59e0b; --red: #ef4444; --radius: 14px;
 }
 * { margin:0; padding:0; box-sizing:border-box; }
 body {
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 40px 20px;
+  background: var(--bg); color: var(--text);
+  min-height: 100vh; padding: 32px 16px;
 }
-
-header {
-  text-align: center;
-  margin-bottom: 48px;
+.page { max-width: 960px; margin: 0 auto; }
+header { text-align: center; margin-bottom: 40px; }
+header .badge {
+  display: inline-block; padding: 4px 14px; border-radius: 20px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #fff; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 14px;
 }
 header h1 {
-  font-size: 28px;
-  font-weight: 800;
+  font-size: 30px; font-weight: 800;
   background: linear-gradient(135deg, var(--accent), var(--accent2));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin-bottom: 8px;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; margin-bottom: 8px;
 }
-header p {
-  color: var(--dim);
-  font-size: 14px;
-}
-.badge {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 20px;
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 12px;
+header p { color: var(--dim); font-size: 14px; }
+
+.section-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1.2px; color: var(--muted);
+  margin: 32px 0 14px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 24px;
-  width: 100%;
-  max-width: 800px;
-}
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
 
 .card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 28px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  transition: border-color 0.3s, box-shadow 0.3s;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px;
+  display: flex; flex-direction: column; gap: 12px;
+  transition: border-color .25s, box-shadow .25s;
 }
-.card:hover {
-  border-color: rgba(6,182,212,0.4);
-  box-shadow: 0 8px 32px rgba(6,182,212,0.1);
-}
-.card-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-}
-.lake-icon {
-  font-size: 36px;
-  line-height: 1;
-}
-.lake-title {
-  flex: 1;
-}
-.lake-title h2 {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--text);
-  margin-bottom: 4px;
-}
-.lake-title .region {
-  font-size: 12px;
-  color: var(--dim);
-  font-weight: 500;
-}
+.card:hover { border-color: rgba(6,182,212,.35); box-shadow: 0 6px 24px rgba(6,182,212,.08); }
+.card.disabled { opacity: .45; pointer-events: none; }
 
-.stats-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+.card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.lake-name { font-size: 16px; font-weight: 700; }
+.succes-badge {
+  font-size: 11px; font-weight: 800; padding: 3px 9px;
+  border-radius: 20px; white-space: nowrap;
 }
-.stat {
-  background: rgba(255,255,255,0.04);
-  border-radius: 8px;
-  padding: 10px 12px;
-}
-.stat-label {
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: var(--muted);
-  margin-bottom: 3px;
-}
-.stat-value {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-}
+.s-hot   { background: rgba(16,185,129,.18); color: #10b981; border:1px solid rgba(16,185,129,.3); }
+.s-good  { background: rgba(245,158,11,.18); color: #f59e0b; border:1px solid rgba(245,158,11,.3); }
+.s-avg   { background: rgba(148,163,184,.15); color: #94a3b8; border:1px solid rgba(148,163,184,.2); }
+.s-limit { background: rgba(239,68,68,.15); color: #ef4444; border:1px solid rgba(239,68,68,.2); }
 
-.species-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.species-tag {
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 600;
-  background: rgba(6,182,212,0.12);
-  color: var(--accent);
-  border: 1px solid rgba(6,182,212,0.2);
-}
+.lake-sub { font-size: 11px; color: var(--muted); }
 
-.card-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 4px;
+.stats-mini { display: flex; gap: 12px; flex-wrap: wrap; }
+.stat-chip {
+  font-size: 11px; font-weight: 500; color: var(--dim);
+  background: rgba(255,255,255,.04); padding: 4px 9px;
+  border-radius: 6px; white-space: nowrap;
 }
+.stat-chip strong { color: var(--text); font-weight: 700; }
+
+.btn-row { display: flex; gap: 8px; margin-top: 2px; }
 .btn {
-  flex: 1;
-  padding: 12px 16px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 700;
-  text-decoration: none;
-  text-align: center;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  cursor: pointer;
-  border: none;
+  flex: 1; padding: 10px 10px; border-radius: 9px; font-size: 12px;
+  font-weight: 700; text-decoration: none; text-align: center;
+  display: flex; align-items: center; justify-content: center;
+  gap: 5px; transition: all .2s; cursor: pointer; border: none;
 }
 .btn-primary {
   background: linear-gradient(135deg, var(--accent), var(--accent2));
-  color: #fff;
-  box-shadow: 0 4px 16px rgba(6,182,212,0.3);
+  color: #fff; box-shadow: 0 3px 12px rgba(6,182,212,.25);
 }
-.btn-primary:hover {
-  box-shadow: 0 6px 24px rgba(6,182,212,0.5);
-  transform: translateY(-1px);
+.btn-primary:hover { box-shadow: 0 5px 20px rgba(6,182,212,.45); transform: translateY(-1px); }
+.btn-maps {
+  background: rgba(255,255,255,.06); color: var(--dim);
+  border: 1px solid var(--border); flex: 0 0 auto; padding: 10px 12px;
 }
-.btn-secondary {
-  background: rgba(255,255,255,0.06);
-  color: var(--dim);
-  border: 1px solid var(--border);
-}
-.btn-secondary:hover {
-  background: rgba(255,255,255,0.1);
-  color: var(--text);
-}
+.btn-maps:hover { background: rgba(255,255,255,.1); color: var(--text); }
 
-.dates-badge {
-  font-size: 11px;
-  color: var(--green);
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 5px;
+.no-data {
+  font-size: 10px; color: var(--muted); text-align: center;
+  background: rgba(255,255,255,.03); border-radius: 6px; padding: 6px;
 }
 
 footer {
-  margin-top: 60px;
-  color: var(--muted);
-  font-size: 11px;
-  text-align: center;
-  line-height: 1.7;
+  margin-top: 52px; text-align: center; color: var(--muted);
+  font-size: 11px; line-height: 1.8;
+  border-top: 1px solid var(--border); padding-top: 24px;
 }
 </style>
 </head>
 <body>
+<div class="page">
 
 <header>
-  <div class="badge">Réserve faunique Mastigouche</div>
+  <div class="badge">Réserve faunique Mastigouche — Secteur Lac-au-Sable</div>
   <h1>🎣 Guides de Pêche IA</h1>
-  <p>Cartes interactives bathymétriques · Spots scorés par heure et météo · Zone 9</p>
+  <p>Cartes bathymétriques interactives · Spots scorés par heure et météo · Zone 9 · Mai 2026</p>
 </header>
 
+<div class="section-title">🗺️ Guides disponibles — 9 lacs avec bathymétrie MFFP</div>
 <div class="grid">
 
-  <!-- LAC OSBORN -->
+  <!-- FOX 7.1 -->
   <div class="card">
-    <div class="card-header">
-      <div class="lake-icon">🏔️</div>
-      <div class="lake-title">
-        <h2>Lac Osborn</h2>
-        <div class="region">Secteur HEB. Violon · 46.7949°N, 73.3666°W</div>
+    <div class="card-top">
+      <div>
+        <div class="lake-name">🦊 Lac Fox</div>
+        <div class="lake-sub">46.8217°N, 73.3661°W</div>
       </div>
+      <span class="succes-badge s-hot">⭐ 7.1 omble/j</span>
     </div>
-    <div class="stats-row">
-      <div class="stat">
-        <div class="stat-label">Superficie</div>
-        <div class="stat-value">~45 ha</div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">Prof. max</div>
-        <div class="stat-value">~12 m</div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">Bassins</div>
-        <div class="stat-value">Multi-bassins</div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">Source bathy</div>
-        <div class="stat-value">MFFP 05884</div>
-      </div>
+    <div class="stats-mini">
+      <span class="stat-chip"><strong>19.3 ha</strong></span>
+      <span class="stat-chip">Prof <strong>8.2 m</strong></span>
+      <span class="stat-chip">🚙 VUS · 3 min</span>
+      <span class="stat-chip">~346 g</span>
     </div>
-    <div class="species-tags">
-      <span class="species-tag">🟠 Omble de fontaine</span>
-    </div>
-    <div class="card-actions">
-      <a href="lac_osborn_peche.html" class="btn btn-primary">🗺️ Ouvrir la carte</a>
-      <a href="https://maps.google.com/maps?q=46.7949,-73.3666" target="_blank" class="btn btn-secondary">📍 Google Maps</a>
+    <div class="btn-row">
+      <a href="lac_fox_peche.html" class="btn btn-primary">🗺️ Ouvrir la carte</a>
+      <a href="https://maps.app.goo.gl/TzQNfYu7GPxGVtfx8" target="_blank" class="btn btn-maps">📍</a>
     </div>
   </div>
 
-  <!-- LAC FOX -->
+  <!-- DORÉ 5.3 -->
   <div class="card">
-    <div class="card-header">
-      <div class="lake-icon">🦊</div>
-      <div class="lake-title">
-        <h2>Lac Fox</h2>
-        <div class="region">Mastigouche · 46.8217°N, 73.3661°W</div>
+    <div class="card-top">
+      <div>
+        <div class="lake-name">✨ Lac Doré</div>
+        <div class="lake-sub">46.8161°N, 73.3895°W</div>
       </div>
+      <span class="succes-badge s-hot">⭐ 5.3 omble/j</span>
     </div>
-    <div class="stats-row">
-      <div class="stat">
-        <div class="stat-label">Superficie</div>
-        <div class="stat-value">19.3 ha</div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">Prof. max</div>
-        <div class="stat-value">8.2 m</div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">Bassins</div>
-        <div class="stat-value">2 (SW + NE)</div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">Source bathy</div>
-        <div class="stat-value">MFFP 05870</div>
-      </div>
+    <div class="stats-mini">
+      <span class="stat-chip"><strong>17.1 ha</strong></span>
+      <span class="stat-chip">Prof <strong>6.2 m</strong></span>
+      <span class="stat-chip">🚙 VUS · 3 min</span>
+      <span class="stat-chip">~293 g</span>
     </div>
-    <div class="species-tags">
-      <span class="species-tag">🟠 Omble de fontaine</span>
-      <span class="species-tag">⚫ Touladi</span>
+    <div class="btn-row">
+      <a href="lac_dore_peche.html" class="btn btn-primary">🗺️ Ouvrir la carte</a>
+      <a href="https://maps.google.com/maps?q=46.816086,-73.389460" target="_blank" class="btn btn-maps">📍</a>
     </div>
-    <div class="dates-badge">
-      <span>📅</span> Voyage 20–22 mai 2026
+  </div>
+
+  <!-- CHUTE NOIRE 4.5 -->
+  <div class="card">
+    <div class="card-top">
+      <div>
+        <div class="lake-name">🌊 Lac de la Chute Noire</div>
+        <div class="lake-sub">46.7290°N, 73.3601°W</div>
+      </div>
+      <span class="succes-badge s-good">4.5 omble/j</span>
     </div>
-    <div class="card-actions">
-      <a href="lac_fox_peche.html" class="btn btn-primary">🗺️ Ouvrir la carte</a>
-      <a href="https://maps.app.goo.gl/TzQNfYu7GPxGVtfx8" target="_blank" class="btn btn-secondary">📍 Google Maps</a>
+    <div class="stats-mini">
+      <span class="stat-chip"><strong>17.2 ha</strong></span>
+      <span class="stat-chip">Prof <strong>10.3 m</strong></span>
+      <span class="stat-chip">🚗 Auto · Aucun</span>
+      <span class="stat-chip">~167 g</span>
+    </div>
+    <div class="btn-row">
+      <a href="lac_chutenoire_peche.html" class="btn btn-primary">🗺️ Ouvrir la carte</a>
+      <a href="https://maps.google.com/maps?q=46.729047,-73.360071" target="_blank" class="btn btn-maps">📍</a>
+    </div>
+  </div>
+
+  <!-- BAIE 4.3 -->
+  <div class="card">
+    <div class="card-top">
+      <div>
+        <div class="lake-name">🏞️ Lac de la Baie</div>
+        <div class="lake-sub">46.7859°N, 73.4400°W</div>
+      </div>
+      <span class="succes-badge s-good">4.3 omble/j</span>
+    </div>
+    <div class="stats-mini">
+      <span class="stat-chip"><strong>65.7 ha</strong></span>
+      <span class="stat-chip">Prof <strong>32.2 m</strong></span>
+      <span class="stat-chip">🚙 VUS · 1 min</span>
+      <span class="stat-chip">~185 g</span>
+    </div>
+    <div class="btn-row">
+      <a href="lac_baie_peche.html" class="btn btn-primary">🗺️ Ouvrir la carte</a>
+      <a href="https://maps.google.com/maps?q=46.785923,-73.440021" target="_blank" class="btn btn-maps">📍</a>
+    </div>
+  </div>
+
+  <!-- SAULES 4.1 -->
+  <div class="card">
+    <div class="card-top">
+      <div>
+        <div class="lake-name">🌿 Lac des Saules</div>
+        <div class="lake-sub">46.7832°N, 73.3548°W</div>
+      </div>
+      <span class="succes-badge s-good">4.1 omble/j</span>
+    </div>
+    <div class="stats-mini">
+      <span class="stat-chip"><strong>12.1 ha</strong></span>
+      <span class="stat-chip">Prof <strong>14.2 m</strong></span>
+      <span class="stat-chip">🚙 VUS · 5 min</span>
+      <span class="stat-chip">~195 g</span>
+    </div>
+    <div class="btn-row">
+      <a href="lac_saules_peche.html" class="btn btn-primary">🗺️ Ouvrir la carte</a>
+      <a href="https://maps.google.com/maps?q=46.783183,-73.354804" target="_blank" class="btn btn-maps">📍</a>
+    </div>
+  </div>
+
+  <!-- SABLE 3.9 -->
+  <div class="card">
+    <div class="card-top">
+      <div>
+        <div class="lake-name">🏖️ Lac au Sable</div>
+        <div class="lake-sub">46.7717°N, 73.3958°W</div>
+      </div>
+      <span class="succes-badge s-avg">3.9 omble/j</span>
+    </div>
+    <div class="stats-mini">
+      <span class="stat-chip"><strong>~185 ha</strong></span>
+      <span class="stat-chip">Prof <strong>56.0 m</strong></span>
+      <span class="stat-chip">🚗 Auto · Aucun</span>
+      <span class="stat-chip">~330 g</span>
+    </div>
+    <div class="btn-row">
+      <a href="lac_sable_peche.html" class="btn btn-primary">🗺️ Ouvrir la carte</a>
+      <a href="https://maps.google.com/maps?q=46.771703,-73.395826" target="_blank" class="btn btn-maps">📍</a>
+    </div>
+  </div>
+
+  <!-- SOUFFLET 3.6 -->
+  <div class="card">
+    <div class="card-top">
+      <div>
+        <div class="lake-name">💨 Lac du Soufflet</div>
+        <div class="lake-sub">46.7375°N, 73.4026°W</div>
+      </div>
+      <span class="succes-badge s-avg">3.6 omble/j</span>
+    </div>
+    <div class="stats-mini">
+      <span class="stat-chip"><strong>52.1 ha</strong></span>
+      <span class="stat-chip">Prof <strong>16.7 m</strong></span>
+      <span class="stat-chip">🚗 Auto · Aucun</span>
+      <span class="stat-chip">~123 g</span>
+    </div>
+    <div class="btn-row">
+      <a href="lac_soufflet_peche.html" class="btn btn-primary">🗺️ Ouvrir la carte</a>
+      <a href="https://maps.google.com/maps?q=46.737516,-73.402628" target="_blank" class="btn btn-maps">📍</a>
+    </div>
+  </div>
+
+  <!-- MARCEL 3.2 -->
+  <div class="card">
+    <div class="card-top">
+      <div>
+        <div class="lake-name">🎯 Lac Marcel</div>
+        <div class="lake-sub">46.8100°N, 73.3982°W</div>
+      </div>
+      <span class="succes-badge s-avg">3.2 omble/j</span>
+    </div>
+    <div class="stats-mini">
+      <span class="stat-chip"><strong>33.7 ha</strong></span>
+      <span class="stat-chip">Prof <strong>8.7 m</strong></span>
+      <span class="stat-chip">🚙 VUS · 5 min</span>
+      <span class="stat-chip">~310 g</span>
+    </div>
+    <div class="btn-row">
+      <a href="lac_marcel_peche.html" class="btn btn-primary">🗺️ Ouvrir la carte</a>
+      <a href="https://maps.google.com/maps?q=46.810044,-73.398199" target="_blank" class="btn btn-maps">📍</a>
+    </div>
+  </div>
+
+  <!-- OSBORN 1.1 limité -->
+  <div class="card">
+    <div class="card-top">
+      <div>
+        <div class="lake-name">🏔️ Lac Osborn</div>
+        <div class="lake-sub">46.7949°N, 73.3666°W · Accès limité</div>
+      </div>
+      <span class="succes-badge s-limit">1.1 omble/j</span>
+    </div>
+    <div class="stats-mini">
+      <span class="stat-chip"><strong>~45 ha</strong></span>
+      <span class="stat-chip">Prof <strong>~12 m</strong></span>
+      <span class="stat-chip">🚗 Auto · Aucun</span>
+      <span class="stat-chip">~646 g 🏆</span>
+    </div>
+    <div class="btn-row">
+      <a href="lac_osborn_peche.html" class="btn btn-primary">🗺️ Ouvrir la carte</a>
+      <a href="https://maps.google.com/maps?q=46.7949,-73.3666" target="_blank" class="btn btn-maps">📍</a>
     </div>
   </div>
 
 </div>
 
+<!-- SANS BATHYMÉTRIE -->
+<div class="section-title">⚠️ Sans carte disponible — Bathymétrie MFFP non disponible (GBLQ)</div>
+<div class="grid">
+  <div class="card disabled">
+    <div class="card-top"><div class="lake-name">Lac Sonois</div><span class="succes-badge s-hot">6.2/j · 419g</span></div>
+    <div class="stats-mini"><span class="stat-chip">🚙 VUS · 5 min</span></div>
+    <div class="no-data">Données bathymétriques non disponibles</div>
+  </div>
+  <div class="card disabled">
+    <div class="card-top"><div class="lake-name">Lac Brasier</div><span class="succes-badge s-hot">6.0/j · 282g</span></div>
+    <div class="stats-mini"><span class="stat-chip">🚛 Camion 4X4 · 10 min</span></div>
+    <div class="no-data">Données bathymétriques non disponibles</div>
+  </div>
+  <div class="card disabled">
+    <div class="card-top"><div class="lake-name">Lac Roméo</div><span class="succes-badge s-hot">5.6/j · 304g</span></div>
+    <div class="stats-mini"><span class="stat-chip">🚗 Auto · 25 min portage</span></div>
+    <div class="no-data">Données bathymétriques non disponibles</div>
+  </div>
+  <div class="card disabled">
+    <div class="card-top"><div class="lake-name">Lac Hêtre</div><span class="succes-badge s-good">4.4/j · 164g</span></div>
+    <div class="stats-mini"><span class="stat-chip">🚗 Auto · Aucun</span></div>
+    <div class="no-data">Données bathymétriques non disponibles</div>
+  </div>
+  <div class="card disabled">
+    <div class="card-top"><div class="lake-name">Lac Tremble</div><span class="succes-badge s-good">4.3/j · 271g</span></div>
+    <div class="stats-mini"><span class="stat-chip">🚙 VUS · 5 min</span></div>
+    <div class="no-data">Données bathymétriques non disponibles</div>
+  </div>
+  <div class="card disabled">
+    <div class="card-top"><div class="lake-name">Lac Jane</div><span class="succes-badge s-avg">0.9/j · 246g</span></div>
+    <div class="stats-mini"><span class="stat-chip">🚗 Auto · 15 min portage</span></div>
+    <div class="no-data">Données bathymétriques non disponibles</div>
+  </div>
+  <div class="card disabled">
+    <div class="card-top"><div class="lake-name">Lac du Sud-Est</div><span class="succes-badge s-limit">0.2/j · 1000g 🏆</span></div>
+    <div class="stats-mini"><span class="stat-chip">🚛 Camion 4X4 · 2 min</span></div>
+    <div class="no-data">Données bathymétriques non disponibles</div>
+  </div>
+</div>
+
 <footer>
   Données bathymétriques : MFFP SIIEF · Sépaq Mastigouche<br>
-  Réglementations : Zone de pêche 9 — Québec 2026<br>
-  Guides générés par IA · Valider les spots GPS sur satellite avant de sortir
+  Succès de pêche : statistiques Sépaq 2023–2025 · Secteur Lac-au-Sable<br>
+  Zone de pêche 9 — Québec 2026 · Spots GPS estimés depuis bathymétrie — valider sur satellite<br>
+  <span style="color:#475569">🤖 Guides générés par IA · github.com/mcousine/fishmap</span>
 </footer>
 
+</div>
 </body>
 </html>
