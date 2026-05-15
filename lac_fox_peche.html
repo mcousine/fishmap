@@ -706,7 +706,7 @@ body {
   overflow: hidden;
   height: 100vh;
 }
-#map { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 1; background: #2d3b2a; }
+#map { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 1; }
 
 .top-bar {
   position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
@@ -1405,14 +1405,18 @@ const map = L.map('map', {
 });
 L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
-// Pas de tile layer de base — fonctionne 100% hors-ligne depuis file:// ou edge://external-file
-// Le fond vert-forêt (#2d3b2a sur #map) + polygones bathymétriques = carte suffisante
+// Dark base tile layer
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a> © <a href="https://carto.com/">CARTO</a>',
+  subdomains: 'abcd',
+  maxZoom: 20
+}).addTo(map);
 
-// Satellite ESRI — overlay optionnel, nécessite internet
+// Satellite overlay (Esri World Imagery — free, no API key)
 const satTile = L.tileLayer(
   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-  { attribution: '© Esri', maxZoom: 19, opacity: 0.7 }
-);
+  { attribution: '© <a href="https://www.esri.com/">Esri</a>', maxZoom: 19, opacity: 0.5 }
+).addTo(map);
 
 function setSatOpacity(val) { satTile.setOpacity(val / 100); }
 
@@ -1425,7 +1429,7 @@ const layerSun     = L.layerGroup().addTo(map);
 const layerHotzones = L.layerGroup();
 
 const baseMaps   = { "🌊 Bathymétrie": layerBathy, "🌡️ Carte Thermique": layerThermal };
-const overlayMaps = { "🛰️ Satellite (internet)": satTile, "☀️ Soleil / Ombre": layerSun, "🎯 Zones de Frappe": layerHotzones };
+const overlayMaps = { "☀️ Soleil / Ombre": layerSun, "🎯 Zones de Frappe": layerHotzones };
 L.control.layers(baseMaps, overlayMaps, { position: 'topright', collapsed: false }).addTo(map);
 
 map.on('baselayerchange', function(e) {
