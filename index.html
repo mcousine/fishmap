@@ -111,7 +111,7 @@ footer {
   <p>Cartes bathymétriques interactives · Spots scorés par heure et météo · Zone 9 · Mai 2026</p>
 </header>
 
-<div class="section-title">🗺️ Guides disponibles — 9 lacs avec bathymétrie MFFP</div>
+<div class="section-title">🗺️ Guides disponibles — 10 lacs (9 bathymétrie MFFP + 1 SDB satellite)</div>
 <div class="grid">
 
   <!-- FOX 7.1 -->
@@ -305,14 +305,33 @@ footer {
 
 </div>
 
+  <!-- SONOIS 6.2 — SDB Satellite -->
+  <div class="card" style="border-color:rgba(16,185,129,.3);background:linear-gradient(135deg,#111827,#0d1f1a)">
+    <div class="card-top">
+      <div>
+        <div class="lake-name">🛰️ Lac Sonois</div>
+        <div class="lake-sub">46.7990°N, 73.3899°W · Bathymétrie satellite</div>
+      </div>
+      <span class="succes-badge s-hot">6.2 omble/j</span>
+    </div>
+    <div class="stats-mini">
+      <span class="stat-chip"><strong>~55 ha</strong></span>
+      <span class="stat-chip">Prof <strong>~11.8 m SDB</strong></span>
+      <span class="stat-chip">🚙 VUS · 5 min</span>
+      <span class="stat-chip">~419 g</span>
+    </div>
+    <div style="font-size:10px;color:#6b9;padding:3px 0;opacity:0.8">⚠️ Profondeurs estimées Sentinel-2 · Précision ±40%</div>
+    <div class="btn-row">
+      <a href="lac_sonois_peche.html" class="btn btn-primary">🗺️ Ouvrir la carte</a>
+      <a href="https://www.google.com/maps?q=46.799028,-73.389861" target="_blank" class="btn btn-maps">📍</a>
+    </div>
+  </div>
+
+</div>
+
 <!-- SANS BATHYMÉTRIE -->
 <div class="section-title">⚠️ Sans carte disponible — Bathymétrie MFFP non disponible (GBLQ)</div>
 <div class="grid">
-  <div class="card disabled">
-    <div class="card-top"><div class="lake-name">Lac Sonois</div><span class="succes-badge s-hot">6.2/j · 419g</span></div>
-    <div class="stats-mini"><span class="stat-chip">🚙 VUS · 5 min</span></div>
-    <div class="no-data">Données bathymétriques non disponibles</div>
-  </div>
   <div class="card disabled">
     <div class="card-top"><div class="lake-name">Lac Brasier</div><span class="succes-badge s-hot">6.0/j · 282g</span></div>
     <div class="stats-mini"><span class="stat-chip">🚛 Camion 4X4 · 10 min</span></div>
