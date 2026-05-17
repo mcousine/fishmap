@@ -46,6 +46,136 @@ LAC_CONFIG = {
     "template":   "/Users/michelcousineau/Downloads/fishmap/lac_fox_peche.html",
 }
 
+# ─── Statistiques de pêche Sépaq 2023-2026 — Secteur Lac-au-Sable & Des Îles ─
+# Format: succès (omble/jour-pêche), masse moyenne (g), véhicule, portage (min)
+MASTIGOUCHE_STATS = {
+    "Anselme":      {"success": 3.8, "mass_g": 726, "vehicule": "VUS (VTT)", "portage_min": 40, "enst": "5"},
+    "Bigorne":      {"success": 3.9, "mass_g": 317, "vehicule": "Traversée", "portage_min": 5,  "enst": "5"},
+    "Bourgeois":    {"success": 5.2, "mass_g": 249, "vehicule": "Auto",       "portage_min": 0,  "enst": "++"},
+    "Brasier":      {"success": 6.0, "mass_g": 282, "vehicule": "Camion 4X4", "portage_min": 10, "enst": ""},
+    "Caillette":    {"success": 0.0, "mass_g": 0,   "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "Charme":       {"success": 4.6, "mass_g": 275, "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "Chipeau":      {"success": 0.0, "mass_g": 0,   "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "Chute Noire":  {"success": 4.5, "mass_g": 167, "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "Clut":         {"success": 0.0, "mass_g": 0,   "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "Coleman":      {"success": 0.0, "mass_g": 0,   "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "de la Baie":   {"success": 4.3, "mass_g": 185, "vehicule": "VUS",        "portage_min": 1,  "enst": ""},
+    "de la Gitane": {"success": 0.0, "mass_g": 0,   "vehicule": "VUS",        "portage_min": 0,  "enst": ""},
+    "de la Griffe": {"success": 0.0, "mass_g": 0,   "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "de la Rencontre": {"success": 0.0, "mass_g": 0,"vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "des Demoiselles": {"success": 1.1,"mass_g": 386,"vehicule": "VUS",       "portage_min": 10, "enst": ""},
+    "des Joncs":    {"success": 6.0, "mass_g": 312, "vehicule": "Camion 4X4", "portage_min": 3,  "enst": ""},
+    "des Loups":    {"success": 4.3, "mass_g": 185, "vehicule": "VUS (VTT)",  "portage_min": 20, "enst": ""},
+    "des Mauves":   {"success": 2.8, "mass_g": 188, "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "des Ronces":   {"success": 0.0, "mass_g": 0,   "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "des Saules":   {"success": 4.1, "mass_g": 195, "vehicule": "VUS",        "portage_min": 5,  "enst": ""},
+    "Diablos":      {"success": 1.7, "mass_g": 204, "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "Doré":         {"success": 5.3, "mass_g": 293, "vehicule": "VUS",        "portage_min": 3,  "enst": ""},
+    "du Brasier":   {"success": 6.0, "mass_g": 282, "vehicule": "Camion 4X4", "portage_min": 10, "enst": ""},
+    "du Chipeau":   {"success": 0.0, "mass_g": 0,   "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "du Grillon":   {"success": 3.7, "mass_g": 240, "vehicule": "VUS",        "portage_min": 0,  "enst": ""},
+    "du Gros Ours": {"success": 5.2, "mass_g": 223, "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "du Hêtre":     {"success": 4.4, "mass_g": 164, "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "du Méta":      {"success": 5.1, "mass_g": 336, "vehicule": "Camion 4X4", "portage_min": 15, "enst": ""},
+    "du Rat Musqué":{"success": 0.0, "mass_g": 0,   "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "du Rutabaga":  {"success": 0.0, "mass_g": 0,   "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "du Serpent":   {"success": 3.6, "mass_g": 214, "vehicule": "Auto",       "portage_min": 0,  "enst": "++"},
+    "du Soufflet":  {"success": 3.6, "mass_g": 123, "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "du Sud-Est":   {"success": 0.2, "mass_g": 1000,"vehicule": "Camion 4X4", "portage_min": 2,  "enst": ""},
+    "Ephémère":     {"success": 5.0, "mass_g": 190, "vehicule": "VUS",        "portage_min": 3,  "enst": ""},
+    "Forestier":    {"success": 0.0, "mass_g": 0,   "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "Fox":          {"success": 7.1, "mass_g": 346, "vehicule": "VUS",        "portage_min": 3,  "enst": ""},
+    "Grand lac des Îles": {"success": 3.0, "mass_g": 176, "vehicule": "Auto", "portage_min": 0,  "enst": ""},
+    "Green":        {"success": 3.8, "mass_g": 359, "vehicule": "VUS",        "portage_min": 1,  "enst": "5"},
+    "Gros Ours":    {"success": 5.2, "mass_g": 223, "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "Henri":        {"success": 0.0, "mass_g": 0,   "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "Jane":         {"success": 0.9, "mass_g": 246, "vehicule": "Auto",       "portage_min": 15, "enst": ""},
+    "Lafond":       {"success": 3.7, "mass_g": 163, "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "l'Orignal":    {"success": 3.9, "mass_g": 452, "vehicule": "Traversée",  "portage_min": 3,  "enst": ""},
+    "Lemay":        {"success": 1.4, "mass_g": 438, "vehicule": "Auto",       "portage_min": 5,  "enst": ""},
+    "aux Lézards":  {"success": 0.0, "mass_g": 0,   "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "Marcel":       {"success": 3.2, "mass_g": 310, "vehicule": "VUS",        "portage_min": 5,  "enst": ""},
+    "Moyen":        {"success": 5.2, "mass_g": 205, "vehicule": "Auto",       "portage_min": 1,  "enst": ""},
+    "Osborn":       {"success": 1.1, "mass_g": 646, "vehicule": "Auto",       "portage_min": 0,  "enst": "5"},
+    "Orignal":      {"success": 3.9, "mass_g": 452, "vehicule": "Traversée",  "portage_min": 3,  "enst": ""},
+    "Oudiette":     {"success": 0.0, "mass_g": 0,   "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "à Paner":      {"success": 0.0, "mass_g": 0,   "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "Portage":      {"success": 0.0, "mass_g": 0,   "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "Prudent":      {"success": 5.0, "mass_g": 207, "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "Punaise":      {"success": 4.6, "mass_g": 204, "vehicule": "Auto",       "portage_min": 0,  "enst": "++"},
+    "Rat Musqué":   {"success": 0.0, "mass_g": 0,   "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "Recto":        {"success": 4.0, "mass_g": 169, "vehicule": "VUS",        "portage_min": 1,  "enst": ""},
+    "Régis":        {"success": 4.5, "mass_g": 170, "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "Roméo":        {"success": 5.6, "mass_g": 304, "vehicule": "Auto",       "portage_min": 25, "enst": ""},
+    "Rutabaga":     {"success": 0.0, "mass_g": 0,   "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "au Sable":     {"success": 3.9, "mass_g": 330, "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "Siffleux":     {"success": 3.3, "mass_g": 407, "vehicule": "Auto",       "portage_min": 1,  "enst": "5"},
+    "Sonois":       {"success": 6.2, "mass_g": 419, "vehicule": "VUS",        "portage_min": 5,  "enst": ""},
+    "Théodule":     {"success": 0.0, "mass_g": 0,   "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "Traverse":     {"success": 4.5, "mass_g": 246, "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "au Tremble":   {"success": 4.3, "mass_g": 271, "vehicule": "VUS",        "portage_min": 5,  "enst": ""},
+    "Verdun":       {"success": 2.1, "mass_g": 168, "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "Verso":        {"success": 5.0, "mass_g": 253, "vehicule": "VUS",        "portage_min": 5,  "enst": ""},
+    "Victoire":     {"success": 3.6, "mass_g": 221, "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+}
+
+# Lookup helper: find stats by partial name match
+def _lake_stats(lake_name: str) -> dict:
+    """Return MASTIGOUCHE_STATS entry for lake_name, tolerant to prefix/accent differences."""
+    import unicodedata
+    def _norm(s):
+        return unicodedata.normalize("NFKD", s.lower()).encode("ascii","ignore").decode("ascii").strip()
+    key = _norm(lake_name)
+    for k, v in MASTIGOUCHE_STATS.items():
+        if _norm(k) == key:
+            return v
+    # Partial match fallback
+    for k, v in MASTIGOUCHE_STATS.items():
+        nk = _norm(k)
+        if key in nk or nk in key:
+            return v
+    return {}
+
+# GBLQ index path (Quebec provincial bathymetry)
+GBLQ_INDEX_PATH = "/Users/michelcousineau/Downloads/05884_Osborn/index_s.geojson"
+
+def _lookup_gblq(lake_name: str, index_path: str = GBLQ_INDEX_PATH) -> dict:
+    """Return GBLQ properties dict for a lake or {} if not found."""
+    import unicodedata
+    def _norm(s):
+        return unicodedata.normalize("NFKD", s.lower()).encode("ascii","ignore").decode("ascii").strip()
+    try:
+        with open(index_path, encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception:
+        return {}
+    key = _norm(lake_name)
+    for feat in data.get("features", []):
+        hydro = feat["properties"].get("HYDRONYME") or ""
+        # "Romeo, Lac" → "Romeo"  /  "Lac Romeo" → "Romeo"
+        if ", Lac" in hydro or ", lac" in hydro:
+            name_part = hydro.split(",")[0].strip()
+        elif re.match(r"(?i)^(grand\s+)?lac\s+", hydro):
+            name_part = re.sub(r"(?i)^(grand\s+)?lac\s+", "", hydro).strip()
+        else:
+            name_part = hydro
+        if _norm(name_part) == key:
+            return feat["properties"]
+    return {}
+
+def _polygon_area_ha(coords_latlon: list) -> float:
+    """Approximate lake area in hectares via Shoelace formula."""
+    if len(coords_latlon) < 3:
+        return 0.0
+    lat0 = coords_latlon[0][0]
+    mplat = 111320.0
+    mplon = 111320.0 * math.cos(math.radians(lat0))
+    xs = [p[1] * mplon for p in coords_latlon]
+    ys = [p[0] * mplat for p in coords_latlon]
+    n = len(xs)
+    area = abs(sum(xs[i]*ys[(i+1)%n] - xs[(i+1)%n]*ys[i] for i in range(n))) / 2
+    return round(area / 10000, 1)
+
 # ─── Spots de pêche prédéfinis (dérivés de la géographie du lac) ────────────
 FISHING_SPOTS_SONOIS = [
     {"lat": 46.8000, "lon": -73.3890, "name": "Fosse principale (estimée)", "icon": "⭐", "depth_est": "~8-12m"},
@@ -1343,11 +1473,25 @@ def build_pdf_html(data: dict, lac_config: dict, template_path: str) -> str:
 
     lac_name = lac_config["name"]
     species  = lac_config.get("species", "Omble de fontaine")
-    area_ha  = lac_config.get("area_ha", "?")
     clat     = data["lake_center"]["lat"]
     clon     = data["lake_center"]["lon"]
     trip_dates = lac_config.get("trip_dates", ["2026-05-20","2026-05-21","2026-05-22"])
-    file_slug  = lac_config.get("file", f"lac_{lac_name.lower().replace(' ','_')}")
+
+    # Compute polygon area if not provided
+    poly = data.get("lake_polygon", [])
+    area_ha = lac_config.get("area_ha") or _polygon_area_ha(poly) or "?"
+
+    # Fishing stats from MASTIGOUCHE_STATS
+    st = _lake_stats(lac_name)
+    success   = st.get("success", 0)
+    mass_g    = st.get("mass_g", 0)
+    vehicule  = st.get("vehicule", "Auto")
+    portage   = st.get("portage_min", 0)
+    enst_code = st.get("enst", "")
+
+    # GBLQ lookup
+    gblq     = _lookup_gblq(lac_name)
+    has_gblq = gblq.get("ISO_DISPO") == "Oui"
 
     def _js(obj):
         return json.dumps(obj, ensure_ascii=False)
@@ -1392,23 +1536,85 @@ def build_pdf_html(data: dict, lac_config: dict, template_path: str) -> str:
         ba = [{"lat": ap[-1][0], "lon": ap[-1][1]}] if ap else [{"lat": clat, "lon": clon}]
     boat_js = f"const BOAT_ACCESS = {_js(ba)};"
 
-    # ── Regex replacements in template ───────────────────────────────────────
-    # Lake name in title bar and page title
-    html = html.replace("🎣 Lac Roméo", f"🎣 Lac {lac_name}")
-    html = html.replace(">Lac Roméo<", f">Lac {lac_name}<")
-    html = html.replace("Lac&nbsp;Roméo", f"Lac&nbsp;{lac_name}")
+    # ── Replace ALL template lake-name occurrences ───────────────────────────
+    # Replace "Roméo" everywhere first; then fix JS single-quote contexts that
+    # may now contain unescaped apostrophes (e.g. "l'Orignal" inside 'string').
+    html = html.replace("Roméo", lac_name)
+    lac_name_sq = lac_name.replace("'", "\\'")  # safe inside JS '...' strings
+    if lac_name_sq != lac_name:
+        # Fix bindTooltip and any other JS single-quote strings
+        html = re.sub(
+            r"(\.bindTooltip\(|\.bindPopup\()'([^']*)'",
+            lambda m: m.group(1) + "'" + m.group(2).replace(lac_name, lac_name_sq) + "'",
+            html
+        )
+
+    # Title + meta
     html = re.sub(r'<title>.*?</title>', f'<title>Lac {lac_name} — Pêche Mastigouche</title>', html)
+    html = re.sub(r'content="[^"]*Lac [^"]*Mastigouche[^"]*"',
+                  f'content="Carte de pêche interactive — Lac {lac_name}, Réserve faunique Mastigouche."', html)
 
     # Coordinates in top-bar display
     html = re.sub(r'\d+\.\d+°N,\s*\d+\.\d+°W', f"{abs(clat):.3f}°N, {abs(clon):.3f}°W", html)
 
     # JS constants
+    bathy_note = "Bathymétrie GBLQ disponible" if has_gblq else "sans bathymétrie"
     html = re.sub(r'const SOURCE_NOTE\s*=\s*"[^"]*";',
-                  f'const SOURCE_NOTE = "Carte PDF Sépaq 2024 — Lac {lac_name} (sans bathymétrie)";', html)
+                  f'const SOURCE_NOTE = "Carte PDF Sépaq 2024 — Lac {lac_name} ({bathy_note})";', html)
     html = re.sub(r'const SPECIES\s*=\s*"[^"]*";',
                   f'const SPECIES = {_js(species)};', html)
     html = re.sub(r'const LAT\s*=\s*[\d.]+,\s*LON\s*=\s*[-\d.]+;',
                   f'const LAT = {round(clat,4)}, LON = {round(clon,4)};', html)
+    html = re.sub(r'const LAC_NAME\s*=\s*"[^"]*";',
+                  f'const LAC_NAME = "{lac_name_sq}";', html)
+    html = re.sub(r'const MAP_CENTER\s*=\s*\[[^\]]*\];',
+                  f'const MAP_CENTER = [{round(clat,4)}, {round(clon,4)}];', html)
+    html = re.sub(r'const LAC_AREA_HA\s*=\s*[\d.]+;',
+                  f'const LAC_AREA_HA = {area_ha};', html)
+
+    # ── Stats panel (HTML) ────────────────────────────────────────────────────
+    # Score badge label (success rate + mass)
+    success_str = f"{success} omble/j" if success else "N/D"
+    mass_str    = f"{mass_g} g" if mass_g else "N/D"
+    portage_str = f"{portage} min portage" if portage else "Aucun portage"
+    enst_str    = f"Ensemencement {enst_code}" if enst_code else "Espèce indigène"
+    gblq_str    = "Oui (GBLQ)" if has_gblq else "Non disponible"
+
+    new_stats_block = (
+        f'  <h3>📊 Stats Lac {lac_name}</h3>\n'
+        f'  <div class="stat-row"><span class="stat-label">Superficie</span>'
+        f'<span class="stat-value">{area_ha} ha</span></div>\n'
+        f'  <div class="stat-row"><span class="stat-label">Succès 2025</span>'
+        f'<span class="stat-value">{success_str}</span></div>\n'
+        f'  <div class="stat-row"><span class="stat-label">Masse moy.</span>'
+        f'<span class="stat-value">{mass_str}</span></div>\n'
+        f'  <div class="stat-row"><span class="stat-label">Véhicule</span>'
+        f'<span class="stat-value">{vehicule}</span></div>\n'
+        f'  <div class="stat-row"><span class="stat-label">Portage</span>'
+        f'<span class="stat-value">{portage_str}</span></div>\n'
+        f'  <div class="stat-row"><span class="stat-label">Bathymétrie</span>'
+        f'<span class="stat-value">{gblq_str}</span></div>\n'
+        f'  <div class="stat-row"><span class="stat-label">Espèce cible</span>'
+        f'<span class="stat-value">{species}</span></div>\n'
+        f'  <div class="stat-row"><span class="stat-label">Zone pêche</span>'
+        f'<span class="stat-value">Zone 9</span></div>\n'
+        f'  <div class="stat-row"><span class="stat-label">Ensemencement</span>'
+        f'<span class="stat-value">{enst_str}</span></div>\n'
+        f'  <div class="stat-row"><span class="stat-label">Source</span>'
+        f'<span class="stat-value">Carte PDF Sépaq 2024</span></div>'
+    )
+    html = re.sub(
+        r'<h3>📊 Stats Lac [^<]*</h3>[\s\S]*?<h3>🗺️ Légende',
+        new_stats_block + '\n\n  <h3>🗺️ Légende',
+        html, count=1
+    )
+
+    # Lake polygon tooltip
+    html = re.sub(
+        r"lakePoly\.bindTooltip\('[^']*'",
+        f"lakePoly.bindTooltip('Lac {lac_name_sq} — {area_ha} ha<br>Source: PDF Sépaq 2024'",
+        html
+    )
 
     # LAKE_POLYGON
     html = re.sub(r'const LAKE_POLYGON\s*=\s*\[[\s\S]*?\];',
@@ -1472,14 +1678,27 @@ def batch_pdf_maps(pdf_dir: str, output_dir: str, template_path: str,
     os.makedirs(output_dir, exist_ok=True)
     results = []
 
+    # These have curated bathymetry (MFFP/SDB) — skip unless explicitly forced
+    CURATED = {"lac_fox_peche.html", "lac_dore_peche.html", "lac_marcel_peche.html",
+               "lac_osborn_peche.html", "lac_sonois_peche.html",
+               "lac_baie_peche.html", "lac_chutenoire_peche.html",
+               "lac_saules_peche.html", "lac_sable_peche.html"}
+
     for i, pdf_path in enumerate(pdfs, 1):
         basename = os.path.basename(pdf_path)
         # "MAS_Carte_Lac Roméo.pdf" → "Roméo"
-        lac_name = basename.replace("MAS_Carte_Lac ", "").replace(".pdf", "").strip()
+        # Handle "MAS_Carte_Grand lac des Îles.pdf" → "Grand lac des Îles"
+        lac_name = re.sub(r'^MAS_Carte_(?:Lac\s+)?', '', basename).replace(".pdf", "").strip()
         file_slug = "lac_" + slugify(lac_name)
         html_path = os.path.join(output_dir, f"{file_slug}_peche.html")
 
         print(f"[{i:02d}/{len(pdfs)}] {lac_name}")
+
+        # Skip curated files (they have real bathymetry data)
+        if os.path.basename(html_path) in CURATED and not force:
+            print(f"       → fichier curatée avec bathymétrie, skip")
+            results.append((lac_name, html_path, True))
+            continue
 
         if os.path.exists(html_path) and not force:
             print(f"       → déjà existant, skip (--force pour régénérer)")
@@ -1487,12 +1706,15 @@ def batch_pdf_maps(pdf_dir: str, output_dir: str, template_path: str,
             continue
 
         try:
+            st = _lake_stats(lac_name)
             lac_config = {
                 "name": lac_name,
                 "file": file_slug,
                 "output_dir": output_dir,
                 "species": "Omble de fontaine",
                 "trip_dates": trip_dates,
+                "vehicule": st.get("vehicule", "Auto"),
+                "portage_min": st.get("portage_min", 0),
             }
             data = gen_pdf_map(pdf_path, lac_config)
             html = build_pdf_html(data, lac_config, template_path)

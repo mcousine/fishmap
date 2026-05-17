@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lac Fox — Guide de Pêche IA | Mastigouche</title>
-<meta name="description" content="Application interactive de planification de pêche au Lac Fox, Réserve faunique Mastigouche. Spots optimaux par heure et météo pour l'omble de fontaine et le touladi.">
+<title>Lac Fox — Pêche Mastigouche</title>
+<meta name="description" content="Carte de pêche interactive — Lac Fox, Réserve faunique Mastigouche.">
 <style>
+/* Leaflet CSS */
 /* required styles */
 
 .leaflet-pane,
@@ -669,6 +670,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
 	}
 
 </style>
+
+</style>
 <script>
 /* @preserve
  * Leaflet 1.9.4, a JS library for interactive maps. https://leafletjs.com
@@ -678,6 +681,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 //# sourceMappingURL=leaflet.js.map
 </script>
 
+</script>
 <style>
 :root {
   --bg-primary: #0a0e1a;
@@ -728,6 +732,12 @@ body {
   background: linear-gradient(135deg, var(--accent), var(--accent2));
   color: #fff; text-transform: uppercase; letter-spacing: 0.5px;
 }
+.top-bar .badge-nosdb {
+  font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px;
+  background: linear-gradient(135deg, #d97706, #f59e0b);
+  color: #fff; text-transform: uppercase; letter-spacing: 0.5px;
+  border: 1px solid rgba(245,158,11,0.5);
+}
 .top-bar .separator { width: 1px; height: 20px; background: var(--border); }
 
 .control-panel {
@@ -766,7 +776,8 @@ body {
 .date-btns { display: flex; gap: 4px; }
 .date-btn {
   padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px;
-  background: transparent; color: var(--text-dim); font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: transparent; color: var(--text-dim);
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.3s;
 }
 .date-btn.active {
@@ -787,7 +798,7 @@ body {
 
 .info-panel {
   position: fixed; top: 70px; right: 16px; z-index: 1000;
-  width: 300px; max-height: calc(100vh - 160px); overflow-y: auto;
+  width: 310px; max-height: calc(100vh - 160px); overflow-y: auto;
   background: var(--bg-glass); backdrop-filter: blur(20px) saturate(1.8);
   -webkit-backdrop-filter: blur(20px) saturate(1.8);
   border: 1px solid var(--border); border-radius: var(--radius);
@@ -798,7 +809,7 @@ body {
 .info-panel::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 2px; }
 .info-panel h2 {
   font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
-  color: var(--accent); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
+  color: var(--accent); margin-bottom: 12px;
 }
 .info-panel h3 {
   font-size: 11px; font-weight: 600; color: var(--text-dim);
@@ -811,13 +822,9 @@ body {
 }
 .spot-card:hover { border-color: var(--accent); background: rgba(6,182,212,0.06); transform: translateX(-2px); }
 .spot-card.top-pick { border-color: rgba(16,185,129,0.4); background: rgba(16,185,129,0.06); }
+.spot-card.official-pick { border-color: rgba(245,158,11,0.4); background: rgba(245,158,11,0.06); }
 .spot-card .spot-name { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
 .spot-card .spot-detail { font-size: 10px; color: var(--text-dim); line-height: 1.4; }
-.spot-card .spot-score {
-  float: right; font-size: 18px; font-weight: 800;
-  background: linear-gradient(135deg, var(--accent3), var(--accent));
-  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-}
 .stat-row {
   display: flex; justify-content: space-between; padding: 4px 0;
   font-size: 11px; border-bottom: 1px solid var(--border);
@@ -830,6 +837,18 @@ body {
   font-size: 10px; font-weight: 500; background: rgba(59,130,246,0.12);
   border: 1px solid rgba(59,130,246,0.25); color: var(--accent2);
 }
+.forecast-day {
+  padding: 10px 12px; margin-bottom: 8px; border-radius: 10px;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+}
+.forecast-day-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.forecast-day-name { font-size: 12px; font-weight: 700; color: var(--text); }
+.forecast-day-icon { font-size: 18px; }
+.forecast-day-temp { font-size: 11px; color: var(--warning); font-weight: 600; }
+.forecast-details { font-size: 10px; color: var(--text-dim); line-height: 1.6; }
+.forecast-fishing { margin-top: 6px; padding: 5px 8px; border-radius: 6px;
+  background: rgba(6,182,212,0.08); border: 1px solid rgba(6,182,212,0.2);
+  font-size: 10px; color: var(--accent); font-weight: 600; }
 
 .sun-indicator {
   position: fixed; top: 70px; left: 16px; z-index: 1000; padding: 12px 16px;
@@ -853,42 +872,16 @@ body {
   backdrop-filter: blur(10px); border: 1px solid var(--border);
   color: var(--text); font-size: 18px; cursor: pointer; align-items: center; justify-content: center;
 }
-
-@keyframes pulse-ring {
-  0% { transform: scale(0.8); opacity: 1; }
-  100% { transform: scale(2.2); opacity: 0; }
+.thermal-status {
+  margin-top: 7px; padding: 5px 8px; border-radius: 8px; font-size: 10px; font-weight: 700;
+  text-align: center; letter-spacing: 0.3px; line-height: 1.6;
 }
-.pulse-marker { position: relative; }
-.pulse-marker::before {
-  content: ''; position: absolute; width: 100%; height: 100%; border-radius: 50%;
-  background: var(--accent3); animation: pulse-ring 2s ease-out infinite;
-}
-
-.dlabel-icon { background: transparent !important; border: none !important; }
-.dlabel-txt {
-  background: rgba(0,0,0,0.58); color: rgba(255,255,255,0.92);
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 11px; font-weight: 700;
-  padding: 2px 5px; border-radius: 4px; white-space: nowrap;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.9); pointer-events: none; display: inline-block;
-}
-.tdepth-lbl {
-  background: rgba(0,0,0,0.52); color: rgba(255,255,255,0.78);
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 10px; font-weight: 600;
-  padding: 1px 5px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.14);
-  white-space: nowrap; pointer-events: none; display: inline-block;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.9); letter-spacing: 0.2px;
-}
-.tlabel-txt {
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 11px; font-weight: 800;
-  padding: 2px 6px; border-radius: 5px; border: 1.5px solid rgba(255,255,255,0.4);
-  white-space: nowrap; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.9);
-  pointer-events: none; display: inline-block; letter-spacing: 0.3px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.5);
-}
-
+.thermal-opt  { background: rgba(16,185,129,0.18); color:#10b981; border:1px solid rgba(16,185,129,0.4); }
+.thermal-good { background: rgba(245,158,11,0.18); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); }
+.thermal-bad  { background: rgba(239,68,68,0.18);  color:#ef4444; border:1px solid rgba(239,68,68,0.4); }
 .sat-topbar { display: flex; align-items: center; gap: 5px; }
-.sat-icon { font-size: 13px; line-height: 1; filter: drop-shadow(0 0 3px rgba(59,130,246,0.6)); }
-.sat-pct { font-size: 9px; font-weight: 700; color: var(--text-dim); min-width: 24px; font-variant-numeric: tabular-nums; }
+.sat-icon { font-size: 13px; line-height: 1; }
+.sat-pct { font-size: 9px; font-weight: 700; color: var(--text-dim); min-width: 24px; }
 #satSlider {
   -webkit-appearance: none; appearance: none; width: 64px; height: 3px;
   border-radius: 2px; background: linear-gradient(90deg, var(--text-muted), #3b82f6);
@@ -896,18 +889,8 @@ body {
 }
 #satSlider::-webkit-slider-thumb {
   -webkit-appearance: none; width: 11px; height: 11px; border-radius: 50%;
-  background: #fff; border: 2px solid #3b82f6; box-shadow: 0 0 5px rgba(59,130,246,0.5); cursor: grab;
+  background: #fff; border: 2px solid #3b82f6; cursor: grab;
 }
-
-.species-select {
-  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 15px; color: var(--text); font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 12px; font-weight: 600; padding: 4px 10px; cursor: pointer; outline: none;
-  -webkit-appearance: none; appearance: none; transition: border-color 0.2s;
-}
-.species-select:focus, .species-select:hover { border-color: var(--accent); }
-.species-select option { background: #111827; color: var(--text); }
-
 .fish-marker { pointer-events: none !important; }
 @keyframes fish-swim {
   0%,100% { transform: translateY(0) rotate(0deg); }
@@ -915,15 +898,17 @@ body {
   70%      { transform: translateY(3px) rotate(6deg); }
 }
 .fish-animate { animation: fish-swim 2.4s ease-in-out infinite; }
-
-.thermal-status {
-  margin-top: 7px; padding: 5px 8px; border-radius: 8px; font-size: 10px; font-weight: 700;
-  text-align: center; letter-spacing: 0.3px; line-height: 1.6; transition: background 0.4s, color 0.4s;
+.map-legend {
+  position: fixed; bottom: 90px; left: 16px; z-index: 1000; padding: 10px 14px;
+  background: var(--bg-glass); backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow); font-size: 10px;
 }
-.thermal-opt  { background: rgba(16,185,129,0.18); color:#10b981; border:1px solid rgba(16,185,129,0.4); }
-.thermal-good { background: rgba(245,158,11,0.18); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); }
-.thermal-bad  { background: rgba(239,68,68,0.18);  color:#ef4444; border:1px solid rgba(239,68,68,0.4); }
-
+.legend-item { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; color: var(--text-dim); }
+.legend-item:last-child { margin-bottom: 0; }
+.legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+.legend-line { width: 16px; height: 3px; flex-shrink: 0; border-radius: 2px; }
 @media (max-width: 768px) {
   .info-panel { display: none; }
   .toggle-panel { display: flex; }
@@ -932,37 +917,21 @@ body {
   #timeSlider { width: 140px; }
   .sun-indicator { display: none; }
   .sat-topbar { display: none; }
+  .map-legend { display: none; }
 }
 </style>
 </head>
 <body>
 <div id="map"></div>
 <div id="sunOverlay" style="position:absolute;top:0;left:0;right:0;bottom:0;z-index:400;pointer-events:none;transition:background 0.5s;mix-blend-mode:soft-light;"></div>
-<div id="mapWaterTemp" style="position:absolute;bottom:90px;left:20px;z-index:400;font-size:32px;font-weight:900;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,0.8);pointer-events:none;display:flex;flex-direction:column;align-items:flex-start;">
-  <span style="font-size:12px;text-transform:uppercase;color:var(--accent);letter-spacing:1px;text-shadow:0 1px 4px rgba(0,0,0,0.8);">Temp. Eau Surface</span>
-  <span id="mapWaterTempVal">10.0°C</span>
-</div>
 
 <!-- Top bar -->
 <div class="top-bar">
-  <h1>🎣 Lac Fox</h1>
+  <h1>🎣 Lac Roméo</h1>
   <div class="separator"></div>
   <span class="badge">Mastigouche</span>
   <div class="separator"></div>
-  <div class="unit-toggle" onclick="toggleUnit()" style="cursor:pointer;background:rgba(255,255,255,0.1);padding:4px 10px;border-radius:15px;font-weight:bold;font-size:12px;display:inline-block;border:1px solid rgba(255,255,255,0.2);">
-    <span id="unitM" style="color:var(--accent);">M</span> | <span id="unitFt" style="color:#aaa;">Pi</span>
-  </div>
-  <div class="unit-toggle" onclick="toggleTempUnit()" style="cursor:pointer;background:rgba(255,255,255,0.1);padding:4px 10px;border-radius:15px;font-weight:bold;font-size:12px;margin-right:15px;display:inline-block;border:1px solid rgba(255,255,255,0.2);">
-    <span id="unitC" style="color:var(--accent);">°C</span> | <span id="unitF" style="color:#aaa;">°F</span>
-  </div>
-  <div class="separator"></div>
-  <select id="speciesSelect" class="species-select" onchange="setSpecies(this.value)" title="Espèce cible">
-    <option value="omble">🐟 Omble de fontaine</option>
-    <option value="touladi">🐟 Touladi</option>
-    <option value="brochet">🐟 Grand Brochet</option>
-    <option value="dore">🐟 Doré jaune</option>
-    <option value="perchaude">🐟 Perchaude</option>
-  </select>
+  <span class="badge-nosdb">SANS BATHYMÉTRIE</span>
   <div class="separator"></div>
   <div class="sat-topbar" title="Opacité satellite">
     <span class="sat-icon">🛰️</span>
@@ -971,10 +940,10 @@ body {
     <span class="sat-pct" id="satPct">50%</span>
   </div>
   <div class="separator"></div>
-  <span style="font-size:11px;color:var(--text-dim)">46.8217°N, 73.3661°W</span>
+  <span style="font-size:11px;color:var(--text-dim)">46.822°N, 73.368°W</span>
 </div>
 
-<!-- Sun / water temp indicator -->
+<!-- Sun indicator -->
 <div class="sun-indicator" id="sunIndicator">
   <div class="sun-compass" id="sunCompass">
     <svg viewBox="0 0 80 80">
@@ -999,19 +968,31 @@ body {
 
 <!-- Info panel -->
 <div class="info-panel" id="infoPanel">
-  <h2 id="spotsTitle">📍 Omble de fontaine — Spots</h2>
+  <h2>📍 Omble de fontaine — Spots</h2>
+  <div style="margin-bottom:8px;padding:6px 10px;border-radius:8px;background:rgba(217,119,6,0.12);border:1px solid rgba(245,158,11,0.3);font-size:10px;color:#f59e0b;line-height:1.5;">
+    ⚠️ Données sans bathymétrie — spots déduits de la géographie (PDF Sépaq 2024)
+  </div>
   <div id="spotsContainer"></div>
 
-  <h3>📊 Stats Lac Fox</h3>
+        <h3>📊 Stats Lac Fox</h3>
   <div class="stat-row"><span class="stat-label">Superficie</span><span class="stat-value">19.3 ha</span></div>
-  <div class="stat-row"><span class="stat-label">Profondeur max</span><span class="stat-value" id="statDepthMax">8.2 m</span></div>
-  <div class="stat-row"><span class="stat-label">Bassins</span><span class="stat-value">2 (SW + NE)</span></div>
-  <div class="stat-row"><span class="stat-label">Captures</span><span class="stat-value">N/D — rapport à demander</span></div>
-  <div class="stat-row"><span class="stat-label">Espèces</span><span class="stat-value">Omble + Touladi</span></div>
+  <div class="stat-row"><span class="stat-label">Succès 2025</span><span class="stat-value">7.1 omble/j</span></div>
+  <div class="stat-row"><span class="stat-label">Masse moy.</span><span class="stat-value">346 g</span></div>
+  <div class="stat-row"><span class="stat-label">Véhicule</span><span class="stat-value">VUS</span></div>
+  <div class="stat-row"><span class="stat-label">Portage</span><span class="stat-value">3 min portage</span></div>
+  <div class="stat-row"><span class="stat-label">Bathymétrie</span><span class="stat-value">Oui (GBLQ)</span></div>
+  <div class="stat-row"><span class="stat-label">Espèce cible</span><span class="stat-value">Omble de fontaine</span></div>
   <div class="stat-row"><span class="stat-label">Zone pêche</span><span class="stat-value">Zone 9</span></div>
-  <div class="stat-row"><span class="stat-label">Limite omble</span><span class="stat-value">10 / jour</span></div>
-  <div class="stat-row"><span class="stat-label">Limite touladi</span><span class="stat-value">2 / jour · min 40 cm</span></div>
-  <div class="stat-row"><span class="stat-label">Source bathy</span><span class="stat-value">MFFP Sépaq 2004</span></div>
+  <div class="stat-row"><span class="stat-label">Ensemencement</span><span class="stat-value">Espèce indigène</span></div>
+  <div class="stat-row"><span class="stat-label">Source</span><span class="stat-value">Carte PDF Sépaq 2024</span></div>
+
+  <h3>🗺️ Légende Spots</h3>
+  <div style="font-size:10px;color:var(--text-dim);line-height:1.9;">
+    <div>⭐ Site Sépaq officiel — validé terrain</div>
+    <div>🎣 Spot déduit — géographie/hydrologie</div>
+    <div>🌿 Structure / végétation probable</div>
+    <div>🐟 Zone pélagique — transit</div>
+  </div>
 
   <h3>🎯 Techniques Mai — Omble</h3>
   <div>
@@ -1021,29 +1002,38 @@ body {
     <span class="technique-tag">🎣 Cuillère ondulante</span>
   </div>
   <p style="font-size:10px;color:var(--text-muted);margin-top:8px;line-height:1.5">
-    <strong>Mi-mai :</strong> Eau &lt;15°C → ombles en surface (0–3m). Récupération lente, pêcher tôt le matin et en fin de journée. Ver de terre après pluie.
+    <strong>Mi-mai :</strong> Eau &lt;15°C → ombles en surface (0–3m). Entrées d'eau froide = zones prioritaires. Ver de terre après pluie. Pêcher tôt le matin et en fin de journée.
   </p>
 
-  <h3>🎯 Techniques Mai — Touladi</h3>
-  <div>
-    <span class="technique-tag">🔵 Leurre profond</span>
-    <span class="technique-tag">🥄 Cuillère large</span>
-    <span class="technique-tag">🎣 Troll profond</span>
-    <span class="technique-tag">🪱 Doré vivant</span>
+  <h3>🌤️ Prévisions — 20-21-22 mai 2026</h3>
+  <div id="forecastPanel">
+    <div style="font-size:10px;color:var(--text-muted);text-align:center;padding:8px;">Chargement des prévisions...</div>
   </div>
-  <p style="font-size:10px;color:var(--text-muted);margin-top:8px;line-height:1.5">
-    <strong>Touladi :</strong> Fond de la fosse (6–8m). Troll lent 1–2 km/h en passant sur la fosse principale (spot 🔵). Eau &lt;12°C idéale.
-  </p>
 
   <h3>🐟 Guide Rapide</h3>
   <p style="font-size:10px;color:var(--text-muted);line-height:1.5">
-    <strong>Règle 90/10 :</strong> 90% des poissons dans 10% du lac.<br>
-    <strong>Étranglement :</strong> passage obligé entre les 2 bassins = meilleur spot.<br>
-    <strong>Remise à l'eau :</strong> hameçon sans ardillon, mains mouillées, &lt;15s hors de l'eau.
+    <strong>Lac 11 ha :</strong> Petit lac = poisson accessible partout.<br>
+    <strong>Entrée nord :</strong> Eau froide/oxygénée = spot #1 en mai.<br>
+    <strong>Matin 5h-9h :</strong> ⭐⭐⭐ Meilleur moment.<br>
+    <strong>Soir 18h-20h :</strong> ⭐⭐⭐ Excellent aussi.<br>
+    <strong>Midi 10h-16h :</strong> ⭐ Poissons plus en profondeur.<br>
+    <strong>Remise à l'eau :</strong> hameçon sans ardillon, mains mouillées.
   </p>
 </div>
 
 <button class="toggle-panel" id="togglePanel" onclick="document.getElementById('infoPanel').classList.toggle('visible')">☰</button>
+
+<!-- Map legend (bottom-left) -->
+<div class="map-legend">
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,0.7);border:1px solid #3b82f6;"></div>Lac Roméo (contour PDF)</div>
+  <div class="legend-item"><div class="legend-line" style="background:#60a5fa;"></div>Entrée d'eau (nord)</div>
+  <div class="legend-item"><div class="legend-line" style="background:#34d399;"></div>Sortie d'eau (sud)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#d97706;border:2px solid #fbbf24;"></div>Site Sépaq officiel</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#0369a1;border:1px solid #38bdf8;"></div>Spot déduit géographie</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6;border:1px solid rgba(255,255,255,0.4);width:10px;height:10px;border-radius:2px;"></div>Mise à l'eau (chaloupe)</div>
+  <div class="legend-item"><div class="legend-line" style="background:#008599;height:4px;"></div>Omble de fontaine (PDF)</div>
+  <div class="legend-item"><div class="legend-line" style="background:#d946ef;background:repeating-linear-gradient(90deg,#d946ef 0,#d946ef 8px,transparent 8px,transparent 13px);"></div>Chemin d'accès</div>
+</div>
 
 <!-- Control panel -->
 <div class="control-panel">
@@ -1062,278 +1052,167 @@ body {
   <div class="weather-widget" id="weatherWidget">
     <div class="weather-icon" id="weatherIcon">🌦️</div>
     <div class="weather-info">
-      <div class="weather-temp" id="weatherTemp">10–21°C</div>
-      <div class="weather-desc" id="weatherDesc">Bruine légère</div>
+      <div class="weather-temp" id="weatherTemp">--</div>
+      <div class="weather-desc" id="weatherDesc">Chargement...</div>
     </div>
   </div>
 </div>
 
 <script>
 // ============================================================
-// DATA & STATE
+// DATA & CONFIG
 // ============================================================
-const LAT = 46.821667, LON = -73.366130;
-let currentUnit = 'm';
-let currentMode = 'bathy';
-let showSun = true;
-let showHotzones = false;
-let geoJsonLayer = null;
+const LAC_NAME = "Fox";
+const MAP_CENTER = [46.8218, -73.3685];
+const MAP_ZOOM = 15;
+const LAC_AREA_HA = 19.3;
+const SOURCE_NOTE = "Carte PDF Sépaq 2024 — Lac Fox (Bathymétrie GBLQ disponible)";
+const HAS_BATHY = false;
+const SPECIES = "Omble de fontaine";
+const LAT = 46.8218, LON = -73.3685;
 
-function toggleUnit() {
-  currentUnit = currentUnit === 'm' ? 'ft' : 'm';
-  document.getElementById('unitM').style.color = currentUnit === 'm' ? 'var(--accent)' : '#aaa';
-  document.getElementById('unitFt').style.color = currentUnit === 'ft' ? 'var(--accent)' : '#aaa';
-  updateDepthLabels();
-  updateThermalDepthLabels();
-  document.getElementById('statDepthMax').textContent = currentUnit === 'm' ? '8.2 m' : '27 pi';
-}
+// Lake polygon from PDF extraction (actual shoreline) — [lat, lon] Leaflet format
+const LAKE_POLYGON = [[46.824594, -73.369001], [46.824586, -73.36889], [46.824584, -73.368752], [46.824635, -73.368462], [46.824604, -73.368018], [46.824566, -73.367708], [46.824506, -73.367328], [46.824394, -73.36694], [46.824344, -73.366848], [46.824244, -73.366669], [46.824206, -73.366537], [46.824135, -73.366308], [46.824076, -73.366176], [46.823936, -73.366025], [46.823835, -73.365957], [46.823665, -73.365967], [46.823535, -73.366037], [46.823426, -73.366125], [46.823346, -73.366278], [46.823286, -73.366578], [46.823198, -73.366758], [46.823105, -73.366886], [46.822875, -73.367208], [46.822647, -73.367437], [46.822565, -73.367466], [46.822467, -73.367438], [46.822216, -73.367126], [46.822097, -73.366698], [46.822046, -73.366269], [46.821995, -73.366168], [46.821686, -73.365827], [46.821546, -73.365617], [46.821508, -73.365525], [46.821376, -73.364805], [46.821277, -73.364515], [46.821147, -73.364363], [46.821058, -73.364295], [46.820966, -73.364275], [46.820577, -73.364274], [46.820437, -73.364313], [46.820349, -73.364334], [46.820237, -73.364373], [46.819848, -73.364665], [46.819707, -73.364784], [46.819678, -73.364865], [46.819609, -73.365005], [46.819658, -73.365626], [46.819689, -73.365865], [46.819739, -73.366006], [46.81984, -73.366185], [46.819868, -73.366237], [46.819907, -73.366436], [46.81992, -73.366889], [46.819858, -73.367908], [46.819838, -73.36846], [46.819777, -73.36908], [46.819769, -73.369169], [46.819738, -73.36953], [46.819678, -73.36982], [46.819389, -73.3707], [46.819109, -73.371313], [46.819069, -73.371532], [46.819069, -73.371741], [46.819038, -73.371902], [46.81899, -73.371934], [46.81888, -73.371911], [46.818788, -73.371914], [46.818728, -73.371964], [46.818718, -73.372094], [46.81883, -73.372255], [46.818869, -73.372253], [46.81891, -73.372141], [46.818958, -73.372095], [46.819007, -73.372111], [46.819128, -73.372254], [46.819238, -73.372242], [46.819497, -73.372083], [46.819649, -73.372043], [46.819869, -73.371894], [46.820027, -73.371632], [46.820258, -73.371643], [46.820537, -73.371514], [46.820976, -73.371594], [46.821089, -73.371582], [46.821237, -73.371484], [46.821417, -73.371501], [46.821566, -73.371523], [46.821617, -73.371482], [46.822006, -73.371181], [46.822158, -73.371132], [46.822318, -73.371074], [46.822466, -73.370972], [46.822655, -73.370792], [46.822836, -73.370471], [46.822857, -73.370422], [46.822828, -73.370063], [46.822877, -73.36987], [46.822957, -73.369752], [46.823177, -73.369599], [46.823206, -73.369509], [46.823186, -73.369372], [46.823115, -73.368859], [46.823136, -73.368658], [46.823147, -73.368578], [46.823186, -73.368319], [46.823176, -73.368199], [46.823135, -73.368138], [46.823046, -73.368079], [46.823027, -73.368048], [46.822995, -73.367929], [46.822996, -73.3678], [46.823055, -73.367638], [46.823156, -73.36748], [46.823235, -73.367437], [46.823347, -73.367376], [46.823487, -73.36739], [46.823555, -73.367468], [46.823777, -73.367861], [46.823866, -73.368147], [46.823875, -73.368369], [46.823896, -73.368519], [46.823955, -73.36862], [46.824095, -73.368829], [46.824544, -73.36914], [46.824737, -73.36917], [46.824684, -73.369131]];
 
-let tempUnit = 'C';
-function tempDisp(t_c) {
-  if (tempUnit === 'F') return (t_c * 9 / 5 + 32).toFixed(1) + '°F';
-  return t_c.toFixed(1) + '°C';
-}
-function toggleTempUnit() {
-  tempUnit = tempUnit === 'C' ? 'F' : 'C';
-  document.getElementById('unitC').style.color = tempUnit === 'C' ? 'var(--accent)' : '#aaa';
-  document.getElementById('unitF').style.color  = tempUnit === 'F' ? 'var(--accent)' : '#aaa';
-  updateThermalLabels();
-  update();
-}
-
-// Voyage 20–22 mai 2026 — météo open-meteo
-const WEATHER = {
-  0: { min: 10, max: 21, icon: '🌦️', desc: 'Bruine légère, couvert',        cloud: 1.00 },
-  1: { min:  1, max:  9, icon: '☁️', desc: 'Refroidissement, très nuageux', cloud: 0.88 },
-  2: { min: -3, max: 14, icon: '⛅', desc: 'Gel nocturne, dégagement',       cloud: 0.21 },
-};
-
-const FISHING_SPOTS = [
-  {
-    id: 'etrang',
-    name: 'Étranglement entre bassins',
-    lat: 46.82303, lon: -73.36742,
-    depth: '2–4 m', type: 'pointe/étranglement',
-    why: 'Seule connexion entre le grand bassin SW et le bassin NE. Passage obligé pour les deux espèces.',
-    bestTime: [5,6,7,8,17,18,19,20],
-    peakTime: [6,6.5,7,18,18.5],
-    sunExposure: 'Centre lac — exposé toutes directions',
-    score_base: 90
-  },
-  {
-    id: 'fosse_w',
-    name: 'Fosse principale (8.2 m)',
-    lat: 46.82090, lon: -73.37031,
-    depth: '6–8.2 m', type: 'fosse profonde',
-    why: 'Point le plus profond du lac (8.2m, confirmé MFFP). Refuge thermique touladi. Omble en été.',
-    bestTime: [10,11,12,13,14,15],
-    peakTime: [11,12,13],
-    sunExposure: 'Bassin central — plein soleil midi',
-    score_base: 60
-  },
-  {
-    id: 'fosse_ne',
-    name: 'Fosse bassin NE (6 m)',
-    lat: 46.82409, lon: -73.36732,
-    depth: '4–6 m', type: 'fosse profonde',
-    why: 'Fosse du bassin satellite NE. Plus accessible, bon refuge touladi alternatif en milieu de journée.',
-    bestTime: [9,10,11,12,13,14],
-    peakTime: [10,11,12],
-    sunExposure: 'Bassin NE — soleil matin',
-    score_base: 55
-  },
-  {
-    id: 'escarp_w',
-    name: 'Escarpement rive Ouest',
-    lat: 46.82100, lon: -73.37130,
-    depth: '1–6 m', type: 'escarpement/pente raide',
-    why: 'Rive W plonge de 2m à 6m sur courte distance. Ombre matinale, structure favorite de l\'omble à l\'aube.',
-    bestTime: [5,6,7,8,17,18,19],
-    peakTime: [5.5,6,6.5,7],
-    sunExposure: 'Face Est (soleil matin)',
-    score_base: 73
-  },
-  {
-    id: 'baie_se',
-    name: 'Baie SE — rive Sud',
-    lat: 46.81960, lon: -73.36590,
-    depth: '0.5–2 m', type: 'baie/herbier',
-    why: 'Zone peu profonde première à se réchauffer au printemps. Omble actif le matin. Possible émissaire.',
-    bestTime: [7,8,9,10,17,18,19],
-    peakTime: [8,9,9.5],
-    sunExposure: 'Face Nord (soleil journée)',
-    score_base: 76
-  },
-  {
-    id: 'pointe_ne',
-    name: 'Pointe N bassin NE',
-    lat: 46.82445, lon: -73.36745,
-    depth: '0.5–2 m', type: 'embouchure',
-    why: 'Extrémité N du bassin NE — possible entrée de tributaire à confirmer. Si tributaire: spot #1 omble.',
-    bestTime: [5,6,7,8,17,18,19,20],
-    peakTime: [6,6.5,7,18,19],
-    sunExposure: 'Face Sud (soleil journée)',
-    score_base: 88
-  },
-  {
-    id: 'rive_e',
-    name: 'Rive Est bassin principal',
-    lat: 46.82120, lon: -73.36565,
-    depth: '1–4 m', type: 'escarpement/pente raide',
-    why: 'Rive E du grand bassin, pente modérée. Soleil après-midi réchauffe la zone — omble actif en fin de journée.',
-    bestTime: [16,17,18,19,20],
-    peakTime: [17.5,18,18.5,19],
-    sunExposure: 'Face Ouest (soleil après-midi)',
-    score_base: 68
-  }
+// Waterways
+const WATERWAYS = [
+  { type: "inlet", name: "Entrée nord", lat: 46.82524, lon: -73.36558,
+    coords: [[46.825222, -73.365604], [46.825246, -73.365576], [46.825261, -73.365558]] },
+  { type: "inlet", name: "Entrée nord", lat: 46.82244, lon: -73.36134,
+    coords: [[46.822448, -73.361381], [46.822438, -73.361333], [46.822447, -73.361315]] },
+  { type: "outlet", name: "Sortie sud", lat: 46.81822, lon: -73.37278,
+    coords: [[46.817874, -73.373603], [46.817909, -73.373487], [46.817948, -73.373006], [46.81801, -73.372844], [46.818159, -73.372626], [46.8185, -73.372385], [46.81861, -73.372203], [46.818718, -73.372094]] },
+  { type: "outlet", name: "Sortie sud", lat: 46.81995, lon: -73.36213,
+    coords: [[46.820087, -73.363262], [46.819998, -73.363002], [46.819777, -73.362223], [46.819768, -73.362023], [46.819799, -73.361871], [46.819848, -73.361692], [46.820402, -73.360821]] },
+  { type: "outlet", name: "Sortie sud", lat: 46.81797, lon: -73.36363,
+    coords: [[46.817948, -73.363633], [46.818, -73.363623]] },
+  { type: "outlet", name: "Sortie sud", lat: 46.81804, lon: -73.36362,
+    coords: [[46.818012, -73.363623], [46.818049, -73.363613], [46.818061, -73.363612]] }
 ];
 
-const depthColors = {
-  2.0: '#a5f3fc',
-  4.0: '#0ea5e9',
-  6.0: '#1d4ed8',
-  8.0: '#172554',
-};
+// Trout habitat line (omble de fontaine — trait sarcelle PDF Sépaq)
+const TROUT_LINE = [[46.820323, -73.370801], [46.821052, -73.370281], [46.821779, -73.369761], [46.822505, -73.369242], [46.824171, -73.367942], [46.824106, -73.367455], [46.824041, -73.366968], [46.823973, -73.366482]];
 
-// ============================================================
-// SPECIES THERMAL DATA
-// ============================================================
-const SPECIES = {
-  omble: {
-    name: 'Omble de fontaine', latin: 'Salvelinus fontinalis',
-    color: '#f59e0b', glow: 'rgba(245,158,11,0.55)',
-    tempMin: 8, tempOpt1: 12, tempOpt2: 16, tempMax: 22,
-    depthPref: [0, 4], limit: '10/jour',
-    bonus: { 'embouchure':15,'baie/herbier':10,'pointe/étranglement':8,'émissaire':12,'escarpement/pente raide':5,'connexion/passage':8 },
-    malus: { 'fosse profonde': -8 },
-  },
-  touladi: {
-    name: 'Touladi', latin: 'Salvelinus namaycush',
-    color: '#94a3b8', glow: 'rgba(148,163,184,0.55)',
-    tempMin: 4, tempOpt1: 8, tempOpt2: 12, tempMax: 18,
-    depthPref: [5, 12], limit: '2/jour',
-    bonus: { 'fosse profonde':25,'escarpement/pente raide':15 },
-    malus: { 'baie/herbier':-15,'embouchure':-5,'connexion/passage':-5 },
-  },
-  brochet: {
-    name: 'Grand Brochet', latin: 'Esox lucius',
-    color: '#22c55e', glow: 'rgba(34,197,94,0.55)',
-    tempMin: 10, tempOpt1: 16, tempOpt2: 22, tempMax: 28,
-    depthPref: [0, 3], limit: '6/jour',
-    bonus: { 'baie/herbier':25,'embouchure':10,'connexion/passage':12 },
-    malus: { 'fosse profonde':-25,'escarpement/pente raide':-10 },
-  },
-  dore: {
-    name: 'Doré jaune', latin: 'Sander vitreus',
-    color: '#eab308', glow: 'rgba(234,179,8,0.55)',
-    tempMin: 10, tempOpt1: 16, tempOpt2: 22, tempMax: 26,
-    depthPref: [3, 8], limit: 'variable',
-    bonus: { 'fosse profonde':12,'escarpement/pente raide':20,'pointe/étranglement':10 },
-    malus: { 'baie/herbier': -5 },
-  },
-  perchaude: {
-    name: 'Perchaude', latin: 'Perca flavescens',
-    color: '#fb923c', glow: 'rgba(251,146,60,0.55)',
-    tempMin: 12, tempOpt1: 18, tempOpt2: 24, tempMax: 28,
-    depthPref: [0, 5], limit: '50/jour',
-    bonus: { 'baie/herbier':20,'embouchure':8,'pointe/étranglement':5,'émissaire':6 },
-    malus: { 'fosse profonde':-15,'escarpement/pente raide':-8 },
-  },
-};
+// Access path to lake (sentier d'accès PDF — chemin vers mise à l'eau)
+const ACCESS_PATH = [];
 
-let currentSpecies = 'omble';
+// Boat access
+const BOAT_ACCESS = [{"lat": 46.820848, "lon": -73.364274}, {"lat": 46.824334, "lon": -73.363171}];
 
-// ============================================================
-// FISH SVG ICONS
-// ============================================================
-function getFishSVG(key, w, h) {
-  const c = SPECIES[key].color;
-  const hw = h / 2;
-  const shapes = {
-    omble: `
-      <ellipse cx="${w*0.55}" cy="${hw}" rx="${w*0.38}" ry="${hw-1}" fill="${c}" opacity="0.95"/>
-      <path d="M${w*0.18} ${h*0.2} L2 0 L${w*0.1} ${hw} L2 ${h} L${w*0.18} ${h*0.8}" fill="${c}"/>
-      <circle cx="${w*0.82}" cy="${hw*0.76}" r="3.5" fill="rgba(255,255,255,0.9)"/>
-      <circle cx="${w*0.84}" cy="${hw*0.76}" r="1.8" fill="#222"/>
-      <path d="M${w*0.48} ${h*0.1} L${w*0.65} 1 L${w*0.67} ${h*0.42}" fill="${c}" opacity="0.75"/>
-      <ellipse cx="${w*0.5}" cy="${h*0.72}" rx="${w*0.16}" ry="${h*0.2}" fill="rgba(255,120,20,0.4)"/>`,
-    touladi: `
-      <ellipse cx="${w*0.52}" cy="${hw}" rx="${w*0.4}" ry="${hw-1}" fill="${c}" opacity="0.88"/>
-      <path d="M${w*0.14} ${h*0.1} L0 0 L${w*0.06} ${hw} L0 ${h} L${w*0.14} ${h*0.9}" fill="${c}"/>
-      <circle cx="${w*0.82}" cy="${hw*0.76}" r="3.5" fill="rgba(255,255,255,0.9)"/>
-      <circle cx="${w*0.84}" cy="${hw*0.76}" r="1.8" fill="#111"/>
-      <ellipse cx="${w*0.46}" cy="${h*0.28}" rx="${w*0.07}" ry="${h*0.22}" fill="rgba(210,225,255,0.55)"/>
-      <ellipse cx="${w*0.62}" cy="${h*0.68}" rx="${w*0.05}" ry="${h*0.18}" fill="rgba(210,225,255,0.5)"/>
-      <ellipse cx="${w*0.32}" cy="${hw}" rx="${w*0.05}" ry="${h*0.2}" fill="rgba(210,225,255,0.48)"/>`,
-    brochet: `
-      <ellipse cx="${w*0.5}" cy="${hw}" rx="${w*0.46}" ry="${hw-2}" fill="${c}" opacity="0.88"/>
-      <path d="M${w*0.07} ${h*0.25} L0 0 L${w*0.04} ${hw} L0 ${h} L${w*0.07} ${h*0.75}" fill="${c}" opacity="0.8"/>
-      <circle cx="${w*0.88}" cy="${hw*0.7}" r="3" fill="rgba(255,255,255,0.85)"/>
-      <circle cx="${w*0.9}" cy="${hw*0.7}" r="1.5" fill="#111"/>
-      <path d="M${w*0.58} ${h*0.08} L${w*0.75} 1 L${w*0.77} ${h*0.38}" fill="${c}" opacity="0.7"/>
-      <ellipse cx="${w*0.5}" cy="${hw*0.84}" rx="${w*0.24}" ry="${h*0.22}" fill="rgba(0,150,50,0.22)"/>`,
-    dore: `
-      <ellipse cx="${w*0.52}" cy="${hw}" rx="${w*0.38}" ry="${hw-1}" fill="${c}" opacity="0.92"/>
-      <path d="M${w*0.16} ${h*0.15} L1 0 L${w*0.08} ${hw} L1 ${h} L${w*0.16} ${h*0.85}" fill="${c}"/>
-      <circle cx="${w*0.8}" cy="${hw*0.72}" r="5" fill="rgba(255,255,200,0.88)"/>
-      <circle cx="${w*0.82}" cy="${hw*0.72}" r="2.5" fill="#777"/>
-      <path d="M${w*0.46} ${h*0.1} L${w*0.62} 1 L${w*0.64} ${h*0.38}" fill="${c}" opacity="0.8"/>
-      <path d="M${w*0.46} ${h*0.82} L${w*0.6} ${h} L${w*0.6} ${h*0.6}" fill="${c}" opacity="0.6"/>
-      <ellipse cx="${w*0.16}" cy="${hw}" rx="${w*0.05}" ry="${h*0.2}" fill="rgba(255,255,200,0.5)"/>`,
-    perchaude: `
-      <ellipse cx="${w*0.5}" cy="${hw}" rx="${w*0.36}" ry="${hw-1}" fill="${c}" opacity="0.92"/>
-      <path d="M${w*0.16} ${h*0.2} L1 0 L${w*0.08} ${hw} L1 ${h} L${w*0.16} ${h*0.8}" fill="${c}"/>
-      <circle cx="${w*0.76}" cy="${hw*0.72}" r="3.5" fill="rgba(255,255,255,0.88)"/>
-      <circle cx="${w*0.78}" cy="${hw*0.72}" r="1.8" fill="#333"/>
-      <line x1="${w*0.44}" y1="${h*0.12}" x2="${w*0.44}" y2="${h*0.88}" stroke="rgba(0,0,0,0.35)" stroke-width="2.5"/>
-      <line x1="${w*0.56}" y1="${h*0.1}" x2="${w*0.56}" y2="${h*0.9}" stroke="rgba(0,0,0,0.35)" stroke-width="2.5"/>
-      <line x1="${w*0.66}" y1="${h*0.15}" x2="${w*0.66}" y2="${h*0.85}" stroke="rgba(0,0,0,0.3)" stroke-width="2"/>`,
-  };
-  return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">${shapes[key]||shapes.omble}</svg>`;
-}
+// Fishing spots — omble de fontaine (mix official + predicted)
+const FISHING_SPOTS = [
+  { id: 'official_0', lat: 46.82069, lon: -73.36353, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
+    bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
+    why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
+  { id: 'official_1', lat: 46.82049, lon: -73.36246, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
+    bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
+    why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
+  { id: 'official_2', lat: 46.82065, lon: -73.36196, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
+    bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
+    why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
+  { id: 'official_3', lat: 46.82084, lon: -73.36148, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
+    bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
+    why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
+  { id: 'official_4', lat: 46.82086, lon: -73.36139, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
+    bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
+    why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
+  { id: 'official_5', lat: 46.82089, lon: -73.36131, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
+    bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
+    why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
+  { id: 'inlet', lat: 46.82444, lon: -73.3656, name: "Entrée nord — Eau fraîche", icon: "🎣", type: "inlet",
+    bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [5, 6, 7, 18, 19], score_base: 85,
+    why: "Entrée d'eau froide et oxygénée. L'Omble de fontaine affectionne ces zones de convergence thermique, surtout en mai." },
+  { id: 'outlet', lat: 46.81892, lon: -73.37209, name: "Sortie sud — Affût courant", icon: "🎣", type: "outlet",
+    bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 17, 18], score_base: 72,
+    why: "Sortie d'eau (émissaire). Les omble de fontaines se tiennent souvent à la sortie pour profiter du courant." },
+  { id: 'center', lat: 46.82183, lon: -73.36845, name: "Centre lac — Pélagique", icon: "🐟", type: "pelagic",
+    bestTime: [5, 6, 7, 19, 20], peakTime: [6, 19, 20], score_base: 50,
+    why: "Zone de transit. Les omble de fontaines croisent le centre en début/fin de journée." }
+];
 
-function createFishMarkerIcon(key, facing = 'right') {
-  const sp = SPECIES[key];
-  const W = key === 'brochet' ? 72 : 54, H = 26;
-  return L.divIcon({
-    className: 'fish-marker',
-    html: `<div class="fish-animate" style="filter:drop-shadow(0 0 7px ${sp.glow});transform:scaleX(${facing==='left'?-1:1});display:inline-block;">${getFishSVG(key,W,H)}</div>`,
-    iconSize: [W, H], iconAnchor: [W/2, H/2],
-  });
-}
-
-let fishMarker = null;
-let fishPrevLon = null;
-
-function updateFishMarker(scored) {
-  const top = scored[0];
-  const facing = (fishPrevLon !== null && top.lon < fishPrevLon) ? 'left' : 'right';
-  const icon = createFishMarkerIcon(currentSpecies, facing);
-  if (!fishMarker) {
-    fishMarker = L.marker([top.lat, top.lon], { icon, zIndexOffset: 500, interactive: false }).addTo(map);
-  } else {
-    fishMarker.setLatLng([top.lat, top.lon]);
-    fishMarker.setIcon(icon);
-  }
-  fishPrevLon = top.lon;
-}
-
-function setSpecies(key) {
-  currentSpecies = key;
-  fishPrevLon = null;
-  update();
-}
-
-// ── Dates du voyage : 20–22 mai 2026 ────────────────────────
-const TRIP_DATES = ['2026-05-20', '2026-05-21', '2026-05-22'];
+// Trip dates
+const TRIP_DATES = ["2026-05-23", "2026-05-24", "2026-05-25"];
 let currentDate = TRIP_DATES[0];
 let currentDayIdx = 0;
 let currentTime = 6.0;
 
-const _pad = n => String(n).padStart(2, '0');
+// Weather defaults (overridden by API)
+let WEATHER = [
+  { min: 10, max: 21, icon: '🌦️', desc: 'Bruine légère', cloud: 1.0 },
+  { min:  1, max:  9, icon: '☁️', desc: 'Très nuageux',  cloud: 0.88 },
+  { min: -3, max: 14, icon: '⛅', desc: 'Dégagement',    cloud: 0.21 },
+];
 
 // ============================================================
-// SUN POSITION CALCULATION
+// WEATHER API — Open-Meteo
+// ============================================================
+const WMO_CODE = {0:'Clair',1:'Peu nuageux',2:'Partiellement nuageux',3:'Couvert',45:'Brouillard',48:'Brouillard givrant',51:'Bruine légère',53:'Bruine',55:'Bruine forte',61:'Pluie légère',63:'Pluie',65:'Pluie forte',71:'Neige légère',73:'Neige',75:'Neige forte',80:'Averses légères',81:'Averses',82:'Averses violentes',95:'Orage',96:'Orage grêle',99:'Orage fort grêle'};
+const WMO_ICON = {0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',61:'🌦️',63:'🌧️',65:'🌧️',71:'🌨️',73:'❄️',75:'❄️',80:'🌦️',81:'🌧️',82:'🌩️',95:'⛈️',96:'⛈️',99:'⛈️'};
+
+async function fetchWeatherForecast() {
+  const url = 'https://api.open-meteo.com/v1/forecast?latitude=46.806&longitude=-73.358&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,weather_code&hourly=temperature_2m,precipitation_probability,wind_speed_10m&timezone=America%2FToronto&start_date=2026-05-20&end_date=2026-05-22&wind_speed_unit=kmh';
+  try {
+    const resp = await fetch(url);
+    const data = await resp.json();
+    return data;
+  } catch(e) { return null; }
+}
+
+function buildForecastPanel(data) {
+  const panel = document.getElementById('forecastPanel');
+  if (!data || !data.daily) {
+    panel.innerHTML = '<div style="font-size:10px;color:var(--text-muted);text-align:center;padding:8px;">Prévisions non disponibles (ouvrir en ligne)</div>';
+    return;
+  }
+  const d = data.daily;
+  const h = data.hourly;
+  let html = '';
+  const dayNames = ['Mer 20 mai', 'Jeu 21 mai', 'Ven 22 mai'];
+  for (let i = 0; i < 3; i++) {
+    const wcode = d.weather_code[i];
+    const icon = WMO_ICON[wcode] || '🌤️';
+    const desc = WMO_CODE[wcode] || 'Variable';
+    const tmax = Math.round(d.temperature_2m_max[i]);
+    const tmin = Math.round(d.temperature_2m_min[i]);
+    const precip = d.precipitation_sum[i] ? d.precipitation_sum[i].toFixed(1) : '0.0';
+    const wind = Math.round(d.wind_speed_10m_max[i]);
+    const hourOffset = i * 24;
+    let bestMorn = 6, bestMornTemp = 99;
+    for (let hh = 5; hh <= 9; hh++) {
+      const idx = hourOffset + hh;
+      if (h && h.temperature_2m && h.temperature_2m[idx] !== undefined && h.temperature_2m[idx] < bestMornTemp) {
+        bestMornTemp = h.temperature_2m[idx]; bestMorn = hh;
+      }
+    }
+    const moonHour = (bestMorn < 10 ? '0' : '') + bestMorn;
+    const moonHourEnd = (bestMorn + 3 < 10 ? '0' : '') + (bestMorn + 3);
+    WEATHER[i] = {
+      min: tmin, max: tmax, icon: icon, desc: desc,
+      cloud: (wcode >= 3 ? 0.8 : wcode >= 1 ? 0.4 : 0.1),
+      precip: precip, wind: wind
+    };
+    // Fishing quality summary
+    let fishMsg = '';
+    if (tmax >= 5 && tmax <= 18) fishMsg = 'Conditions optimales omble';
+    else if (tmax > 18) fishMsg = 'Chaud — pêcher tôt le matin';
+    else fishMsg = 'Froid — omble actif en surface';
+    html += `
+    <div class="forecast-day">
+      <div class="forecast-day-header">
+        <span class="forecast-day-name">${dayNames[i]}</span>
+        <span class="forecast-day-icon">${icon}</span>
+        <span class="forecast-day-temp">${tmin}–${tmax}°C</span>
+      </div>
+      <div class="forecast-details">☁️ ${desc}&nbsp;&nbsp;💧 ${precip}mm&nbsp;&nbsp;💨 ${wind} km/h</div>
+      <div class="forecast-fishing">🎣 ${moonHour}h–${moonHourEnd}h · 18h–20h · ${fishMsg}</div>
+    </div>`;
+  }
+  panel.innerHTML = html;
+  update();
+}
+
+// ============================================================
+// SUN POSITION
 // ============================================================
 function getSunPosition(hour, dayOfYear) {
   const decl = 23.45 * Math.sin((2 * Math.PI / 365) * (dayOfYear - 81));
@@ -1356,63 +1235,30 @@ function getDayOfYear(dateStr) {
   return Math.floor((d - start) / 86400000);
 }
 
-// ============================================================
-// WATER TEMPERATURE ESTIMATION
-// ============================================================
 function estimateWaterTemp(airMax, airMin, hour, cloud) {
   const airTemp = airMin + (airMax - airMin) * Math.sin(Math.PI * Math.max(0, hour - 5) / 18);
   const waterBase = (airMax + airMin) / 2 - 3;
   const diurnal = (airTemp - (airMax + airMin) / 2) * 0.3;
-  const cloudEffect = cloud * -0.5;
+  const cloudEffect = (cloud || 0.5) * -0.5;
   return Math.max(4, waterBase + diurnal + cloudEffect);
-}
-
-// ============================================================
-// SPOT SCORING
-// ============================================================
-function scoreSpot(spot, hour, weather) {
-  const sp = SPECIES[currentSpecies];
-  let score = spot.score_base;
-  score += (sp.bonus[spot.type] || 0) + (sp.malus[spot.type] || 0);
-  const wt = estimateWaterTemp(weather.max, weather.min, hour, weather.cloud);
-  if (wt >= sp.tempOpt1 && wt <= sp.tempOpt2) score += 15;
-  else if (wt >= sp.tempMin && wt <= sp.tempMax) score += 5;
-  else score -= 12;
-  const h = Math.round(hour * 2) / 2;
-  if (spot.peakTime.includes(h)) score += 20;
-  else if (spot.bestTime.includes(Math.floor(h))) score += 10;
-  else score -= 15;
-  if ((hour >= 5 && hour <= 7.5) || (hour >= 17.5 && hour <= 20)) score += 10;
-  if (hour >= 11 && hour <= 14) {
-    if (sp.depthPref[0] >= 4) score += 15;
-    else if (spot.type !== 'fosse profonde') score -= 10;
-  }
-  if (hour >= 11 && hour <= 14 && spot.type === 'fosse profonde') score += 15;
-  if (weather.cloud > 0.6) {
-    score += 5;
-    if (spot.type !== 'fosse profonde') score += 5;
-  }
-  if (weather.max < 13 && (spot.depth.includes('0.5') || spot.depth.includes('1–'))) score += 5;
-  return Math.max(0, Math.min(100, score));
 }
 
 // ============================================================
 // MAP INITIALIZATION
 // ============================================================
 const map = L.map('map', {
-  center: [46.82112, -73.36854],
-  zoom: 16, minZoom: 14, maxZoom: 19, zoomControl: false
+  center: MAP_CENTER,
+  zoom: MAP_ZOOM, minZoom: 13, maxZoom: 19, zoomControl: false
 });
 L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
-// Dark base tile layer
+// Dark base tile
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
   attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a> © <a href="https://carto.com/">CARTO</a>',
-  subdomains: 'abcd',
-  maxZoom: 20
+  subdomains: 'abcd', maxZoom: 20
 }).addTo(map);
 
-// Satellite overlay (Esri World Imagery — free, no API key)
+// Satellite overlay
 const satTile = L.tileLayer(
   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
   { attribution: '© <a href="https://www.esri.com/">Esri</a>', maxZoom: 19, opacity: 0.5 }
@@ -1421,206 +1267,104 @@ const satTile = L.tileLayer(
 function setSatOpacity(val) { satTile.setOpacity(val / 100); }
 
 // ============================================================
-// LAYER CONTROLS
+// LAKE POLYGON
 // ============================================================
-const layerBathy   = L.layerGroup().addTo(map);
-const layerThermal = L.layerGroup();
-const layerSun     = L.layerGroup().addTo(map);
-const layerHotzones = L.layerGroup();
-
-const baseMaps   = { "🌊 Bathymétrie": layerBathy, "🌡️ Carte Thermique": layerThermal };
-const overlayMaps = { "☀️ Soleil / Ombre": layerSun, "🎯 Zones de Frappe": layerHotzones };
-L.control.layers(baseMaps, overlayMaps, { position: 'topright', collapsed: false }).addTo(map);
-
-map.on('baselayerchange', function(e) {
-  currentMode = (e.name === "🌡️ Carte Thermique") ? 'thermal' : 'bathy';
-  if (geoJsonLayer) {
-    if (currentMode === 'thermal') { layerBathy.removeLayer(geoJsonLayer); layerThermal.addLayer(geoJsonLayer); }
-    else { layerThermal.removeLayer(geoJsonLayer); layerBathy.addLayer(geoJsonLayer); }
-    geoJsonLayer.setStyle(styleFunction);
-  }
-});
-map.on('overlayadd', function(e) {
-  if (e.name === "☀️ Soleil / Ombre") { showSun = true; document.getElementById('sunOverlay').style.display = 'block'; }
-  if (e.name === "🎯 Zones de Frappe") { showHotzones = true; }
-  if (geoJsonLayer) geoJsonLayer.setStyle(styleFunction);
-});
-map.on('overlayremove', function(e) {
-  if (e.name === "☀️ Soleil / Ombre") { showSun = false; document.getElementById('sunOverlay').style.display = 'none'; }
-  if (e.name === "🎯 Zones de Frappe") { showHotzones = false; }
-  if (geoJsonLayer) geoJsonLayer.setStyle(styleFunction);
-});
+function buildLakeMask() {
+  const lakePoly = L.polygon(LAKE_POLYGON, {
+    color: '#3b82f6',
+    weight: 2,
+    opacity: 0.85,
+    fillColor: '#1d4ed8',
+    fillOpacity: 0.22,
+  }).addTo(map);
+  lakePoly.bindTooltip('Lac Fox — 19.3 ha<br>Source: PDF Sépaq 2024', {
+    direction: 'center', permanent: false, className: 'lake-tooltip'
+  });
+  return lakePoly;
+}
 
 // ============================================================
-// DEPTH LABEL POSITIONS — Lac Fox (4 depth levels)
-// Main basin SW + NE basin
+// WATERWAYS
 // ============================================================
-const DEPTH_LABEL_POS = [
-  // 2m — 3 labels: SE main, NW main, NE basin
-  { depth_m: 2.0, lat: 46.82040, lon: -73.36640 },
-  { depth_m: 2.0, lat: 46.82210, lon: -73.37060 },
-  { depth_m: 2.0, lat: 46.82390, lon: -73.36740 },
-  // 4m — 2 labels: main basin, NE basin
-  { depth_m: 4.0, lat: 46.82090, lon: -73.36900 },
-  { depth_m: 4.0, lat: 46.82400, lon: -73.36750 },
-  // 6m — 2 labels (both basins)
-  { depth_m: 6.0, lat: 46.82065, lon: -73.37045 },
-  { depth_m: 6.0, lat: 46.82410, lon: -73.36730 },
-  // 8m — 1 label (main basin fosse)
-  { depth_m: 8.0, lat: 46.82088, lon: -73.37020 },
-];
-
-const depthLabelMarkers = [];
-function depthVal(d) {
-  return currentUnit === 'm' ? d.toFixed(1) + ' m' : (d * 3.28084).toFixed(0) + ' pi';
-}
-function buildDepthLabels() {
-  depthLabelMarkers.forEach(m => m.remove());
-  depthLabelMarkers.length = 0;
-  DEPTH_LABEL_POS.forEach(lp => {
-    const m = L.marker([lp.lat, lp.lon], {
-      icon: L.divIcon({
-        className: 'dlabel-icon',
-        html: `<span class="dlabel-txt" data-d="${lp.depth_m}">${depthVal(lp.depth_m)}</span>`,
-        iconSize: [52, 18], iconAnchor: [26, 9]
-      }), interactive: false, zIndexOffset: -100
-    });
-    m.addTo(layerBathy);
-    depthLabelMarkers.push(m);
-  });
-}
-function updateDepthLabels() {
-  depthLabelMarkers.forEach(m => {
-    const el = m.getElement();
-    if (!el) return;
-    const span = el.querySelector('.dlabel-txt');
-    if (span) span.textContent = depthVal(parseFloat(span.dataset.d));
-  });
-}
-
-// Depth labels on thermal map (offset ~25m to avoid overlap with temp labels)
-const THERMAL_DEPTH_LABEL_POS = [
-  { depth_m: 2.0, lat: 46.82063, lon: -73.36608 },
-  { depth_m: 2.0, lat: 46.82233, lon: -73.37028 },
-  { depth_m: 2.0, lat: 46.82413, lon: -73.36708 },
-  { depth_m: 4.0, lat: 46.82067, lon: -73.36868 },
-  { depth_m: 4.0, lat: 46.82423, lon: -73.36718 },
-  { depth_m: 6.0, lat: 46.82042, lon: -73.37013 },
-  { depth_m: 6.0, lat: 46.82433, lon: -73.36698 },
-  { depth_m: 8.0, lat: 46.82065, lon: -73.36988 },
-];
-
-const thermalDepthLabelMarkers = [];
-function buildThermalDepthLabels() {
-  thermalDepthLabelMarkers.forEach(m => m.remove());
-  thermalDepthLabelMarkers.length = 0;
-  THERMAL_DEPTH_LABEL_POS.forEach(lp => {
-    const m = L.marker([lp.lat, lp.lon], {
-      icon: L.divIcon({
-        className: 'dlabel-icon',
-        html: `<span class="tdepth-lbl" data-d="${lp.depth_m}">${depthVal(lp.depth_m)}</span>`,
-        iconSize: [48, 16], iconAnchor: [24, 8]
-      }), interactive: false, zIndexOffset: -100
-    });
-    m.addTo(layerThermal);
-    thermalDepthLabelMarkers.push(m);
-  });
-}
-function updateThermalDepthLabels() {
-  thermalDepthLabelMarkers.forEach(m => {
-    const el = m.getElement();
-    if (!el) return;
-    const span = el.querySelector('.tdepth-lbl');
-    if (span) span.textContent = depthVal(parseFloat(span.dataset.d));
-  });
-}
-
-// Thermal temperature labels
-const thermalLabelMarkers = [];
-function buildThermalLabels() {
-  thermalLabelMarkers.forEach(m => m.remove());
-  thermalLabelMarkers.length = 0;
-  DEPTH_LABEL_POS.forEach(lp => {
-    const t = getPolygonTemp(lp.depth_m, currentTime);
-    const col = getThermalColor(t);
-    const m = L.marker([lp.lat, lp.lon], {
-      icon: L.divIcon({
-        className: 'dlabel-icon',
-        html: `<span class="tlabel-txt" style="background:${col}cc;" data-d="${lp.depth_m}">${tempDisp(t)}</span>`,
-        iconSize: [58, 20], iconAnchor: [29, 10]
-      }), interactive: false, zIndexOffset: -100
-    });
-    m.addTo(layerThermal);
-    thermalLabelMarkers.push(m);
-  });
-}
-function updateThermalLabels() {
-  thermalLabelMarkers.forEach(m => {
-    const el = m.getElement();
-    if (!el) return;
-    const span = el.querySelector('.tlabel-txt');
-    if (!span) return;
-    const depth = parseFloat(span.dataset.d);
-    const t = getPolygonTemp(depth, currentTime);
-    const col = getThermalColor(t);
-    span.textContent = tempDisp(t);
-    span.style.background = col + 'cc';
+function buildWaterways() {
+  WATERWAYS.forEach(ww => {
+    const color = ww.type === 'inlet' ? '#60a5fa' : '#34d399';
+    L.polyline(ww.coords, {
+      color: color, weight: 3, opacity: 0.9,
+      dashArray: ww.type === 'outlet' ? '6,4' : '',
+    }).addTo(map).bindPopup(
+      '<div style="font-family:Inter;min-width:180px"><strong>' + ww.name + '</strong><br>' +
+      '<span style="font-size:11px;color:#94a3b8;">' +
+      (ww.type === 'inlet' ? "Entrée d'eau froide — Spot #1 omble en mai" : "Émissaire — Ombles à l'affût du courant") +
+      '</span></div>'
+    );
+    // Arrow marker at midpoint
+    const mid = ww.coords[Math.floor(ww.coords.length / 2)];
+    L.marker(mid, { icon: L.divIcon({
+      className: '',
+      html: '<div style="font-size:14px;filter:drop-shadow(0 0 4px ' + color + ');">⬇️</div>',
+      iconSize: [18, 18], iconAnchor: [9, 9]
+    }), interactive: false }).addTo(map);
+    // Label at first coord
+    const lbl = ww.coords[0];
+    L.marker(lbl, { icon: L.divIcon({
+      className: '',
+      html: '<div style="font-size:9px;font-weight:700;color:' + color + ';background:rgba(0,0,0,0.6);padding:2px 5px;border-radius:4px;white-space:nowrap;border:1px solid ' + color + '40;">' + ww.name + '</div>',
+      iconSize: [90, 16], iconAnchor: [45, -4]
+    }), interactive: false }).addTo(map);
   });
 }
 
 // ============================================================
-// BATHYMETRY GEOJSON — inlined (no server, works file://)
-// Source: MFFP 05870_Fox.gpkg (Sépaq 2004), EPSG:32198→WGS84
+// TROUT HABITAT LINE (omble de fontaine)
 // ============================================================
-const BATHYMETRY_GEOJSON = {"type":"FeatureCollection","features":[{"type":"Feature","properties":{"depth_m":2.0},"geometry":{"type":"MultiPolygon","coordinates":[[[[-73.3712110712637,46.81943573067147],[-73.37136515957475,46.819456687300494],[-73.37147788916596,46.81950783071766],[-73.37151901974734,46.819574007108756],[-73.37152700951444,46.819685495026505],[-73.37152954361055,46.819778080820356],[-73.3714935137177,46.8198819626986],[-73.37140202324649,46.82015771869722],[-73.37125244614303,46.82055244946364],[-73.37116226624872,46.820752626609284],[-73.37109595850207,46.82089108216939],[-73.37101018984679,46.82105349452045],[-73.37093604279036,46.821223911338016],[-73.37087357280811,46.82137835741378],[-73.37083454918042,46.82146889119596],[-73.3707642732805,46.821641976858395],[-73.37068240290304,46.82179640054978],[-73.37057335545033,46.82195345769207],[-73.37044879181408,46.82210783259429],[-73.37028535072785,46.82228880460766],[-73.37012590763085,46.8224218263799],[-73.36995825790393,46.82254676294066],[-73.36980639518629,46.82260830441546],[-73.3695589306553,46.82270059000691],[-73.36938741382052,46.822756322488885],[-73.36921033745493,46.82278697664835],[-73.36897710608605,46.82280213640939],[-73.36880573289254,46.82279808576407],[-73.36862879148835,46.82277281146417],[-73.36845468303186,46.8227398258887],[-73.36829174182257,46.82273385205783],[-73.36816246867353,46.82274720380343],[-73.36804159652387,46.82277213526683],[-73.36794888235808,46.82277202815782],[-73.36785059330157,46.82275262862199],[-73.36776921807623,46.82271203609894],[-73.36767384406456,46.822650213408494],[-73.36753652147026,46.82250927379317],[-73.36744976240468,46.82237224589193],[-73.36731810033272,46.82221588267658],[-73.36715837054079,46.82204791626568],[-73.36699305869638,46.821866442690364],[-73.36682767767886,46.82171196820279],[-73.36659447200422,46.82153184268982],[-73.36639177068673,46.821357972034875],[-73.36610868637348,46.82114454304723],[-73.3658371219258,46.82092323311253],[-73.365646022465,46.82070991002731],[-73.3655543967729,46.82056773928003],[-73.36556224025531,46.82049671401449],[-73.36561227195183,46.82041258558554],[-73.36571971503346,46.820360094835216],[-73.36588073290363,46.82033923671125],[-73.36612217029393,46.82034478071356],[-73.366367385711,46.820371376546845],[-73.3665780133112,46.82043739269414],[-73.36671586259587,46.82048754012339],[-73.36687294529904,46.82050876986111],[-73.36712580783534,46.820543263956225],[-73.36727526524163,46.82054869760267],[-73.36745931296352,46.820514711532056],[-73.36773926832687,46.820441371098944],[-73.36800009456007,46.820354853106664],[-73.36830692941777,46.820260496879555],[-73.36860600548883,46.82017692932108],[-73.3689031901055,46.82008990213874],[-73.36923534681735,46.8199874971239],[-73.36945262137836,46.81992093479431],[-73.36968985994274,46.81985610740093],[-73.36990965547614,46.81977755634462],[-73.37004458659024,46.81970747280652],[-73.37016450138636,46.81965450206546],[-73.37030687136168,46.81960327271513],[-73.37045670764826,46.81955890199269],[-73.3705840197343,46.819543628611115],[-73.37074627269268,46.81952496804528],[-73.37084114826142,46.81950623097591],[-73.37096850753623,46.819470399502116],[-73.37108443048362,46.819446924109734],[-73.3712110712637,46.81943573067147]]],[[[-73.36736889128818,46.82366387786],[-73.36746581945026,46.82373254216923],[-73.36760155111156,46.82381648683408],[-73.36774290493274,46.82386997006297],[-73.36789813557029,46.82392156155942],[-73.36798958916381,46.82395975209281],[-73.36815033160563,46.82402658564269],[-73.3682833670762,46.82407815262367],[-73.36837755375255,46.824135387050035],[-73.36852157601199,46.82423266950693],[-73.36867945689343,46.8243356792373],[-73.36874860500161,46.82442144731576],[-73.3687567444903,46.82449572285836],[-73.36875111343126,46.82452999380086],[-73.36867615868256,46.82455085286661],[-73.36846253725264,46.82455251244941],[-73.36820730040056,46.82455412207417],[-73.36803808973394,46.82454630952604],[-73.3678328444718,46.82452703142487],[-73.36763874400567,46.82448681895307],[-73.36749176216675,46.82446570067769],[-73.36729763883672,46.824435008748694],[-73.36718395057991,46.82441202624556],[-73.36703705154184,46.82435663228594],[-73.36691235235973,46.824299360339595],[-73.36685977459211,46.82424598231246],[-73.3667823015796,46.82416210508788],[-73.36667158181997,46.82406105273257],[-73.36654978981427,46.823950465074404],[-73.36645297276866,46.82383800352431],[-73.36642814696204,46.82378084812484],[-73.36642555004298,46.823708482688566],[-73.36645067764731,46.82364376863068],[-73.36648690525983,46.82357906843358],[-73.36652309169213,46.82352959935639],[-73.3666314348041,46.82346878995037],[-73.36674257303133,46.82340036698621],[-73.36686468260751,46.82338146768142],[-73.3669923007186,46.823379710834004],[-73.36707552097512,46.8233817130735],[-73.36715591044852,46.82340656138475],[-73.36720576533102,46.82343899085362],[-73.36724450670313,46.823479025373985],[-73.36729704436725,46.82354954147709],[-73.36732739964893,46.82361432185504],[-73.36736889128818,46.82366387786]]]]}},{"type":"Feature","properties":{"depth_m":4.0},"geometry":{"type":"MultiPolygon","coordinates":[[[[-73.37071714214738,46.820140753976034],[-73.37078185031211,46.820097823363284],[-73.37094846804105,46.82001065815744],[-73.37105819721701,46.819970464480086],[-73.371136538014,46.81995711379335],[-73.37118349505994,46.81996926039925],[-73.37124218215094,46.81998814208619],[-73.37125383221232,46.82002847110895],[-73.37125373607749,46.82006878996704],[-73.37122807375782,46.82015745766326],[-73.37120045226705,46.82024612313267],[-73.37116498697344,46.820341500584284],[-73.37114719948036,46.820411361080886],[-73.37112554022086,46.82046374976793],[-73.37108623078186,46.82052821296743],[-73.37100124780905,46.82066506981302],[-73.3709438942231,46.820748003305745],[-73.37086670852392,46.82084902116888],[-73.37079832214198,46.82094853992517],[-73.37069694584576,46.82105405627921],[-73.37060217349183,46.821155057058384],[-73.37047882156448,46.82125602240033],[-73.37034887713456,46.82135697818052],[-73.37018156592961,46.82145487606678],[-73.3700121333061,46.82152108159626],[-73.36991536642795,46.82153606284028],[-73.3697351004557,46.82153585801019],[-73.36952626496596,46.8215326023665],[-73.36935966671354,46.821514071956805],[-73.36918027726263,46.82148129696914],[-73.36892666912962,46.821430031040634],[-73.36865454256704,46.821358916353844],[-73.36832258642272,46.821290565008965],[-73.36809583115566,46.821225169027045],[-73.36793296660154,46.82118391605719],[-73.36776595226297,46.8211525702052],[-73.36760519096367,46.82109432760579],[-73.36751041702212,46.82104607345403],[-73.3674857787436,46.82099931663767],[-73.36748380881572,46.82096108120817],[-73.36752106650921,46.820910147576626],[-73.367609914736,46.82085077793445],[-73.36775033735861,46.82079004925112],[-73.36790928089003,46.820747752518955],[-73.3680228230554,46.82071248251694],[-73.36810128638723,46.820681421312116],[-73.36827465501973,46.82064480325202],[-73.36857796738707,46.820614000210206],[-73.3688133070196,46.82059175624462],[-73.36911086746365,46.82055360067701],[-73.36934012681729,46.82052708310114],[-73.36948156010772,46.820522223858454],[-73.36968398785119,46.82050069582446],[-73.3698791358071,46.820464096394396],[-73.37002795871751,46.82042744255193],[-73.37022561991657,46.8203590437601],[-73.370425725972,46.82028897330161],[-73.37060881011789,46.8201987985796],[-73.37071714214738,46.820140753976034]]],[[[-73.36736020825745,46.82381049488799],[-73.36752926604596,46.823879243299075],[-73.36775650830086,46.82397852672582],[-73.36800036103938,46.82409306046346],[-73.36817770982958,46.82417514675673],[-73.36836059910867,46.82426104647681],[-73.36847972050299,46.824331639538016],[-73.36852119974782,46.8243869103881],[-73.36851551098984,46.82444403330626],[-73.3684793501782,46.82448398011519],[-73.36842660536682,46.8244972476112],[-73.36824631193012,46.824483711772736],[-73.36799669965318,46.824454859431704],[-73.36777207562622,46.82441842081801],[-73.36749756214634,46.82436287952849],[-73.36722310517305,46.824284489250566],[-73.36710113735882,46.82424435997181],[-73.36699033303445,46.82417758303637],[-73.36686018383199,46.82408031464504],[-73.36672177757087,46.82395637827932],[-73.36665536601397,46.82388774950301],[-73.36661664831698,46.823838193572385],[-73.36658626153287,46.82378674364677],[-73.36655586640417,46.823737197761105],[-73.36657540710958,46.82368771218426],[-73.36664491058195,46.823628761947724],[-73.36672823530542,46.82358887024216],[-73.36681705579306,46.82356993078882],[-73.36688642564367,46.823564299702106],[-73.36696408715609,46.82357010194416],[-73.36704168248961,46.82360446922442],[-73.36708872877796,46.82365022380388],[-73.36722999931656,46.82373798272258],[-73.36736020825745,46.82381049488799]]]]}},{"type":"Feature","properties":{"depth_m":6.0},"geometry":{"type":"MultiPolygon","coordinates":[[[[-73.37109394661319,46.82022947385012],[-73.37110358681798,46.820276350222564],[-73.37109617049074,46.820319858110736],[-73.3710252119791,46.82042354848229],[-73.37091028977294,46.820558990582086],[-73.3708270984945,46.820681081479435],[-73.37072679489332,46.820819886803164],[-73.3705996393778,46.82097205314755],[-73.37047987535571,46.821092425316515],[-73.37036015825748,46.821192714708204],[-73.3701770128664,46.82130632079758],[-73.37001347241576,46.821379778554494],[-73.36992071858624,46.82141984327927],[-73.36986710839028,46.82140639262933],[-73.36980380194697,46.82136949883139],[-73.36973321227354,46.82131920659848],[-73.36973088382658,46.82127401265071],[-73.36976028954648,46.82121379174315],[-73.36983604907826,46.82114190736517],[-73.3699533494293,46.821033248361594],[-73.37003648092396,46.82093794033598],[-73.3701318319748,46.820830929395086],[-73.37023202547188,46.820737315337276],[-73.37033958220529,46.820623621192006],[-73.37042511479297,46.82054337911804],[-73.37051059739066,46.82048322334206],[-73.37059609398361,46.82041804402324],[-73.37067185579737,46.820344484639065],[-73.37079884909701,46.820259269620436],[-73.37088916767493,46.82021585388298],[-73.37095992558716,46.820195848656226],[-73.37105011885554,46.82020431756911],[-73.37109394661319,46.82022947385012]]],[[[-73.36762849759128,46.82414023684948],[-73.36771439493764,46.824182227471915],[-73.3677698289011,46.824203239442696],[-73.36778640976677,46.82422991895982],[-73.36777247735812,46.824254656962545],[-73.36768921671528,46.82426789175315],[-73.36758934860534,46.824265870104064],[-73.36747289405396,46.8242409817891],[-73.36732599389197,46.82418558831343],[-73.36717907903706,46.824137811759186],[-73.36706544415401,46.82409388287751],[-73.36699624547671,46.82402906004752],[-73.36696031824277,46.82397379462895],[-73.36695214096179,46.823914753740624],[-73.36696053935799,46.823884294554105],[-73.36699941148433,46.82387101178393],[-73.36707152429187,46.82387871156151],[-73.36716852007417,46.82391881279584],[-73.36724609270627,46.82396270110998],[-73.367340297401,46.82401041547896],[-73.36743176205817,46.82404479686351],[-73.36751992791679,46.8240807231463],[-73.36762849759128,46.82414023684948]]]]}},{"type":"Feature","properties":{"depth_m":8.0},"geometry":{"type":"Polygon","coordinates":[[[-73.37045034233459,46.82084481200914],[-73.3704240605363,46.820890510243096],[-73.37038587997037,46.82093783084338],[-73.37028809641592,46.82103571034519],[-73.3702356470448,46.821079746743436],[-73.37015703023967,46.82112212128956],[-73.37009515796333,46.82112694876687],[-73.37008092852972,46.821108968166065],[-73.37009293615745,46.821061620640535],[-73.37012400010777,46.821006128120615],[-73.37019317611643,46.820932711068664],[-73.37025520456395,46.8208625543188],[-73.3703148876894,46.8207776970997],[-73.37035304883354,46.820738541099345],[-73.37041738610263,46.820697786388685],[-73.37046743695312,46.82066191380856],[-73.37051501738468,46.82066360124915],[-73.37052923603206,46.82068648047728],[-73.3705291423601,46.82072567763538],[-73.37050044948934,46.82078444038546],[-73.37045034233459,46.82084481200914]]]}}]};
-
-(function initGeoJSON() {
-  geoJsonLayer = L.geoJSON(BATHYMETRY_GEOJSON, {
-    style: styleFunction,
-    pointToLayer: function(feature, latlng) { return null; }
-  }).addTo(layerBathy);
-  buildDepthLabels();
-  buildThermalLabels();
-  buildThermalDepthLabels();
-})();
-
-function getPolygonTemp(depth_m, hour) {
-  const baseT = 4 + Math.sin((hour - 5) / 24 * Math.PI) * 8;
-  let t = baseT - (depth_m * 0.4);
-  if (showSun && depth_m < 4.0) t += Math.max(0, Math.sin((hour - 6) / 12 * Math.PI) * 4);
-  return Math.max(t, 4);
+function buildTroutLine() {
+  L.polyline(TROUT_LINE, {
+    color: '#008599',
+    weight: 5,
+    opacity: 0.9,
+    lineCap: 'round',
+    lineJoin: 'round',
+  }).addTo(map).bindPopup(
+    '<div style="font-family:Inter;min-width:180px"><strong style="color:#008599;">Omble de fontaine — Habitat PDF</strong><br>' +
+    '<span style="font-size:11px;color:#94a3b8;">Zone de présence confirmée (carte Sépaq 2024)<br>Rive est — eau froide et oxygénée</span></div>'
+  );
+  // Label
+  const mid = TROUT_LINE[1];
+  L.marker(mid, { icon: L.divIcon({
+    className: '',
+    html: '<div style="font-size:9px;font-weight:700;color:#008599;background:rgba(0,0,0,0.6);padding:2px 5px;border-radius:4px;white-space:nowrap;border:1px solid #00859940;">Omble de fontaine</div>',
+    iconSize: [100, 16], iconAnchor: [50, -4]
+  }), interactive: false }).addTo(map);
 }
 
-function getThermalColor(t) {
-  if (t < 6)  return '#1e3a8a';
-  if (t < 8)  return '#3b82f6';
-  if (t < 10) return '#06b6d4';
-  if (t < 13) return '#10b981';
-  if (t < 15) return '#fde047';
-  if (t < 17) return '#f59e0b';
-  return '#ef4444';
+// ============================================================
+// ACCESS PATH (chemin d'accès au lac)
+// ============================================================
+function buildAccessPath() {
+  L.polyline(ACCESS_PATH, {
+    color: '#d946ef',
+    weight: 3,
+    opacity: 0.85,
+    dashArray: '8,5',
+  }).addTo(map).bindPopup(
+    '<div style="font-family:Inter;min-width:160px"><strong style="color:#d946ef;">Chemin d\'accès</strong><br>' +
+    '<span style="font-size:11px;color:#94a3b8;">Sentier vers mise à l\'eau<br>Source: carte PDF Sépaq 2024</span></div>'
+  );
 }
 
-function styleFunction(feature) {
-  if (feature.properties.type === 'fosse') return null;
-  const d = feature.properties.depth_m;
-  const hour = parseFloat(document.getElementById('timeSlider').value);
-  let color, fillOpacity;
-  if (currentMode === 'bathy') {
-    color = depthColors[d] || '#0288d1';
-    fillOpacity = 0.6;
-  } else {
-    const t = getPolygonTemp(d, hour);
-    color = getThermalColor(t);
-    fillOpacity = 0.7;
-  }
-  let weight = 1, dashArray = '';
-  if (showHotzones) {
-    const t = getPolygonTemp(d, hour);
-    if (t >= 10 && t <= 14) { weight = 3; color = '#34d399'; fillOpacity = 0.9; dashArray = '5, 5'; }
-    else if (currentMode === 'bathy') { fillOpacity = 0.2; }
-  }
-  return { fillColor: color, fillOpacity, color: showHotzones ? color : '#0288d1', weight, opacity: 0.8, dashArray };
+// ============================================================
+// BOAT ACCESS
+// ============================================================
+function buildBoatAccess() {
+  BOAT_ACCESS.forEach(ba => {
+    L.marker([ba.lat, ba.lon], { icon: L.divIcon({
+      className: '',
+      html: '<div style="width:18px;height:18px;background:#8b5cf6;border:2px solid #fff;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:10px;box-shadow:0 0 10px rgba(139,92,246,0.7);">⛵</div>',
+      iconSize: [18, 18], iconAnchor: [9, 9]
+    })}).addTo(map)
+    .bindPopup('<div style="font-family:Inter"><strong>Mise à l\'eau — Chaloupe</strong><br><span style="font-size:11px;color:#94a3b8;">Accès validé PDF Sépaq 2024</span></div>');
+  });
 }
 
 // ============================================================
@@ -1628,48 +1372,92 @@ function styleFunction(feature) {
 // ============================================================
 const spotMarkers = {};
 const spotCircles = {};
-const spotIcons = {
-  'embouchure': '💧', 'pointe/étranglement': '📌', 'fosse profonde': '🔵',
-  'émissaire': '💧', 'baie/herbier': '🌿', 'escarpement/pente raide': '📐',
-  'connexion/passage': '🔗'
-};
 
-function createSpotIcon(spot, score) {
-  const isTop = score >= 80;
-  const hue = score < 40 ? 0 : score < 60 ? 30 : score < 80 ? 150 : 140;
-  const bg = `hsl(${hue}, 70%, ${isTop ? 45 : 35}%)`;
+function createSpotIcon(spot, isTopPick) {
+  const isOfficial = spot.type === 'official';
+  const size = isTopPick ? 36 : 28;
+  let bg, border, glow;
+  if (isOfficial) {
+    bg = '#d97706'; border = '#fbbf24'; glow = 'rgba(217,119,6,0.7)';
+  } else if (isTopPick) {
+    bg = '#0d9488'; border = '#34d399'; glow = 'rgba(16,185,129,0.6)';
+  } else {
+    bg = '#0369a1'; border = '#38bdf8'; glow = 'rgba(6,182,212,0.4)';
+  }
   return L.divIcon({
     className: 'custom-spot-marker',
-    html: `<div style="position:relative;width:${isTop?36:28}px;height:${isTop?36:28}px;border-radius:50%;background:${bg};border:2px solid rgba(255,255,255,${isTop?0.9:0.5});display:flex;align-items:center;justify-content:center;font-size:${isTop?14:11}px;box-shadow:0 0 ${isTop?20:8}px ${bg};transition:all 0.3s;cursor:pointer;">${isTop ? '⭐' : spotIcons[spot.type] || '🎯'}${isTop ? `<div style="position:absolute;top:-8px;right:-8px;background:#10b981;color:#fff;font-size:9px;font-weight:800;padding:1px 4px;border-radius:6px;font-family:Inter;">${score}</div>` : ''}</div>`,
-    iconSize: [isTop?36:28, isTop?36:28], iconAnchor: [isTop?18:14, isTop?18:14]
+    html: '<div style="position:relative;width:' + size + 'px;height:' + size + 'px;border-radius:50%;background:' + bg + ';border:2px solid ' + border + ';display:flex;align-items:center;justify-content:center;font-size:' + (isTopPick?14:11) + 'px;box-shadow:0 0 ' + (isTopPick?20:8) + 'px ' + glow + ';cursor:pointer;">' + spot.icon + '</div>',
+    iconSize: [size, size], iconAnchor: [size/2, size/2]
   });
 }
 
+function scoreSpot(spot, hour) {
+  const weather = WEATHER[currentDayIdx];
+  let score = spot.score_base;
+  const h = Math.round(hour * 2) / 2;
+  if (spot.peakTime.includes(h)) score += 20;
+  else if (spot.bestTime.includes(Math.floor(h))) score += 8;
+  else score -= 15;
+  if ((hour >= 5 && hour <= 8) || (hour >= 18 && hour <= 20)) score += 10;
+  if (hour >= 11 && hour <= 15) score -= 8;
+  const wt = estimateWaterTemp(weather.max, weather.min, hour, weather.cloud || 0.5);
+  if (wt >= 8 && wt <= 16) score += 10;
+  else if (wt < 5 || wt > 20) score -= 12;
+  if ((weather.cloud || 0) > 0.6) score += 5;
+  return Math.max(0, Math.min(100, score));
+}
+
 FISHING_SPOTS.forEach(spot => {
-  const marker = L.marker([spot.lat, spot.lon], {
-    icon: createSpotIcon(spot, spot.score_base)
-  }).addTo(map);
-  marker.bindPopup(`
-    <div style="font-family:Inter;min-width:200px">
-      <strong style="font-size:13px">${spot.name}</strong><br>
-      <span style="color:#666;font-size:11px">${spot.type} · ${spot.depth}</span><br>
-      <p style="font-size:11px;margin:6px 0">${spot.why}</p>
-      <div style="font-size:10px;color:#888">
-        📍 ${spot.lat.toFixed(4)}°N, ${Math.abs(spot.lon).toFixed(4)}°W<br>
-        ☀️ ${spot.sunExposure}
-      </div>
-    </div>
-  `);
+  const marker = L.marker([spot.lat, spot.lon], { icon: createSpotIcon(spot, false) }).addTo(map);
+  marker.bindPopup(
+    '<div style="font-family:Inter;min-width:220px;max-width:280px">' +
+    '<strong style="font-size:13px">' + spot.icon + ' ' + spot.name + '</strong><br>' +
+    '<span style="color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;">' +
+    (spot.type === 'official' ? 'SITE SÉPAQ OFFICIEL' : 'Spot déduit — géographie') + '</span>' +
+    '<p style="font-size:11px;margin:8px 0;color:#e2e8f0;line-height:1.5">' + spot.why + '</p>' +
+    '<div style="font-size:10px;color:#64748b;">📍 ' + spot.lat.toFixed(5) + '°N, ' + Math.abs(spot.lon).toFixed(5) + '°W<br>🕐 Meilleur: 05h-09h · 18h-20h</div>' +
+    '</div>'
+  );
   const circle = L.circle([spot.lat, spot.lon], {
-    radius: 20, color: '#10b981', fillColor: '#10b981', fillOpacity: 0.15, weight: 1
+    radius: 30, color: '#10b981', fillColor: '#10b981', fillOpacity: 0.15, weight: 1
   });
   spotMarkers[spot.id] = marker;
   spotCircles[spot.id] = circle;
-  marker.on('click', () => {
-    const card = document.querySelector(`[data-spot="${spot.id}"]`);
-    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  });
 });
+
+// ============================================================
+// ANIMATED FISH MARKER
+// ============================================================
+let fishMarker = null;
+let fishPrevLon = null;
+
+function getFishSVG(w, h) {
+  const c = '#f59e0b', hw = h / 2;
+  return '<svg viewBox="0 0 ' + w + ' ' + h + '" width="' + w + '" height="' + h + '" xmlns="http://www.w3.org/2000/svg">' +
+    '<ellipse cx="' + (w*0.55) + '" cy="' + hw + '" rx="' + (w*0.38) + '" ry="' + (hw-1) + '" fill="' + c + '" opacity="0.95"/>' +
+    '<path d="M' + (w*0.18) + ' ' + (h*0.2) + ' L2 0 L' + (w*0.1) + ' ' + hw + ' L2 ' + h + ' L' + (w*0.18) + ' ' + (h*0.8) + '" fill="' + c + '"/>' +
+    '<circle cx="' + (w*0.82) + '" cy="' + (hw*0.76) + '" r="3.5" fill="rgba(255,255,255,0.9)"/>' +
+    '<circle cx="' + (w*0.84) + '" cy="' + (hw*0.76) + '" r="1.8" fill="#222"/>' +
+    '<ellipse cx="' + (w*0.5) + '" cy="' + (h*0.72) + '" rx="' + (w*0.16) + '" ry="' + (h*0.2) + '" fill="rgba(255,120,20,0.4)"/>' +
+    '</svg>';
+}
+
+function updateFishMarker(topSpot) {
+  const facing = (fishPrevLon !== null && topSpot.lon < fishPrevLon) ? 'left' : 'right';
+  const W = 54, H = 26;
+  const icon = L.divIcon({
+    className: 'fish-marker',
+    html: '<div class="fish-animate" style="filter:drop-shadow(0 0 7px rgba(245,158,11,0.55));transform:scaleX(' + (facing==='left'?-1:1) + ');display:inline-block;">' + getFishSVG(W,H) + '</div>',
+    iconSize: [W, H], iconAnchor: [W/2, H/2],
+  });
+  if (!fishMarker) {
+    fishMarker = L.marker([topSpot.lat, topSpot.lon], { icon, zIndexOffset: 500, interactive: false }).addTo(map);
+  } else {
+    fishMarker.setLatLng([topSpot.lat, topSpot.lon]);
+    fishMarker.setIcon(icon);
+  }
+  fishPrevLon = topSpot.lon;
+}
 
 // ============================================================
 // UPDATE FUNCTION
@@ -1678,16 +1466,16 @@ function update() {
   const weather = WEATHER[currentDayIdx];
   const doy = getDayOfYear(currentDate);
   const sun = getSunPosition(currentTime, doy);
-  const waterTemp = estimateWaterTemp(weather.max, weather.min, currentTime, weather.cloud);
+  const waterTemp = estimateWaterTemp(weather.max, weather.min, currentTime, weather.cloud || 0.5);
 
   const totalMin = Math.round(currentTime * 60);
-  const h = Math.floor(totalMin / 60);
-  const m = totalMin % 60;
+  const hh = Math.floor(totalMin / 60);
+  const mm = totalMin % 60;
   document.getElementById('timeDisplay').textContent =
-    `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+    hh.toString().padStart(2,'0') + ':' + mm.toString().padStart(2,'0');
 
   document.getElementById('weatherIcon').textContent = weather.icon;
-  document.getElementById('weatherTemp').textContent = `${weather.min}–${weather.max}°C`;
+  document.getElementById('weatherTemp').textContent = weather.min + '–' + weather.max + '°C';
   document.getElementById('weatherDesc').textContent = weather.desc;
 
   const sunDot = document.getElementById('sunDot');
@@ -1702,103 +1490,94 @@ function update() {
   } else {
     sunDot.setAttribute('opacity', '0.2'); sunLine.setAttribute('opacity', '0');
   }
-  document.getElementById('sunAzimuthText').textContent = `Az: ${Math.round(sun.azimuth)}°`;
-  document.getElementById('sunAltText').textContent = sun.altitude > 0 ? `Alt: ${Math.round(sun.altitude)}°` : 'Sous l\'horizon';
-
-  const tempStr = '~' + tempDisp(waterTemp);
-  document.getElementById('waterTempText').textContent = tempStr;
-  document.getElementById('mapWaterTempVal').textContent = tempStr;
+  document.getElementById('sunAzimuthText').textContent = 'Az: ' + Math.round(sun.azimuth) + '°';
+  document.getElementById('sunAltText').textContent = sun.altitude > 0 ? 'Alt: ' + Math.round(sun.altitude) + '°' : "Sous l'horizon";
+  document.getElementById('waterTempText').textContent = '~' + waterTemp.toFixed(1) + '°C';
 
   const sunFactor = Math.max(0, Math.min(1, sun.altitude / 90));
   const el = document.getElementById('sunOverlay');
   if (el) {
     if (sun.altitude > 0) {
-      el.style.background = `linear-gradient(${sun.azimuth*(180/Math.PI)}deg,rgba(255,255,200,${sunFactor*0.1}) 0%,rgba(0,0,0,0) 40%,rgba(0,20,50,${(1-sunFactor)*0.7}) 100%)`;
+      el.style.background = 'linear-gradient(' + (sun.azimuth*(180/Math.PI)) + 'deg,rgba(255,255,200,' + (sunFactor*0.1) + ') 0%,rgba(0,0,0,0) 40%,rgba(0,20,50,' + ((1-sunFactor)*0.7) + ') 100%)';
     } else {
       el.style.background = 'rgba(0,0,40,0.45)';
     }
   }
 
-  if (geoJsonLayer) geoJsonLayer.setStyle(styleFunction);
-  updateThermalLabels();
+  const wt = waterTemp;
+  let tClass, tMsg;
+  if (wt >= 8 && wt <= 16) { tClass = 'thermal-opt'; tMsg = '✅ Optimal — Omble de fontaine'; }
+  else if (wt >= 5 && wt <= 20) { tClass = 'thermal-good'; tMsg = '⚠️ Acceptable — Omble'; }
+  else { tClass = 'thermal-bad'; tMsg = '🔴 Hors confort — Omble'; }
+  const ts = document.getElementById('thermalStatus');
+  ts.className = 'thermal-status ' + tClass;
+  ts.innerHTML = tMsg + '<br><span style="font-size:9px;opacity:0.7;font-weight:500;">Opt: 8–16°C · Max: 20°C · Actif: 0–4m</span>';
 
-  const scored = FISHING_SPOTS.map(s => ({
-    ...s, score: scoreSpot(s, currentTime, weather)
-  })).sort((a, b) => b.score - a.score);
+  const scored = FISHING_SPOTS.map(s => Object.assign({}, s, { score: scoreSpot(s, currentTime) }))
+    .sort((a, b) => b.score - a.score);
 
   scored.forEach((spot, i) => {
-    const marker = spotMarkers[spot.id];
+    const isTop = i < 3 && spot.score >= 55;
+    spotMarkers[spot.id].setIcon(createSpotIcon(spot, isTop));
     const circle = spotCircles[spot.id];
-    marker.setIcon(createSpotIcon(spot, spot.score));
-    if (spot.score >= 80 && i < 3) {
+    if (isTop) {
       if (!map.hasLayer(circle)) circle.addTo(map);
-      circle.setStyle({ color: '#10b981', fillColor: '#10b981', fillOpacity: 0.12 + (spot.score - 80) * 0.005 });
+      circle.setStyle({ fillOpacity: 0.12 + (spot.score - 55) * 0.005 });
     } else {
       if (map.hasLayer(circle)) map.removeLayer(circle);
     }
   });
 
-  const sp = SPECIES[currentSpecies];
-  document.getElementById('spotsTitle').textContent = `📍 ${sp.name} — Top spots`;
   const container = document.getElementById('spotsContainer');
   container.innerHTML = scored.map((spot, i) => {
-    const isTop3 = i < 3;
-    const scoreColor = spot.score >= 80 ? sp.color : spot.score >= 60 ? '#f59e0b' : '#94a3b8';
-    return `<div class="spot-card ${spot.score >= 80 ? 'top-pick' : ''}" data-spot="${spot.id}"
-      onclick="map.setView([${spot.lat}, ${spot.lon}], 17); spotMarkers['${spot.id}'].openPopup();">
-      <span class="spot-score" style="-webkit-text-fill-color:${scoreColor};color:${scoreColor};">${spot.score}</span>
-      <div class="spot-name">${isTop3 ? '⭐ ' : ''}${spot.name}</div>
-      <div class="spot-detail">${spot.type} · ${spot.depth}<br>${spot.why.substring(0,60)}${spot.why.length>60?'…':''}</div>
-    </div>`;
+    const isTop = i < 3 && spot.score >= 55;
+    const isOff = spot.type === 'official';
+    const scoreColor = spot.score >= 75 ? '#10b981' : spot.score >= 55 ? '#f59e0b' : '#94a3b8';
+    return '<div class="spot-card ' + (isOff ? 'official-pick' : (isTop ? 'top-pick' : '')) + '" onclick="map.setView([' + spot.lat + ',' + spot.lon + '],16);spotMarkers[' + spot.id + '].openPopup();">' +
+      '<span style="float:right;font-size:18px;font-weight:800;color:' + scoreColor + ';">' + spot.score + '</span>' +
+      '<div class="spot-name">' + (isTop ? '⭐ ' : '') + spot.name + '</div>' +
+      '<div class="spot-detail">' + (spot.type === 'official' ? 'Officiel Sépaq' : 'Spot déduit') + '<br>' + spot.why.substring(0,65) + (spot.why.length>65?'…':'') + '</div>' +
+      '</div>';
   }).join('');
 
-  const wt2 = estimateWaterTemp(weather.max, weather.min, currentTime, weather.cloud);
-  let tClass, tMsg;
-  if (wt2 >= sp.tempOpt1 && wt2 <= sp.tempOpt2) { tClass = 'thermal-opt';  tMsg = `✅ Optimal — ${sp.name}`; }
-  else if (wt2 >= sp.tempMin && wt2 <= sp.tempMax) { tClass = 'thermal-good'; tMsg = `⚠️ Acceptable — ${sp.name}`; }
-  else { tClass = 'thermal-bad';  tMsg = `🔴 Hors confort — ${sp.name}`; }
-  const optRange = tempUnit === 'F'
-    ? `${((sp.tempOpt1*9/5)+32).toFixed(0)}–${((sp.tempOpt2*9/5)+32).toFixed(0)}°F`
-    : `${sp.tempOpt1}–${sp.tempOpt2}°C`;
-  const maxTempStr = tempUnit === 'F' ? `${((sp.tempMax*9/5)+32).toFixed(0)}°F` : `${sp.tempMax}°C`;
-  const profRange = currentUnit === 'ft'
-    ? `${(sp.depthPref[0]*3.28084).toFixed(0)}–${(sp.depthPref[1]*3.28084).toFixed(0)} pi`
-    : `${sp.depthPref[0]}–${sp.depthPref[1]} m`;
-  const ts = document.getElementById('thermalStatus');
-  ts.className = 'thermal-status ' + tClass;
-  ts.innerHTML = `${tMsg}<br><span style="font-size:9px;opacity:0.72;font-weight:500;">`+
-    `Opt: ${optRange} · Max: ${maxTempStr} · Prof: ${profRange}</span>`;
-
-  updateFishMarker(scored);
+  updateFishMarker(scored[0]);
 }
 
 // ============================================================
-// EVENT LISTENERS
+// INIT MAP LAYERS
 // ============================================================
-document.getElementById('timeSlider').addEventListener('input', (e) => {
+buildLakeMask();
+buildWaterways();
+buildTroutLine();
+buildAccessPath();
+buildBoatAccess();
+
+// ============================================================
+// EVENTS
+// ============================================================
+document.getElementById('timeSlider').addEventListener('input', function(e) {
   currentTime = parseFloat(e.target.value);
   update();
 });
 
 function setDate(btn) {
-  document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.date-btn').forEach(function(b) { b.classList.remove('active'); });
   btn.classList.add('active');
   currentDate = btn.dataset.date;
   currentDayIdx = parseInt(btn.dataset.idx || 0);
   update();
 }
 
-// Date buttons: hardcoded trip dates 20–22 mai 2026
 (function initDateButtons() {
   const DAY_FR = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
   const container = document.getElementById('dateBtns');
-  TRIP_DATES.forEach((dateStr, i) => {
+  TRIP_DATES.forEach(function(dateStr, i) {
     const d = new Date(dateStr + 'T12:00:00');
-    const label = `${DAY_FR[d.getDay()]} ${d.getDate()}`;
+    const label = DAY_FR[d.getDay()] + ' ' + d.getDate();
     const btn = document.createElement('button');
     btn.className = 'date-btn' + (i === 0 ? ' active' : '');
     btn.dataset.date = dateStr;
-    btn.dataset.idx  = i;
+    btn.dataset.idx = i;
     btn.setAttribute('onclick', 'setDate(this)');
     btn.textContent = label;
     container.appendChild(btn);
@@ -1808,17 +1587,22 @@ function setDate(btn) {
 document.getElementById('timeSlider').value = currentTime;
 update();
 
-const style = document.createElement('style');
-style.textContent = `
-.leaflet-popup-content-wrapper {
-  background: rgba(15,23,42,0.95) !important; color: #f1f5f9 !important;
-  border-radius: 12px !important; border: 1px solid rgba(148,163,184,0.15) !important;
-  backdrop-filter: blur(10px) !important; box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
-}
-.leaflet-popup-tip { background: rgba(15,23,42,0.95) !important; }
-.leaflet-popup-close-button { color: #94a3b8 !important; }
-`;
-document.head.appendChild(style);
+// Popup styles
+const popupStyle = document.createElement('style');
+popupStyle.textContent = [
+  '.leaflet-popup-content-wrapper { background: rgba(15,23,42,0.95) !important; color: #f1f5f9 !important;',
+  '  border-radius: 12px !important; border: 1px solid rgba(148,163,184,0.15) !important;',
+  '  backdrop-filter: blur(10px) !important; box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important; }',
+  '.leaflet-popup-tip { background: rgba(15,23,42,0.95) !important; }',
+  '.leaflet-popup-close-button { color: #94a3b8 !important; }',
+  '.lake-tooltip { background: rgba(15,23,42,0.9); border: 1px solid #3b82f6; color: #f1f5f9; border-radius: 8px; font-size: 11px; }',
+].join('\n');
+document.head.appendChild(popupStyle);
+
+// Fetch weather
+fetchWeatherForecast().then(function(data) {
+  buildForecastPanel(data);
+});
 </script>
 </body>
 </html>

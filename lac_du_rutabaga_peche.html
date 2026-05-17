@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lac du Rutabaga — Pêche Mastigouche</title>
-<meta name="description" content="Application interactive de planification de pêche au Lac Roméo, Réserve faunique Mastigouche.">
+<meta name="description" content="Carte de pêche interactive — Lac du Rutabaga, Réserve faunique Mastigouche.">
 <style>
 /* Leaflet CSS */
 /* required styles */
@@ -974,12 +974,16 @@ body {
   </div>
   <div id="spotsContainer"></div>
 
-  <h3>📊 Stats Lac Roméo</h3>
-  <div class="stat-row"><span class="stat-label">Superficie</span><span class="stat-value">11.1 ha</span></div>
-  <div class="stat-row"><span class="stat-label">Profondeur max</span><span class="stat-value">N/D (sans SDB)</span></div>
+          <h3>📊 Stats Lac du Rutabaga</h3>
+  <div class="stat-row"><span class="stat-label">Superficie</span><span class="stat-value">7.0 ha</span></div>
+  <div class="stat-row"><span class="stat-label">Succès 2025</span><span class="stat-value">N/D</span></div>
+  <div class="stat-row"><span class="stat-label">Masse moy.</span><span class="stat-value">N/D</span></div>
+  <div class="stat-row"><span class="stat-label">Véhicule</span><span class="stat-value">Auto</span></div>
+  <div class="stat-row"><span class="stat-label">Portage</span><span class="stat-value">Aucun portage</span></div>
+  <div class="stat-row"><span class="stat-label">Bathymétrie</span><span class="stat-value">Non disponible</span></div>
   <div class="stat-row"><span class="stat-label">Espèce cible</span><span class="stat-value">Omble de fontaine</span></div>
   <div class="stat-row"><span class="stat-label">Zone pêche</span><span class="stat-value">Zone 9</span></div>
-  <div class="stat-row"><span class="stat-label">Profondeurs PDF</span><span class="stat-value">Exprimées en pieds</span></div>
+  <div class="stat-row"><span class="stat-label">Ensemencement</span><span class="stat-value">Espèce indigène</span></div>
   <div class="stat-row"><span class="stat-label">Source</span><span class="stat-value">Carte PDF Sépaq 2024</span></div>
 
   <h3>🗺️ Légende Spots</h3>
@@ -1021,7 +1025,7 @@ body {
 
 <!-- Map legend (bottom-left) -->
 <div class="map-legend">
-  <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,0.7);border:1px solid #3b82f6;"></div>Lac Roméo (contour PDF)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,0.7);border:1px solid #3b82f6;"></div>Lac Roméo (contour PDF)</div>
   <div class="legend-item"><div class="legend-line" style="background:#60a5fa;"></div>Entrée d'eau (nord)</div>
   <div class="legend-item"><div class="legend-line" style="background:#34d399;"></div>Sortie d'eau (sud)</div>
   <div class="legend-item"><div class="legend-dot" style="background:#d97706;border:2px solid #fbbf24;"></div>Site Sépaq officiel</div>
@@ -1058,10 +1062,10 @@ body {
 // ============================================================
 // DATA & CONFIG
 // ============================================================
-const LAC_NAME = "Roméo";
-const MAP_CENTER = [46.8058, -73.3584];
+const LAC_NAME = "du Rutabaga";
+const MAP_CENTER = [46.7951, -73.3399];
 const MAP_ZOOM = 15;
-const LAC_AREA_HA = 11.1;
+const LAC_AREA_HA = 7.0;
 const SOURCE_NOTE = "Carte PDF Sépaq 2024 — Lac du Rutabaga (sans bathymétrie)";
 const HAS_BATHY = false;
 const SPECIES = "Omble de fontaine";
@@ -1258,7 +1262,7 @@ function buildLakeMask() {
     fillColor: '#1d4ed8',
     fillOpacity: 0.22,
   }).addTo(map);
-  lakePoly.bindTooltip('Lac Roméo — 11.1 ha<br>Source: PDF Sépaq 2024', {
+  lakePoly.bindTooltip('Lac du Rutabaga — 7.0 ha<br>Source: PDF Sépaq 2024', {
     direction: 'center', permanent: false, className: 'lake-tooltip'
   });
   return lakePoly;
