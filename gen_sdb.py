@@ -1122,8 +1122,65 @@ def gen_pdf_map(pdf_path, lac_config):
         else:
             ww["type"] = "outlet"
 
-    if not waterways:
-        pass  # no-op, list stays empty
+    # ── Filter out bathymetric contour lines (blue lines INSIDE the lake) ───
+    # Real waterways (inlet/outlet/tributary) extend outside the lake bbox.
+    # Depth contour lines (isobaths) have all points within the lake bounds.
+    # Keep only waterways where at least one point is outside the lake bbox
+    # by at least MARGIN degrees (~50m). This removes isobaths from PDFs with
+    # bathymetry data (like Osborn) which would otherwise add hundreds of paths.
+    MARGIN = 0.0004  # ~44m at this latitude
+    def _has_point_outside(ww, s, n, w, e):
+        for lat, lon in ww["coords"]:
+            if lat < s - MARGIN or lat > n + MARGIN or lon < w - MARGIN or lon > e + MARGIN:
+                return True
+        return False
+
+    if lake_bbox["N"] > 0:  # only filter when we have real bbox
+        before = len(waterways)
+        waterways = [ww for ww in waterways
+                     if _has_point_outside(ww, lake_bbox["S"], lake_bbox["N"],
+                                           lake_bbox["W"], lake_bbox["E"])]
+        if len(waterways) < before:
+            print(f"  Filtered {before - len(waterways)} isobath paths, kept {len(waterways)} waterways")
+
+    # ── Deduplicate: cluster waterways per type, keep longest per cluster ────
+    # For lakes with many GPS track segments exported from PDFs, the same
+    # real stream can appear as many small fragments. Cluster by proximity
+    # (0.0005° ≈ 55m) within each type group, keep the longest in each cluster.
+    # Hard cap: max 2 per type, max 6 total.
+    CLUSTER_DIST = 0.0005  # ~55m
+    MAX_PER_TYPE = 2
+
+    def _cluster_waterways(ww_list):
+        """Greedy distance-based clustering; returns one representative per cluster."""
+        remaining = sorted(ww_list, key=lambda w: len(w["coords"]), reverse=True)
+        chosen = []
+        while remaining:
+            seed = remaining.pop(0)
+            chosen.append(seed)
+            remaining = [
+                w for w in remaining
+                if abs(w["center_lat"] - seed["center_lat"]) > CLUSTER_DIST
+                or abs(w["center_lon"] - seed["center_lon"]) > CLUSTER_DIST
+            ]
+            if len(chosen) >= MAX_PER_TYPE:
+                break
+        return chosen
+
+    if len(waterways) > 6:
+        deduped = []
+        for wtype in ("inlet", "outlet", "tributary"):
+            group = [w for w in waterways if w["type"] == wtype]
+            if group:
+                deduped.extend(_cluster_waterways(group))
+        # keep any leftover types (shouldn't happen but safety)
+        known = set(id(w) for w in deduped)
+        for w in waterways:
+            if id(w) not in known:
+                deduped.append(w)
+        before2 = len(waterways)
+        waterways = deduped[:6]
+        print(f"  Deduplicated {before2} → {len(waterways)} waterways after clustering")
 
     doc.close()
 
@@ -1157,6 +1214,310 @@ def gen_pdf_map(pdf_path, lac_config):
     print("    → Call run_render_test(html_path) after building HTML from this data.")
 
     return result
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HTML GENERATION FROM PDF DATA
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _auto_fishing_spots(data: dict, species: str) -> list:
+    """Generate fishing spots from extracted PDF geography."""
+    spots = []
+    lake_center = data["lake_center"]
+    lake_bbox   = data["lake_bbox"]
+    clat = lake_center["lat"]
+    clon = lake_center["lon"]
+
+    # Reuse official spots from PDF fishing_spots if any
+    for i, fs in enumerate(data.get("fishing_spots", [])):
+        spots.append({
+            "id": f"official_{i}",
+            "lat": round(fs["lat"], 5),
+            "lon": round(fs["lon"], 5),
+            "name": "Site Sépaq — Pêche favorable",
+            "icon": "⭐", "type": "official",
+            "bestTime": [5,6,7,8,17,18,19,20],
+            "peakTime": [6,7,18,19],
+            "score_base": 90,
+            "why": "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée."
+        })
+
+    # Inlet spot: just inside lake from inlet waterway
+    inlets  = [w for w in data.get("waterways", []) if w["type"] == "inlet"]
+    outlets = [w for w in data.get("waterways", []) if w["type"] == "outlet"]
+    tribs   = [w for w in data.get("waterways", []) if w["type"] == "tributary"]
+
+    if inlets:
+        ww = inlets[0]
+        # Find the point of the inlet closest to the lake interior
+        in_pt = min(ww["coords"], key=lambda c: abs(c[0] - clat))
+        ilat = round(max(lake_bbox["S"] + 0.0003, min(lake_bbox["N"] - 0.0003, in_pt[0])), 5)
+        ilon = round(max(lake_bbox["W"] + 0.0001, min(lake_bbox["E"] - 0.0001, in_pt[1])), 5)
+        spots.append({
+            "id": "inlet",
+            "lat": ilat, "lon": ilon,
+            "name": "Entrée nord — Eau fraîche",
+            "icon": "🎣", "type": "inlet",
+            "bestTime": [5,6,7,8,17,18,19,20], "peakTime": [5,6,7,18,19],
+            "score_base": 85,
+            "why": f"Entrée d'eau froide et oxygénée. L'{species} affectionne ces zones de convergence thermique, surtout en mai."
+        })
+
+    if outlets:
+        ww = outlets[0]
+        out_pt = min(ww["coords"], key=lambda c: abs(c[0] - clat))
+        olat = round(max(lake_bbox["S"] + 0.0002, min(lake_bbox["N"] - 0.0002, out_pt[0])), 5)
+        olon = round(max(lake_bbox["W"] + 0.0001, min(lake_bbox["E"] - 0.0001, out_pt[1])), 5)
+        spots.append({
+            "id": "outlet",
+            "lat": olat, "lon": olon,
+            "name": "Sortie sud — Affût courant",
+            "icon": "🎣", "type": "outlet",
+            "bestTime": [5,6,7,8,17,18,19,20], "peakTime": [6,7,17,18],
+            "score_base": 72,
+            "why": f"Sortie d'eau (émissaire). Les {species.lower()}s se tiennent souvent à la sortie pour profiter du courant."
+        })
+
+    # Tributary spot
+    if tribs:
+        ww = tribs[0]
+        tr_pt = ww["coords"][0] if ww["coords"] else None
+        if tr_pt:
+            tlat = round(max(lake_bbox["S"]+0.0002, min(lake_bbox["N"]-0.0002, tr_pt[0])), 5)
+            tlon = round(max(lake_bbox["W"]+0.0001, min(lake_bbox["E"]-0.0001, tr_pt[1])), 5)
+            spots.append({
+                "id": "tributary",
+                "lat": tlat, "lon": tlon,
+                "name": "Affluent — Eau fraîche",
+                "icon": "🌿", "type": "tributary",
+                "bestTime": [5,6,7,8,17,18,19,20], "peakTime": [6,7,18,19],
+                "score_base": 70,
+                "why": "Confluent d'un affluent. Zone de mélange thermique favorable aux salmonidés."
+            })
+
+    # Lake center (pelagic)
+    spots.append({
+        "id": "center",
+        "lat": round(clat, 5), "lon": round(clon, 5),
+        "name": "Centre lac — Pélagique",
+        "icon": "🐟", "type": "pelagic",
+        "bestTime": [5,6,7,19,20], "peakTime": [6,19,20],
+        "score_base": 50,
+        "why": f"Zone de transit. Les {species.lower()}s croisent le centre en début/fin de journée."
+    })
+
+    # Near boat access (south bay)
+    access_end = (data.get("access_path") or [None])[-1]
+    if access_end and not any(abs(s["lat"]-access_end[0]) < 0.0005 for s in spots):
+        alat = round(max(lake_bbox["S"]+0.0002, min(lake_bbox["N"]-0.0002, access_end[0]+0.0003)), 5)
+        alon = round(max(lake_bbox["W"]+0.0001, min(lake_bbox["E"]-0.0001, access_end[1])), 5)
+        spots.append({
+            "id": "south_bay",
+            "lat": alat, "lon": alon,
+            "name": "Baie sud — Accès facile",
+            "icon": "🎣", "type": "bay",
+            "bestTime": [5,6,7,8,17,18,19,20], "peakTime": [6,7,18,19],
+            "score_base": 65,
+            "why": "Zone accessible depuis la mise à l'eau. Structure de rive et fond variable favorable."
+        })
+
+    return spots
+
+
+def build_pdf_html(data: dict, lac_config: dict, template_path: str) -> str:
+    """Generate a fishing map HTML from gen_pdf_map() data using the Romeo template.
+
+    Parameters
+    ----------
+    data        : dict returned by gen_pdf_map()
+    lac_config  : dict with keys: name, file, area_ha, species (optional),
+                  trip_dates (list of 'YYYY-MM-DD'), lat, lon
+    template_path : path to lac_romeo_peche.html (used as template)
+
+    Returns
+    -------
+    str  — complete HTML content
+    """
+    with open(template_path, "r", encoding="utf-8") as f:
+        html = f.read()
+
+    lac_name = lac_config["name"]
+    species  = lac_config.get("species", "Omble de fontaine")
+    area_ha  = lac_config.get("area_ha", "?")
+    clat     = data["lake_center"]["lat"]
+    clon     = data["lake_center"]["lon"]
+    trip_dates = lac_config.get("trip_dates", ["2026-05-20","2026-05-21","2026-05-22"])
+    file_slug  = lac_config.get("file", f"lac_{lac_name.lower().replace(' ','_')}")
+
+    def _js(obj):
+        return json.dumps(obj, ensure_ascii=False)
+
+    # ── Generate fishing spots ───────────────────────────────────────────────
+    spots = _auto_fishing_spots(data, species)
+    spots_js_parts = []
+    for s in spots:
+        spots_js_parts.append(
+            f"  {{ id: '{s['id']}', lat: {s['lat']}, lon: {s['lon']}, "
+            f"name: {_js(s['name'])}, icon: {_js(s['icon'])}, type: {_js(s['type'])},\n"
+            f"    bestTime: {s['bestTime']}, peakTime: {s['peakTime']}, score_base: {s['score_base']},\n"
+            f"    why: {_js(s['why'])} }}"
+        )
+    spots_js = "const FISHING_SPOTS = [\n" + ",\n".join(spots_js_parts) + "\n];"
+
+    # ── Waterways JS ────────────────────────────────────────────────────────
+    ww_parts = []
+    type_label = {"inlet": "Entrée nord", "outlet": "Sortie sud",
+                  "tributary": "Affluent NW", "stream": "Cours d'eau"}
+    for ww in data.get("waterways", []):
+        wtype = ww.get("type", "stream")
+        name  = type_label.get(wtype, "Cours d'eau")
+        ww_parts.append(
+            f"  {{ type: {_js(wtype)}, name: {_js(name)}, "
+            f"lat: {round(ww['center_lat'],5)}, lon: {round(ww['center_lon'],5)},\n"
+            f"    coords: {_js(ww['coords'])} }}"
+        )
+    ww_js = "const WATERWAYS = [\n" + ",\n".join(ww_parts) + "\n];"
+
+    # ── Trout line JS ────────────────────────────────────────────────────────
+    trout_js = f"const TROUT_LINE = {_js(data.get('trout_line', []))};"
+
+    # ── Access path JS ───────────────────────────────────────────────────────
+    access_js = f"const ACCESS_PATH = {_js(data.get('access_path', []))};"
+
+    # ── Boat access JS ───────────────────────────────────────────────────────
+    ba = data.get("boat_access", [])
+    if not ba:
+        # Fallback: end of access path or south shore
+        ap = data.get("access_path", [])
+        ba = [{"lat": ap[-1][0], "lon": ap[-1][1]}] if ap else [{"lat": clat, "lon": clon}]
+    boat_js = f"const BOAT_ACCESS = {_js(ba)};"
+
+    # ── Regex replacements in template ───────────────────────────────────────
+    # Lake name in title bar and page title
+    html = html.replace("🎣 Lac Roméo", f"🎣 Lac {lac_name}")
+    html = html.replace(">Lac Roméo<", f">Lac {lac_name}<")
+    html = html.replace("Lac&nbsp;Roméo", f"Lac&nbsp;{lac_name}")
+    html = re.sub(r'<title>.*?</title>', f'<title>Lac {lac_name} — Pêche Mastigouche</title>', html)
+
+    # Coordinates in top-bar display
+    html = re.sub(r'\d+\.\d+°N,\s*\d+\.\d+°W', f"{abs(clat):.3f}°N, {abs(clon):.3f}°W", html)
+
+    # JS constants
+    html = re.sub(r'const SOURCE_NOTE\s*=\s*"[^"]*";',
+                  f'const SOURCE_NOTE = "Carte PDF Sépaq 2024 — Lac {lac_name} (sans bathymétrie)";', html)
+    html = re.sub(r'const SPECIES\s*=\s*"[^"]*";',
+                  f'const SPECIES = {_js(species)};', html)
+    html = re.sub(r'const LAT\s*=\s*[\d.]+,\s*LON\s*=\s*[-\d.]+;',
+                  f'const LAT = {round(clat,4)}, LON = {round(clon,4)};', html)
+
+    # LAKE_POLYGON
+    html = re.sub(r'const LAKE_POLYGON\s*=\s*\[[\s\S]*?\];',
+                  f'const LAKE_POLYGON = {_js(data.get("lake_polygon", []))};', html, count=1)
+
+    # WATERWAYS
+    html = re.sub(r'const WATERWAYS\s*=\s*\[[\s\S]*?\];', ww_js, html, count=1)
+
+    # TROUT_LINE
+    html = re.sub(r'const TROUT_LINE\s*=\s*\[[\s\S]*?\];', trout_js, html, count=1)
+
+    # ACCESS_PATH
+    html = re.sub(r'const ACCESS_PATH\s*=\s*\[[\s\S]*?\];', access_js, html, count=1)
+
+    # BOAT_ACCESS
+    html = re.sub(r'const BOAT_ACCESS\s*=\s*\[[\s\S]*?\];', boat_js, html, count=1)
+
+    # FISHING_SPOTS
+    html = re.sub(r'const FISHING_SPOTS\s*=\s*\[[\s\S]*?\];', spots_js, html, count=1)
+
+    # TRIP_DATES
+    html = re.sub(r'const TRIP_DATES\s*=\s*\[[^\]]*\];',
+                  f'const TRIP_DATES = {_js(trip_dates)};', html, count=1)
+
+    return html
+
+
+def batch_pdf_maps(pdf_dir: str, output_dir: str, template_path: str,
+                   trip_dates: list = None, force: bool = False) -> list:
+    """Process all Sépaq PDF lake maps in a directory.
+
+    Parameters
+    ----------
+    pdf_dir      : directory containing MAS_Carte_*.pdf files
+    output_dir   : directory to write HTML outputs
+    template_path: path to lac_romeo_peche.html (used as template)
+    trip_dates   : list of 'YYYY-MM-DD' strings for the forecast
+    force        : re-generate even if HTML already exists
+
+    Returns
+    -------
+    list of (lake_name, html_path, ok) tuples
+    """
+    if trip_dates is None:
+        trip_dates = ["2026-05-20", "2026-05-21", "2026-05-22"]
+
+    import glob, unicodedata
+
+    def slugify(name):
+        # "Lac du Hêtre" → "lac_du_hetre"
+        nfkd = unicodedata.normalize("NFKD", name)
+        ascii_str = nfkd.encode("ascii", "ignore").decode("ascii")
+        return ascii_str.lower().replace(" ", "_").replace("'", "_").replace("-", "_")
+
+    pdfs = sorted(glob.glob(os.path.join(pdf_dir, "MAS_Carte_*.pdf")))
+    print(f"\n{'='*60}")
+    print(f"  BATCH: {len(pdfs)} PDF(s) dans {pdf_dir}")
+    print(f"  Sortie: {output_dir}")
+    print(f"{'='*60}\n")
+
+    os.makedirs(output_dir, exist_ok=True)
+    results = []
+
+    for i, pdf_path in enumerate(pdfs, 1):
+        basename = os.path.basename(pdf_path)
+        # "MAS_Carte_Lac Roméo.pdf" → "Roméo"
+        lac_name = basename.replace("MAS_Carte_Lac ", "").replace(".pdf", "").strip()
+        file_slug = "lac_" + slugify(lac_name)
+        html_path = os.path.join(output_dir, f"{file_slug}_peche.html")
+
+        print(f"[{i:02d}/{len(pdfs)}] {lac_name}")
+
+        if os.path.exists(html_path) and not force:
+            print(f"       → déjà existant, skip (--force pour régénérer)")
+            results.append((lac_name, html_path, True))
+            continue
+
+        try:
+            lac_config = {
+                "name": lac_name,
+                "file": file_slug,
+                "output_dir": output_dir,
+                "species": "Omble de fontaine",
+                "trip_dates": trip_dates,
+            }
+            data = gen_pdf_map(pdf_path, lac_config)
+            html = build_pdf_html(data, lac_config, template_path)
+
+            with open(html_path, "w", encoding="utf-8") as f:
+                f.write(html)
+            size_kb = os.path.getsize(html_path) // 1024
+            print(f"       ✅ {html_path} ({size_kb} KB)")
+
+            ok = run_render_test(html_path)
+            results.append((lac_name, html_path, ok))
+
+        except Exception as exc:
+            print(f"       ❌ ERREUR: {exc}")
+            import traceback; traceback.print_exc()
+            results.append((lac_name, html_path, False))
+
+    print(f"\n{'='*60}")
+    ok_count = sum(1 for _,_,ok in results if ok)
+    print(f"  BILAN: {ok_count}/{len(results)} cartes générées avec succès")
+    for name, path, ok in results:
+        status = "✅" if ok else "❌"
+        print(f"  {status} {name}")
+    print(f"{'='*60}\n")
+    return results
 
 
 if __name__ == "__main__":
