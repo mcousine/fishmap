@@ -837,116 +837,162 @@ def gen_pdf_map(pdf_path, lac_config):
     W, H = page_rect.width, page_rect.height
     print(f"  Page size: {W:.0f} x {H:.0f} pts")
 
+    # Legend area is always on the right ~20% of page; map area ends there
+    MAP_X_MAX = W * 0.76
+
     # ── 2. Extract UTM grid references from text ──────────────────────────────
-    # Look for text blocks that contain UTM coordinates (6-7 digit numbers)
-    utm_refs = []  # list of (pixel_x, pixel_y, utm_easting, utm_northing)
+    # Sépaq PDFs label UTM grid lines with non-breaking-space-separated numbers
+    # like "625 000" (easting) and "5 185 100" (northing).
+    # We use the CENTER of each text bounding box (not baseline origin) for
+    # accurate grid-line pixel positions, then average multiple pairs for scale.
+    import re as _re
 
-    blocks = page.get_text("dict", flags=fitz.TEXT_PRESERVE_LIGATURES)["blocks"]
-    for block in blocks:
-        if block.get("type") != 0:  # text block
-            continue
-        for line in block.get("lines", []):
-            for span in line.get("spans", []):
-                txt = span["text"].strip().replace(" ", "").replace(",", "")
-                origin = span["origin"]  # (x, y) pixel position
-                # Easting: 6-digit number starting with 2-5 (UTM zone 18N ~250000-750000)
-                if txt.isdigit() and len(txt) == 6 and txt[0] in "2345":
-                    utm_refs.append({
-                        "px": origin[0], "py": origin[1],
-                        "easting": float(txt), "northing": None
-                    })
-                # Northing: 7-digit number starting with 5 (latitude ~46° → ~5100000-5200000)
-                elif txt.isdigit() and len(txt) == 7 and txt[0] == "5":
-                    utm_refs.append({
-                        "px": origin[0], "py": origin[1],
-                        "easting": None, "northing": float(txt)
-                    })
-
-    print(f"  UTM text references found: {len(utm_refs)}")
-
-    # Build pixel→UTM transform from grid references
-    # Pair eastings with northings by proximity on the page
-    eastings  = [r for r in utm_refs if r["easting"]  is not None]
-    northings = [r for r in utm_refs if r["northing"] is not None]
-
-    pixel_to_utm = None
     transformer_utm_to_wgs = Transformer.from_crs(
         "EPSG:26918",  # NAD83 / UTM Zone 18N
         "EPSG:4326",   # WGS84
         always_xy=True
     )
 
-    if len(eastings) >= 2 and len(northings) >= 2:
-        # Use the first two of each to build an affine transform
-        e1, e2 = eastings[0], eastings[1]
-        n1, n2 = northings[0], northings[1]
+    easting_anchors  = []  # list of {"px": float, "utm_e": float}
+    northing_anchors = []  # list of {"py": float, "utm_n": float}
 
-        # Pixel x-axis ~ easting, pixel y-axis (inverted) ~ northing
-        # Build 2x2 linear system: px = a*E + b, py = c*N + d
-        dE = e2["easting"]  - e1["easting"]
-        dpx_E = e2["px"] - e1["px"]
-        scale_x = dE / dpx_E if dpx_E != 0 else 1.0
+    blocks = page.get_text("dict")["blocks"]
+    for block in blocks:
+        if block.get("type") != 0:
+            continue
+        for line in block.get("lines", []):
+            for span in line.get("spans", []):
+                raw = span["text"]
+                # Strip all whitespace and non-breaking spaces, keep digits only
+                digits = _re.sub(r'[\s\xa0,]', '', raw)
+                if not digits.isdigit():
+                    continue
+                val = float(digits)
+                # Use CENTER of span bounding box for accurate grid-line position
+                bb = span["bbox"]
+                cx = (bb[0] + bb[2]) / 2
+                cy = (bb[1] + bb[3]) / 2
 
-        dN = n2["northing"] - n1["northing"]
-        dpy_N = n2["py"] - n1["py"]
-        scale_y = dN / dpy_N if dpy_N != 0 else -1.0  # y inverted in PDF
+                # UTM Easting: 6-digit, range 200000–799999 (all UTM Zone 18N)
+                if len(digits) == 6 and 200000 <= val <= 799999:
+                    easting_anchors.append({"px": cx, "utm_e": val})
+                # UTM Northing: 7-digit, range 5000000–6000000 (lat ~45–54°N)
+                elif len(digits) == 7 and 5000000 <= val <= 6000000:
+                    northing_anchors.append({"py": cy, "utm_n": val})
 
-        ref_px = e1["px"]
-        ref_py = n1["py"]
-        ref_E  = e1["easting"]
-        ref_N  = n1["northing"]
+    # Deduplicate by value (keep only unique UTM values, averaged positions)
+    def _dedup_anchors(anchors, key_utm, key_px):
+        from collections import defaultdict
+        groups = defaultdict(list)
+        for a in anchors:
+            groups[a[key_utm]].append(a[key_px])
+        return sorted(
+            [{key_utm: v, key_px: sum(pxs)/len(pxs)} for v, pxs in groups.items()],
+            key=lambda x: x[key_utm]
+        )
+
+    easting_anchors  = _dedup_anchors(easting_anchors,  "utm_e", "px")
+    northing_anchors = _dedup_anchors(northing_anchors, "utm_n", "py")
+    print(f"  UTM easting anchors:  {len(easting_anchors)} ({[int(a['utm_e']) for a in easting_anchors[:4]]}...)")
+    print(f"  UTM northing anchors: {len(northing_anchors)} ({[int(a['utm_n']) for a in northing_anchors[:4]]}...)")
+
+    # Compute scale from ALL consecutive pairs → take median for robustness
+    def _compute_scale(anchors, key_utm, key_px):
+        scales = []
+        for i in range(len(anchors) - 1):
+            du = anchors[i+1][key_utm] - anchors[i][key_utm]
+            dp = anchors[i+1][key_px]  - anchors[i][key_px]
+            if abs(dp) > 1:
+                scales.append(du / dp)
+        if not scales:
+            return None
+        scales.sort()
+        return scales[len(scales)//2]  # median
+
+    scale_x = _compute_scale(easting_anchors,  "utm_e", "px")   # m/pt (+east → +px)
+    scale_y = _compute_scale(northing_anchors, "utm_n", "py")   # m/pt (−north → +py, expect negative)
+
+    if scale_x and scale_y and easting_anchors and northing_anchors:
+        ref_E = easting_anchors[0]["utm_e"]
+        ref_px = easting_anchors[0]["px"]
+        ref_N = northing_anchors[0]["utm_n"]
+        ref_py = northing_anchors[0]["py"]
+        print(f"  Scale: x={scale_x:.4f} m/pt, y={scale_y:.4f} m/pt  ref=({ref_px:.1f},{ref_py:.1f})→E{ref_E:.0f}/N{ref_N:.0f}")
 
         def pixel_to_wgs84(px, py):
             E = ref_E + (px - ref_px) * scale_x
             N = ref_N + (py - ref_py) * scale_y
             lon, lat = transformer_utm_to_wgs.transform(E, N)
             return lon, lat
-
-        pixel_to_utm = pixel_to_wgs84
-        print(f"  Affine transform built: scale_x={scale_x:.2f} m/pt, scale_y={scale_y:.2f} m/pt")
     else:
-        # Fallback: use configured lake center and page center
         center_lat = lac_config.get("lat", 46.806)
         center_lon = lac_config.get("lon", -73.358)
-        print(f"  ⚠️  Insufficient UTM references — using fallback center ({center_lat}, {center_lon})")
+        print(f"  ⚠️  Insufficient UTM grid anchors — using fallback center ({center_lat}, {center_lon})")
+        scale_approx = 1.0526  # 1:3000 typical Sépaq lake map
 
         def pixel_to_wgs84(px, py):
-            # Approximate: 1 pt ≈ 2m for typical Sépaq 1:10000 maps
-            scale_m_per_pt = 2.0
-            dlat = -(py - H / 2) * scale_m_per_pt / 111320.0
-            dlon =  (px - W / 2) * scale_m_per_pt / (111320.0 * math.cos(math.radians(center_lat)))
+            dlat = -(py - H / 2) * scale_approx / 111320.0
+            dlon =  (px - W / 2) * scale_approx / (111320.0 * math.cos(math.radians(center_lat)))
             return center_lon + dlon, center_lat + dlat
 
-        pixel_to_utm = pixel_to_wgs84
-
     # ── 3. Extract drawing paths ──────────────────────────────────────────────
+    # Color signatures calibrated on real Sépaq Mastigouche PDFs (fitz 0-1 scale)
+    # These are the EXACT colors found in the PDF, not theoretical values.
     paths = page.get_drawings()
     print(f"  Drawing paths found: {len(paths)}")
 
-    lake_polygon = []
-    waterways = []
-    fishing_spots = []
-    boat_access = []
-    portage = []
+    # Sépaq PDF color signatures — calibrated on MAS_Carte_Lac Roméo.pdf
+    #   Lake fill:      RGB(0.592, 0.859, 0.949) — light blue
+    #   Water stroke:   RGB(0.251, 0.400, 0.922) — stream/river blue
+    #   Trout line:     RGB(0.000, 0.522, 0.659) — teal (omble de fontaine)
+    #   Portage/access: magenta STROKE (1.0, 0.0, ~0.77) — long line segments
+    #   Spot marker:    magenta FILL  (1.0, 0.0, ~0.77)  — small dots
+    #   Boat access:    black FILL    (0.0, 0.0, 0.0)    — small square
 
-    def color_distance(c1, c2):
-        """Euclidean distance in RGB space (each channel 0-1)."""
+    def _cdist(c1, c2, tol):
         if c1 is None or c2 is None:
-            return 999.0
-        return math.sqrt(sum((a - b) ** 2 for a, b in zip(c1, c2)))
+            return False
+        return all(abs(a - b) <= tol for a, b in zip(c1, c2))
 
-    # Sépaq color signatures (normalized 0-1)
-    COLOR_LAKE_FILL    = (173/255, 216/255, 230/255)  # light blue
-    COLOR_STREAM_STROKE = (0/255, 100/255, 200/255)    # blue
-    COLOR_SPOT_FILL    = (255/255, 0/255, 128/255)     # magenta
-    COLOR_BOAT_FILL    = (0/255,   0/255,   0/255)     # black
-    COLOR_PORTAGE      = (150/255, 75/255,  0/255)     # brown
+    def _extract_pts(path):
+        pts = []
+        seen = set()
+        for item in path.get("items", []):
+            raw = []
+            if item[0] == "l":  raw = [item[1], item[2]]
+            elif item[0] == "c": raw = [item[1], item[2], item[3], item[4]]
+            elif item[0] == "re":
+                r = item[1]
+                raw = [fitz.Point(r.x0,r.y0), fitz.Point(r.x1,r.y0),
+                       fitz.Point(r.x1,r.y1), fitz.Point(r.x0,r.y1)]
+            for pt in raw:
+                key = (round(pt.x, 1), round(pt.y, 1))
+                if key not in seen:
+                    seen.add(key)
+                    pts.append(pt)
+        return pts
 
-    LAKE_COLOR_THRESH  = 0.25
-    STREAM_COLOR_THRESH = 0.35
-    SPOT_COLOR_THRESH  = 0.40
-    BOAT_COLOR_THRESH  = 0.15
-    PORTAGE_COLOR_THRESH = 0.25
+    def _in_map(pts):
+        """True if path centroid is in the map area (not in legend)."""
+        if not pts: return False
+        cx = sum(p.x for p in pts) / len(pts)
+        cy = sum(p.y for p in pts) / len(pts)
+        return cx < MAP_X_MAX and 15 < cy < H - 15
+
+    def _pts_to_latlon(pts):
+        coords = []
+        for p in pts:
+            lon, lat = pixel_to_wgs84(p.x, p.y)
+            coords.append([round(lat, 6), round(lon, 6)])
+        return coords
+
+    lake_polygon   = []
+    waterways      = []
+    fishing_spots  = []
+    boat_access    = []
+    portage        = []
+    trout_line     = []
+    access_path    = []
 
     largest_lake_path = None
     largest_lake_pts  = 0
@@ -954,112 +1000,93 @@ def gen_pdf_map(pdf_path, lac_config):
     for path in paths:
         fill  = path.get("fill")
         color = path.get("color")  # stroke
-        items = path.get("items", [])
-
-        # Collect all points in this path
-        pts = []
-        for item in items:
-            kind = item[0]
-            if kind == "l":   # line segment
-                pts.extend([item[1], item[2]])
-            elif kind == "c": # cubic bezier
-                pts.extend([item[1], item[4]])  # endpoints only
-            elif kind == "m": # move to
-                pts.append(item[1])
-            elif kind == "re": # rectangle
-                r = item[1]
-                pts.extend([r.tl, r.tr, r.br, r.bl])
-
-        if not pts:
+        pts   = _extract_pts(path)
+        if not pts or not _in_map(pts):
             continue
 
-        # Deduplicate
-        unique_pts = list({(round(p.x, 1), round(p.y, 1)): p for p in pts}.values())
+        xs = [p.x for p in pts]
+        ys = [p.y for p in pts]
+        w_span = max(xs) - min(xs)
+        h_span = max(ys) - min(ys)
+        cx_px  = (max(xs) + min(xs)) / 2
+        cy_px  = (max(ys) + min(ys)) / 2
 
-        # ── Lake polygon (large light-blue fill) ─────────────────────────────
-        if fill and color_distance(fill, COLOR_LAKE_FILL) < LAKE_COLOR_THRESH:
-            if len(unique_pts) > largest_lake_pts:
-                largest_lake_pts = len(unique_pts)
-                largest_lake_path = unique_pts
+        # ── Lake polygon: largest light-blue filled path ──────────────────
+        if fill and _cdist(fill, (0.592, 0.859, 0.949), 0.08):
+            if len(pts) > largest_lake_pts:
+                largest_lake_pts = len(pts)
+                largest_lake_path = pts
 
-        # ── Waterways (blue stroke, minimal fill) ────────────────────────────
-        elif color and color_distance(color, COLOR_STREAM_STROKE) < STREAM_COLOR_THRESH:
-            if len(unique_pts) >= 2:
-                ww_coords = []
-                for p in unique_pts:
-                    lon, lat = pixel_to_wgs84(p.x, p.y)
-                    ww_coords.append([lon, lat])
-                cx = np.mean([c[0] for c in ww_coords])
-                cy = np.mean([c[1] for c in ww_coords])
-                waterways.append({
-                    "coords": ww_coords,
-                    "center_lon": float(cx),
-                    "center_lat": float(cy)
-                })
+        # ── Waterways: blue stroke ────────────────────────────────────────
+        elif color and _cdist(color, (0.251, 0.400, 0.922), 0.08) and len(pts) >= 2:
+            # Skip the lake outline drawn in blue (>80pts and encloses area)
+            if len(pts) > 80:
+                continue
+            coords = _pts_to_latlon(pts)
+            waterways.append({
+                "coords": coords,
+                "center_lat": float(sum(c[0] for c in coords) / len(coords)),
+                "center_lon": float(sum(c[1] for c in coords) / len(coords)),
+            })
 
-        # ── Fishing spots (magenta/red fill, small circular shapes) ──────────
-        elif fill and color_distance(fill, COLOR_SPOT_FILL) < SPOT_COLOR_THRESH:
-            if len(unique_pts) >= 3:
-                cx = np.mean([p.x for p in unique_pts])
-                cy = np.mean([p.y for p in unique_pts])
-                lon, lat = pixel_to_wgs84(cx, cy)
+        # ── Trout habitat line: teal stroke (omble de fontaine) ──────────
+        elif color and _cdist(color, (0.000, 0.522, 0.659), 0.08) and len(pts) >= 2:
+            coords = _pts_to_latlon(pts)
+            trout_line.extend(coords)
+
+        # ── Portage / access path: magenta STROKE, elongated ─────────────
+        elif color and _cdist(color, (1.0, 0.0, 0.773), 0.08):
+            coords = _pts_to_latlon(pts)
+            if max(w_span, h_span) > 15:   # elongated = line/trail
+                access_path.extend(coords)
+            elif len(pts) >= 3:             # small = fishing spot marker
+                lon, lat = pixel_to_wgs84(cx_px, cy_px)
                 fishing_spots.append({
-                    "lat": float(lat),
-                    "lon": float(lon),
+                    "lat": round(lat, 6), "lon": round(lon, 6),
                     "name": "Site de pêche favorable"
                 })
 
-        # ── Boat access (small black filled squares) ─────────────────────────
-        elif fill and color_distance(fill, COLOR_BOAT_FILL) < BOAT_COLOR_THRESH:
-            bbox = path.get("rect")
-            if bbox:
-                w_pts = bbox.width
-                h_pts = bbox.height
-                aspect = max(w_pts, h_pts) / max(min(w_pts, h_pts), 0.1)
-                if 0.5 < aspect < 2.5 and 2 < max(w_pts, h_pts) < 30:
-                    cx = (bbox.x0 + bbox.x1) / 2
-                    cy = (bbox.y0 + bbox.y1) / 2
-                    lon, lat = pixel_to_wgs84(cx, cy)
-                    boat_access.append({"lat": float(lat), "lon": float(lon)})
+        # ── Boat access: small black filled square ────────────────────────
+        elif fill and _cdist(fill, (0.0, 0.0, 0.0), 0.05):
+            if 2 < max(w_span, h_span) < 25 and min(w_span, h_span) > 1:
+                lon, lat = pixel_to_wgs84(cx_px, cy_px)
+                boat_access.append({"lat": round(lat, 6), "lon": round(lon, 6)})
 
-        # ── Portage trails (brown/dashed lines) ──────────────────────────────
-        elif color and color_distance(color, COLOR_PORTAGE) < PORTAGE_COLOR_THRESH:
-            if len(unique_pts) >= 2:
-                trail_coords = []
-                for p in unique_pts:
-                    lon, lat = pixel_to_wgs84(p.x, p.y)
-                    trail_coords.append([lon, lat])
-                portage.append({"coords": trail_coords})
-
-    # ── Convert lake polygon ────────────────────────────────────────────────
+    # ── Convert lake polygon ──────────────────────────────────────────────
     if largest_lake_path:
-        for p in largest_lake_path:
-            lon, lat = pixel_to_wgs84(p.x, p.y)
-            lake_polygon.append([lon, lat])
-        print(f"  Lake polygon: {len(lake_polygon)} points extracted")
+        lake_polygon = _pts_to_latlon(largest_lake_path)
+        print(f"  Lake polygon: {len(lake_polygon)} points")
     else:
         print("  ⚠️  No lake polygon found — check PDF color conventions")
 
-    # ── Classify waterways as inlet/outlet ────────────────────────────────
-    if lake_polygon:
-        lake_lats = [p[1] for p in lake_polygon]
-        lake_centroid_lat = np.mean(lake_lats)
-        for ww in waterways:
-            if ww["center_lat"] > lake_centroid_lat:
-                ww["type"] = "inlet"
-            else:
-                ww["type"] = "outlet"
-    else:
-        for ww in waterways:
-            ww["type"] = "stream"
+    # ── Deduplicate trout line points ─────────────────────────────────────
+    seen = set()
+    trout_line_clean = []
+    for c in trout_line:
+        key = (round(c[0], 5), round(c[1], 5))
+        if key not in seen:
+            seen.add(key)
+            trout_line_clean.append(c)
+    trout_line = trout_line_clean
 
-    # ── Compute lake center and bbox ────────────────────────────────────
+    # ── Deduplicate access path points (sort S→N for rendering) ──────────
+    seen = set()
+    access_clean = []
+    for c in access_path:
+        key = (round(c[0], 5), round(c[1], 5))
+        if key not in seen:
+            seen.add(key)
+            access_clean.append(c)
+    access_path = sorted(access_clean, key=lambda c: c[0])  # S→N
+
+    # ── Compute lake center and bbox ─────────────────────────────────────
+    # lake_polygon is [[lat, lon], ...] (Leaflet format)
     if lake_polygon:
-        lons = [p[0] for p in lake_polygon]
-        lats = [p[1] for p in lake_polygon]
+        lats = [p[0] for p in lake_polygon]
+        lons = [p[1] for p in lake_polygon]
         lake_center = {
-            "lat": float(np.mean(lats)),
-            "lon": float(np.mean(lons))
+            "lat": float(sum(lats) / len(lats)),
+            "lon": float(sum(lons) / len(lons))
         }
         lake_bbox = {
             "S": float(min(lats)), "N": float(max(lats)),
@@ -1069,6 +1096,35 @@ def gen_pdf_map(pdf_path, lac_config):
         lake_center = {"lat": lac_config.get("lat", 0), "lon": lac_config.get("lon", 0)}
         lake_bbox   = {"S": 0, "N": 0, "W": 0, "E": 0}
 
+    # ── Classify waterways as inlet / outlet / tributary ─────────────────
+    # Strategy: compare each waterway's center to the lake centroid.
+    # Waterways entirely south of lake south boundary → outlet.
+    # Waterways far west of lake west boundary → tributary.
+    # Remainder: above centroid → inlet, below → outlet.
+    lake_centroid_lat = lake_center["lat"]
+    lake_centroid_lon = lake_center["lon"]
+    lake_s = lake_bbox["S"]
+    lake_n = lake_bbox["N"]
+    lake_w = lake_bbox["W"]
+
+    for ww in waterways:
+        clat = ww["center_lat"]
+        clon = ww["center_lon"]
+        # Outlet: center clearly south of lake (more than 50m south of south shore)
+        if clat < lake_s - 0.00045:
+            ww["type"] = "outlet"
+        # Tributary: center clearly west of lake west boundary
+        elif clon < lake_w - 0.0003:
+            ww["type"] = "tributary"
+        # Inlet: center north of lake centroid; Outlet: south
+        elif clat >= lake_centroid_lat:
+            ww["type"] = "inlet"
+        else:
+            ww["type"] = "outlet"
+
+    if not waterways:
+        pass  # no-op, list stays empty
+
     doc.close()
 
     result = {
@@ -1077,16 +1133,19 @@ def gen_pdf_map(pdf_path, lac_config):
         "fishing_spots": fishing_spots,
         "boat_access":   boat_access,
         "portage":       portage,
+        "trout_line":    trout_line,
+        "access_path":   access_path,
         "lake_center":   lake_center,
         "lake_bbox":     lake_bbox,
     }
 
     print(f"\n  Summary for Lac {lac_config['name']}:")
     print(f"    Lake polygon:  {len(lake_polygon)} points")
-    print(f"    Waterways:     {len(waterways)}")
+    print(f"    Waterways:     {len(waterways)} ({[w['type'] for w in waterways]})")
     print(f"    Fishing spots: {len(fishing_spots)}")
     print(f"    Boat access:   {len(boat_access)}")
-    print(f"    Portage:       {len(portage)}")
+    print(f"    Trout line:    {len(trout_line)} points")
+    print(f"    Access path:   {len(access_path)} points")
     print(f"    Center:        {lake_center['lat']:.5f}°N, {lake_center['lon']:.5f}°W")
 
     # Optionally save to JSON for later HTML generation
