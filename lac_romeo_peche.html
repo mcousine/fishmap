@@ -1296,7 +1296,7 @@ function buildBoatAccess() {
       html: '<div style="width:18px;height:18px;background:#8b5cf6;border:2px solid #fff;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:10px;box-shadow:0 0 10px rgba(139,92,246,0.7);">⛵</div>',
       iconSize: [18, 18], iconAnchor: [9, 9]
     })}).addTo(map)
-    .bindPopup('<div style="font-family:Inter"><strong>Mise à l'eau — Chaloupe</strong><br><span style="font-size:11px;color:#94a3b8;">Accès validé PDF Sépaq 2024</span></div>');
+    .bindPopup('<div style="font-family:Inter"><strong>Mise à l\'eau — Chaloupe</strong><br><span style="font-size:11px;color:#94a3b8;">Accès validé PDF Sépaq 2024</span></div>');
   });
 }
 
@@ -1466,7 +1466,7 @@ function update() {
     const isTop = i < 3 && spot.score >= 55;
     const isOff = spot.type === 'official';
     const scoreColor = spot.score >= 75 ? '#10b981' : spot.score >= 55 ? '#f59e0b' : '#94a3b8';
-    return '<div class="spot-card ' + (isOff ? 'official-pick' : (isTop ? 'top-pick' : '')) + '" onclick="map.setView([' + spot.lat + ',' + spot.lon + '],16);spotMarkers['' + spot.id + ''].openPopup();">' +
+    return '<div class="spot-card ' + (isOff ? 'official-pick' : (isTop ? 'top-pick' : '')) + '" onclick="map.setView([' + spot.lat + ',' + spot.lon + '],16);spotMarkers[' + spot.id + '].openPopup();">' +
       '<span style="float:right;font-size:18px;font-weight:800;color:' + scoreColor + ';">' + spot.score + '</span>' +
       '<div class="spot-name">' + (isTop ? '⭐ ' : '') + spot.name + '</div>' +
       '<div class="spot-detail">' + (spot.type === 'official' ? 'Officiel Sépaq' : 'Spot déduit') + '<br>' + spot.why.substring(0,65) + (spot.why.length>65?'…':'') + '</div>' +

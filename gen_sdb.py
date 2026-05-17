@@ -9,7 +9,7 @@ Sortie : GeoJSON isobathes + HTML carte de pêche
 Usage: python3 gen_sdb.py
 """
 
-import json, re, os, sys, math, warnings
+import json, re, os, sys, math, warnings, subprocess
 import numpy as np
 import requests
 from pathlib import Path
@@ -407,6 +407,29 @@ def replace_block(html, var_name, new_value, is_array=False):
     new_block = f'const {var_name} = {new_value}{semicolon}'
     return html.replace(old_block, new_block, 1)
 
+def run_render_test(html_path: str) -> bool:
+    """Run headless browser render test on a generated map HTML file.
+    Returns True if map renders correctly (tiles loaded, no JS errors)."""
+    test_script = os.path.join(os.path.dirname(__file__), "test_map_render.py")
+    if not os.path.exists(test_script):
+        print("  ⚠️  test_map_render.py not found — skipping render test")
+        return True
+    print(f"\n[Render test] {os.path.basename(html_path)} ...")
+    result = subprocess.run(
+        ["python3.11", test_script, html_path],
+        capture_output=True, text=True, timeout=60
+    )
+    output = result.stdout + result.stderr
+    for line in output.splitlines():
+        print(f"  {line}")
+    passed = result.returncode == 0
+    if not passed:
+        print("  ❌ RENDER TEST FAILED — vérifier la carte avant de pousser")
+    else:
+        print("  ✅ Render OK")
+    return passed
+
+
 def build_html(config, geojson, fosse_info, template_path):
     """Construit le HTML de la carte de pêche à partir du template Fox."""
     with open(template_path, 'r', encoding='utf-8') as f:
@@ -676,6 +699,8 @@ def main():
 
     size_kb = os.path.getsize(output_path) // 1024
     print(f"       ✅ HTML sauvegardé: {output_path} ({size_kb} KB)")
+
+    run_render_test(output_path)
 
     print(f"\n{'='*60}")
     print(f"  ✅ TERMINÉ — Lac {config['name']} — SDB")
@@ -1070,6 +1095,7 @@ def gen_pdf_map(pdf_path, lac_config):
     with open(json_path, "w", encoding="utf-8") as jf:
         json.dump(result, jf, ensure_ascii=False, indent=2)
     print(f"    Data saved: {json_path}")
+    print("    → Call run_render_test(html_path) after building HTML from this data.")
 
     return result
 
