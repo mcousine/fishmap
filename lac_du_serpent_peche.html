@@ -927,7 +927,7 @@ body {
 
 <!-- Top bar -->
 <div class="top-bar">
-  <h1>🎣 Lac Roméo</h1>
+  <h1>🎣 Lac du Serpent</h1>
   <div class="separator"></div>
   <span class="badge">Mastigouche</span>
   <div class="separator"></div>
@@ -974,7 +974,7 @@ body {
   </div>
   <div id="spotsContainer"></div>
 
-              <h3>📊 Stats Lac du Serpent</h3>
+                  <h3>📊 Stats Lac du Serpent</h3>
   <div class="stat-row"><span class="stat-label">Superficie</span><span class="stat-value">5.0 ha</span></div>
   <div class="stat-row"><span class="stat-label">Succès 2025</span><span class="stat-value">3.6 omble/j</span></div>
   <div class="stat-row"><span class="stat-label">Masse moy.</span><span class="stat-value">214 g</span></div>
@@ -1025,7 +1025,7 @@ body {
 
 <!-- Map legend (bottom-left) -->
 <div class="map-legend">
-  <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,0.7);border:1px solid #3b82f6;"></div>Lac Roméo (contour PDF)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,0.7);border:1px solid #3b82f6;"></div>Lac du Serpent (contour PDF)</div>
   <div class="legend-item"><div class="legend-line" style="background:#60a5fa;"></div>Entrée d'eau (nord)</div>
   <div class="legend-item"><div class="legend-line" style="background:#34d399;"></div>Sortie d'eau (sud)</div>
   <div class="legend-item"><div class="legend-dot" style="background:#d97706;border:2px solid #fbbf24;"></div>Site Sépaq officiel</div>
@@ -1078,16 +1078,12 @@ const LAKE_POLYGON = [[46.681743, -73.575183], [46.681355, -73.574731], [46.6812
 const WATERWAYS = [
   { type: "inlet", name: "Entrée nord", lat: 46.6815, lon: -73.57031,
     coords: [[46.681488, -73.570308], [46.681503, -73.570307], [46.681518, -73.570307]] },
-  { type: "inlet", name: "Entrée nord", lat: 46.6821, lon: -73.57029,
-    coords: [[46.682081, -73.570286], [46.682093, -73.570286], [46.682114, -73.570288]] },
   { type: "outlet", name: "Sortie sud", lat: 46.67965, lon: -73.5711,
     coords: [[46.679875, -73.571436], [46.679657, -73.571296], [46.679616, -73.571225], [46.679586, -73.571146], [46.679566, -73.570875], [46.679595, -73.570637]] },
-  { type: "outlet", name: "Sortie sud", lat: 46.67942, lon: -73.57192,
-    coords: [[46.679086, -73.572085], [46.679327, -73.572007], [46.679436, -73.571946], [46.679585, -73.571806], [46.679666, -73.571765]] },
+  { type: "outlet", name: "Sortie sud", lat: 46.67881, lon: -73.57213,
+    coords: [[46.67841, -73.572166], [46.678707, -73.572164], [46.679037, -73.572105], [46.679086, -73.572085]] },
   { type: "tributary", name: "Affluent NW", lat: 46.6828, lon: -73.57746,
-    coords: [[46.683349, -73.577997], [46.683282, -73.577949], [46.683182, -73.577841], [46.683043, -73.577499], [46.682932, -73.577361], [46.682803, -73.577331], [46.682653, -73.57736], [46.682432, -73.577211], [46.682223, -73.57707], [46.682053, -73.57703]] },
-  { type: "inlet", name: "Entrée nord", lat: 46.68103, lon: -73.57033,
-    coords: [[46.681014, -73.570328], [46.681043, -73.570325]] }
+    coords: [[46.683349, -73.577997], [46.683282, -73.577949], [46.683182, -73.577841], [46.683043, -73.577499], [46.682932, -73.577361], [46.682803, -73.577331], [46.682653, -73.57736], [46.682432, -73.577211], [46.682223, -73.57707], [46.682053, -73.57703]] }
 ];
 
 // Trout habitat line (omble de fontaine — trait sarcelle PDF Sépaq)
@@ -1116,7 +1112,7 @@ const FISHING_SPOTS = [
 ];
 
 // Trip dates
-const TRIP_DATES = ["2026-05-23", "2026-05-24", "2026-05-25"];
+const TRIP_DATES = ["2026-05-20", "2026-05-21", "2026-05-22"];
 let currentDate = TRIP_DATES[0];
 let currentDayIdx = 0;
 let currentTime = 6.0;

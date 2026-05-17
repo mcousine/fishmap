@@ -927,7 +927,7 @@ body {
 
 <!-- Top bar -->
 <div class="top-bar">
-  <h1>🎣 Lac Roméo</h1>
+  <h1>🎣 Lac de la Gitane</h1>
   <div class="separator"></div>
   <span class="badge">Mastigouche</span>
   <div class="separator"></div>
@@ -974,7 +974,7 @@ body {
   </div>
   <div id="spotsContainer"></div>
 
-              <h3>📊 Stats Lac de la Gitane</h3>
+                  <h3>📊 Stats Lac de la Gitane</h3>
   <div class="stat-row"><span class="stat-label">Superficie</span><span class="stat-value">13.7 ha</span></div>
   <div class="stat-row"><span class="stat-label">Succès 2025</span><span class="stat-value">N/D</span></div>
   <div class="stat-row"><span class="stat-label">Masse moy.</span><span class="stat-value">N/D</span></div>
@@ -1025,7 +1025,7 @@ body {
 
 <!-- Map legend (bottom-left) -->
 <div class="map-legend">
-  <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,0.7);border:1px solid #3b82f6;"></div>Lac Roméo (contour PDF)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,0.7);border:1px solid #3b82f6;"></div>Lac de la Gitane (contour PDF)</div>
   <div class="legend-item"><div class="legend-line" style="background:#60a5fa;"></div>Entrée d'eau (nord)</div>
   <div class="legend-item"><div class="legend-line" style="background:#34d399;"></div>Sortie d'eau (sud)</div>
   <div class="legend-item"><div class="legend-dot" style="background:#d97706;border:2px solid #fbbf24;"></div>Site Sépaq officiel</div>
@@ -1085,9 +1085,7 @@ const WATERWAYS = [
   { type: "outlet", name: "Sortie sud", lat: 46.75626, lon: -73.50058,
     coords: [[46.756206, -73.501272], [46.756176, -73.501051], [46.756178, -73.500852], [46.756217, -73.500679], [46.756277, -73.500595], [46.756295, -73.500522], [46.756298, -73.500184], [46.756335, -73.500073], [46.756388, -73.500005]] },
   { type: "tributary", name: "Affluent NW", lat: 46.75658, lon: -73.50217,
-    coords: [[46.757775, -73.502574], [46.75779, -73.502529], [46.757807, -73.502401], [46.757817, -73.502263], [46.757798, -73.502031], [46.757767, -73.501949], [46.757626, -73.501709], [46.757459, -73.50173], [46.757229, -73.50162], [46.757126, -73.501651], [46.757036, -73.501731], [46.756987, -73.501832], [46.756939, -73.501922], [46.756697, -73.502078], [46.756636, -73.50208], [46.756446, -73.502162], [46.756318, -73.502238], [46.756215, -73.502241], [46.756145, -73.502193], [46.756125, -73.50211], [46.756096, -73.502172], [46.755946, -73.50242], [46.755867, -73.50245], [46.755787, -73.502452], [46.755706, -73.502421], [46.755575, -73.502303], [46.755476, -73.502289], [46.755354, -73.50232], [46.755025, -73.502501], [46.754954, -73.502652]] },
-  { type: "outlet", name: "Sortie sud", lat: 46.75613, lon: -73.49371,
-    coords: [[46.756145, -73.493738], [46.756137, -73.493727], [46.756114, -73.493662]] }
+    coords: [[46.757775, -73.502574], [46.75779, -73.502529], [46.757807, -73.502401], [46.757817, -73.502263], [46.757798, -73.502031], [46.757767, -73.501949], [46.757626, -73.501709], [46.757459, -73.50173], [46.757229, -73.50162], [46.757126, -73.501651], [46.757036, -73.501731], [46.756987, -73.501832], [46.756939, -73.501922], [46.756697, -73.502078], [46.756636, -73.50208], [46.756446, -73.502162], [46.756318, -73.502238], [46.756215, -73.502241], [46.756145, -73.502193], [46.756125, -73.50211], [46.756096, -73.502172], [46.755946, -73.50242], [46.755867, -73.50245], [46.755787, -73.502452], [46.755706, -73.502421], [46.755575, -73.502303], [46.755476, -73.502289], [46.755354, -73.50232], [46.755025, -73.502501], [46.754954, -73.502652]] }
 ];
 
 // Trout habitat line (omble de fontaine — trait sarcelle PDF Sépaq)
@@ -1125,7 +1123,7 @@ const FISHING_SPOTS = [
 ];
 
 // Trip dates
-const TRIP_DATES = ["2026-05-23", "2026-05-24", "2026-05-25"];
+const TRIP_DATES = ["2026-05-20", "2026-05-21", "2026-05-22"];
 let currentDate = TRIP_DATES[0];
 let currentDayIdx = 0;
 let currentTime = 6.0;

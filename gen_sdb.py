@@ -1414,36 +1414,30 @@ def gen_pdf_map(pdf_path, lac_config):
     # real stream can appear as many small fragments. Cluster by proximity
     # (0.0005° ≈ 55m) within each type group, keep the longest in each cluster.
     # Hard cap: max 2 per type, max 6 total.
-    CLUSTER_DIST = 0.0005  # ~55m
-    MAX_PER_TYPE = 2
+    CLUSTER_DIST = 0.0009  # ~100m — merge fragments of same stream
+    MAX_PER_TYPE = 2        # max 2 per type (inlet/outlet/tributary)
 
     def _cluster_waterways(ww_list):
-        """Greedy distance-based clustering; returns one representative per cluster."""
+        """Greedy Euclidean clustering; keeps one representative per cluster, max MAX_PER_TYPE."""
+        cos_lat = math.cos(math.radians(lake_centroid_lat))
+        def _dist_m(a, b):
+            dlat = (a["center_lat"] - b["center_lat"]) * 111320
+            dlon = (a["center_lon"] - b["center_lon"]) * 111320 * cos_lat
+            return (dlat**2 + dlon**2) ** 0.5
         remaining = sorted(ww_list, key=lambda w: len(w["coords"]), reverse=True)
         chosen = []
-        while remaining:
+        while remaining and len(chosen) < MAX_PER_TYPE:
             seed = remaining.pop(0)
             chosen.append(seed)
-            remaining = [
-                w for w in remaining
-                if abs(w["center_lat"] - seed["center_lat"]) > CLUSTER_DIST
-                or abs(w["center_lon"] - seed["center_lon"]) > CLUSTER_DIST
-            ]
-            if len(chosen) >= MAX_PER_TYPE:
-                break
+            remaining = [w for w in remaining if _dist_m(w, seed) > CLUSTER_DIST * 111320]
         return chosen
 
-    if len(waterways) > 6:
+    if len(waterways) > MAX_PER_TYPE * 3:
         deduped = []
         for wtype in ("inlet", "outlet", "tributary"):
             group = [w for w in waterways if w["type"] == wtype]
             if group:
                 deduped.extend(_cluster_waterways(group))
-        # keep any leftover types (shouldn't happen but safety)
-        known = set(id(w) for w in deduped)
-        for w in waterways:
-            if id(w) not in known:
-                deduped.append(w)
         before2 = len(waterways)
         waterways = deduped[:6]
         print(f"  Deduplicated {before2} → {len(waterways)} waterways after clustering")
@@ -1604,8 +1598,9 @@ def build_pdf_html(data: dict, lac_config: dict, template_path: str) -> str:
     -------
     str  — complete HTML content
     """
+    import unicodedata as _ud
     with open(template_path, "r", encoding="utf-8") as f:
-        html = f.read()
+        html = _ud.normalize("NFC", f.read())
 
     lac_name = lac_config["name"]
     species  = lac_config.get("species", "Omble de fontaine")
@@ -1677,17 +1672,20 @@ def build_pdf_html(data: dict, lac_config: dict, template_path: str) -> str:
     boat_js = f"const BOAT_ACCESS = {_js(ba)};"
 
     # ── Replace ALL template lake-name occurrences ───────────────────────────
-    # Replace "Roméo" everywhere first; then fix JS single-quote contexts that
-    # may now contain unescaped apostrophes (e.g. "l'Orignal" inside 'string').
-    html = html.replace("Roméo", lac_name)
     lac_name_sq = lac_name.replace("'", "\\'")  # safe inside JS '...' strings
-    if lac_name_sq != lac_name:
-        # Fix bindTooltip and any other JS single-quote strings
-        html = re.sub(
-            r"(\.bindTooltip\(|\.bindPopup\()'([^']*)'",
-            lambda m: m.group(1) + "'" + m.group(2).replace(lac_name, lac_name_sq) + "'",
-            html
-        )
+
+    # STEP 1: Replace the lake polygon tooltip BEFORE the broad replace.
+    # The template has 'Lac Roméo — ...' (no apostrophe), so [^']* matches cleanly.
+    # If done after html.replace("Roméo", "l'Orignal"), the apostrophe in "l'" would
+    # truncate [^']* and leave 'Orignal — old_area...' orphaned in the output.
+    html = re.sub(
+        r"lakePoly\.bindTooltip\('[^']*'",
+        f"lakePoly.bindTooltip('Lac {lac_name_sq} — {area_ha} ha<br>Source: PDF Sépaq 2024'",
+        html
+    )
+
+    # STEP 2: Broad replace for all remaining "Roméo" occurrences (HTML, double-quoted JS, etc.)
+    html = html.replace("Roméo", lac_name)
 
     # Title + meta
     html = re.sub(r'<title>.*?</title>', f'<title>Lac {lac_name} — Pêche Mastigouche</title>', html)
@@ -1747,13 +1745,6 @@ def build_pdf_html(data: dict, lac_config: dict, template_path: str) -> str:
         r'<h3>📊 Stats Lac [^<]*</h3>[\s\S]*?<h3>🗺️ Légende',
         new_stats_block + '\n\n  <h3>🗺️ Légende',
         html, count=1
-    )
-
-    # Lake polygon tooltip
-    html = re.sub(
-        r"lakePoly\.bindTooltip\('[^']*'",
-        f"lakePoly.bindTooltip('Lac {lac_name_sq} — {area_ha} ha<br>Source: PDF Sépaq 2024'",
-        html
     )
 
     # LAKE_POLYGON

@@ -927,7 +927,7 @@ body {
 
 <!-- Top bar -->
 <div class="top-bar">
-  <h1>🎣 Lac Roméo</h1>
+  <h1>🎣 Lac à Paner</h1>
   <div class="separator"></div>
   <span class="badge">Mastigouche</span>
   <div class="separator"></div>
@@ -974,10 +974,10 @@ body {
   </div>
   <div id="spotsContainer"></div>
 
-              <h3>📊 Stats Lac à Paner</h3>
+                  <h3>📊 Stats Lac à Paner</h3>
   <div class="stat-row"><span class="stat-label">Superficie</span><span class="stat-value">5.5 ha</span></div>
-  <div class="stat-row"><span class="stat-label">Succès 2025</span><span class="stat-value">N/D</span></div>
-  <div class="stat-row"><span class="stat-label">Masse moy.</span><span class="stat-value">N/D</span></div>
+  <div class="stat-row"><span class="stat-label">Succès 2025</span><span class="stat-value">4.7 omble/j</span></div>
+  <div class="stat-row"><span class="stat-label">Masse moy.</span><span class="stat-value">434 g</span></div>
   <div class="stat-row"><span class="stat-label">Véhicule</span><span class="stat-value">Auto</span></div>
   <div class="stat-row"><span class="stat-label">Portage</span><span class="stat-value">Aucun portage</span></div>
   <div class="stat-row"><span class="stat-label">Bathymétrie</span><span class="stat-value">Non disponible</span></div>
@@ -1025,7 +1025,7 @@ body {
 
 <!-- Map legend (bottom-left) -->
 <div class="map-legend">
-  <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,0.7);border:1px solid #3b82f6;"></div>Lac Roméo (contour PDF)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,0.7);border:1px solid #3b82f6;"></div>Lac à Paner (contour PDF)</div>
   <div class="legend-item"><div class="legend-line" style="background:#60a5fa;"></div>Entrée d'eau (nord)</div>
   <div class="legend-item"><div class="legend-line" style="background:#34d399;"></div>Sortie d'eau (sud)</div>
   <div class="legend-item"><div class="legend-dot" style="background:#d97706;border:2px solid #fbbf24;"></div>Site Sépaq officiel</div>
@@ -1081,13 +1081,7 @@ const WATERWAYS = [
   { type: "inlet", name: "Entrée nord", lat: 46.80097, lon: -73.40756,
     coords: [[46.800986, -73.407569], [46.800963, -73.407553], [46.800957, -73.407547]] },
   { type: "outlet", name: "Sortie sud", lat: 46.79856, lon: -73.40138,
-    coords: [[46.798564, -73.402265], [46.798565, -73.402057], [46.798595, -73.401775], [46.798534, -73.400533], [46.79854, -73.40025]] },
-  { type: "inlet", name: "Entrée nord", lat: 46.80106, lon: -73.40322,
-    coords: [[46.801068, -73.403238], [46.801054, -73.403194]] },
-  { type: "inlet", name: "Entrée nord", lat: 46.80104, lon: -73.40316,
-    coords: [[46.80105, -73.403185], [46.801037, -73.403141]] },
-  { type: "inlet", name: "Entrée nord", lat: 46.80103, lon: -73.40311,
-    coords: [[46.801033, -73.403133], [46.801021, -73.403089]] }
+    coords: [[46.798564, -73.402265], [46.798565, -73.402057], [46.798595, -73.401775], [46.798534, -73.400533], [46.79854, -73.40025]] }
 ];
 
 // Trout habitat line (omble de fontaine — trait sarcelle PDF Sépaq)
@@ -1113,7 +1107,7 @@ const FISHING_SPOTS = [
 ];
 
 // Trip dates
-const TRIP_DATES = ["2026-05-23", "2026-05-24", "2026-05-25"];
+const TRIP_DATES = ["2026-05-20", "2026-05-21", "2026-05-22"];
 let currentDate = TRIP_DATES[0];
 let currentDayIdx = 0;
 let currentTime = 6.0;

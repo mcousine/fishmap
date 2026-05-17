@@ -969,7 +969,7 @@ body {
 
 <!-- Top bar -->
 <div class="top-bar">
-  <h1>🎣 Lac Roméo</h1>
+  <h1>🎣 Lac Siffleux</h1>
   <div class="separator"></div>
   <span class="badge">Mastigouche</span>
   <div class="separator"></div>
@@ -1016,7 +1016,7 @@ body {
   </div>
   <div id="spotsContainer"></div>
 
-              <h3>📊 Stats Lac Siffleux</h3>
+                  <h3>📊 Stats Lac Siffleux</h3>
   <div class="stat-row"><span class="stat-label">Superficie</span><span class="stat-value">22.7 ha</span></div>
   <div class="stat-row"><span class="stat-label">Succès 2025</span><span class="stat-value">3.3 omble/j</span></div>
   <div class="stat-row"><span class="stat-label">Masse moy.</span><span class="stat-value">407 g</span></div>
@@ -1067,7 +1067,7 @@ body {
 
 <!-- Map legend (bottom-left) -->
 <div class="map-legend">
-  <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,0.7);border:1px solid #3b82f6;"></div>Lac Roméo (contour PDF)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,0.7);border:1px solid #3b82f6;"></div>Lac Siffleux (contour PDF)</div>
   <div class="legend-item"><div class="legend-line" style="background:#60a5fa;"></div>Entrée d'eau (nord)</div>
   <div class="legend-item"><div class="legend-line" style="background:#34d399;"></div>Sortie d'eau (sud)</div>
   <div class="legend-item"><div class="legend-dot" style="background:#d97706;border:2px solid #fbbf24;"></div>Site Sépaq officiel</div>
@@ -1121,15 +1121,7 @@ const WATERWAYS = [
   { type: "outlet", name: "Sortie sud", lat: 46.80755, lon: -73.31848,
     coords: [[46.808823, -73.316779], [46.808782, -73.316858], [46.808585, -73.316898], [46.808532, -73.316949], [46.808413, -73.317147], [46.808303, -73.31715], [46.807993, -73.317049], [46.807844, -73.317009], [46.807445, -73.316728], [46.807315, -73.316721], [46.807194, -73.316769], [46.807055, -73.316901], [46.806835, -73.317229], [46.806707, -73.317566], [46.806667, -73.317905], [46.806697, -73.318409], [46.806707, -73.319129], [46.806747, -73.319526], [46.806745, -73.319637], [46.806736, -73.319804], [46.806684, -73.319878], [46.806605, -73.319963], [46.806575, -73.319975], [46.80656, -73.319976], [46.806567, -73.320435], [46.806574, -73.320424], [46.806757, -73.320424], [46.806925, -73.320474], [46.807054, -73.320476], [46.807156, -73.320423], [46.807344, -73.320256], [46.807445, -73.320125], [46.807473, -73.319975], [46.807875, -73.319358], [46.807953, -73.319206], [46.808136, -73.318724], [46.808502, -73.318258], [46.808574, -73.318006], [46.808615, -73.317656], [46.808672, -73.317399], [46.808716, -73.317248], [46.808853, -73.317017], [46.808883, -73.316999]] },
   { type: "outlet", name: "Sortie sud", lat: 46.81009, lon: -73.31039,
-    coords: [[46.809951, -73.31047], [46.809953, -73.310553], [46.810101, -73.310554], [46.810242, -73.310555], [46.810263, -73.310466], [46.810231, -73.310356], [46.810153, -73.310248], [46.810041, -73.310085], [46.809982, -73.310214], [46.809954, -73.310387]] },
-  { type: "outlet", name: "Sortie sud", lat: 46.81003, lon: -73.31004,
-    coords: [[46.810041, -73.310085], [46.810028, -73.309997]] },
-  { type: "outlet", name: "Sortie sud", lat: 46.81002, lon: -73.30993,
-    coords: [[46.810024, -73.309975], [46.810011, -73.309881]] },
-  { type: "outlet", name: "Sortie sud", lat: 46.81, lon: -73.30982,
-    coords: [[46.810007, -73.309859], [46.810003, -73.309826], [46.809987, -73.309771]] },
-  { type: "outlet", name: "Sortie sud", lat: 46.80997, lon: -73.30971,
-    coords: [[46.809979, -73.309755], [46.809955, -73.309667]] }
+    coords: [[46.809951, -73.31047], [46.809953, -73.310553], [46.810101, -73.310554], [46.810242, -73.310555], [46.810263, -73.310466], [46.810231, -73.310356], [46.810153, -73.310248], [46.810041, -73.310085], [46.809982, -73.310214], [46.809954, -73.310387]] }
 ];
 
 // Trout habitat line (omble de fontaine — trait sarcelle PDF Sépaq)
@@ -1155,7 +1147,7 @@ const FISHING_SPOTS = [
 ];
 
 // Trip dates
-const TRIP_DATES = ["2026-05-23", "2026-05-24", "2026-05-25"];
+const TRIP_DATES = ["2026-05-20", "2026-05-21", "2026-05-22"];
 let currentDate = TRIP_DATES[0];
 let currentDayIdx = 0;
 let currentTime = 6.0;

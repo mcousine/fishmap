@@ -927,7 +927,7 @@ body {
 
 <!-- Top bar -->
 <div class="top-bar">
-  <h1>🎣 Lac Roméo</h1>
+  <h1>🎣 Lac de la Griffe</h1>
   <div class="separator"></div>
   <span class="badge">Mastigouche</span>
   <div class="separator"></div>
@@ -974,7 +974,7 @@ body {
   </div>
   <div id="spotsContainer"></div>
 
-              <h3>📊 Stats Lac de la Griffe</h3>
+                  <h3>📊 Stats Lac de la Griffe</h3>
   <div class="stat-row"><span class="stat-label">Superficie</span><span class="stat-value">46.2 ha</span></div>
   <div class="stat-row"><span class="stat-label">Succès 2025</span><span class="stat-value">N/D</span></div>
   <div class="stat-row"><span class="stat-label">Masse moy.</span><span class="stat-value">N/D</span></div>
@@ -1025,7 +1025,7 @@ body {
 
 <!-- Map legend (bottom-left) -->
 <div class="map-legend">
-  <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,0.7);border:1px solid #3b82f6;"></div>Lac Roméo (contour PDF)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,0.7);border:1px solid #3b82f6;"></div>Lac de la Griffe (contour PDF)</div>
   <div class="legend-item"><div class="legend-line" style="background:#60a5fa;"></div>Entrée d'eau (nord)</div>
   <div class="legend-item"><div class="legend-line" style="background:#34d399;"></div>Sortie d'eau (sud)</div>
   <div class="legend-item"><div class="legend-dot" style="background:#d97706;border:2px solid #fbbf24;"></div>Site Sépaq officiel</div>
@@ -1078,8 +1078,8 @@ const LAKE_POLYGON = [[46.661033, -73.576093], [46.661, -73.575986], [46.661004,
 const WATERWAYS = [
   { type: "inlet", name: "Entrée nord", lat: 46.66398, lon: -73.57752,
     coords: [[46.664572, -73.577317], [46.664509, -73.577357], [46.664418, -73.577375], [46.664328, -73.577416], [46.664163, -73.577413], [46.664002, -73.577324], [46.663868, -73.577273], [46.663762, -73.577369], [46.663688, -73.57741], [46.663678, -73.577456], [46.66368, -73.577572], [46.663702, -73.577618], [46.663751, -73.577749], [46.66381, -73.577786], [46.663879, -73.577769], [46.664171, -73.577652], [46.66423, -73.577697], [46.664419, -73.577878], [46.66458, -73.577967], [46.663758, -73.577439], [46.663779, -73.577415], [46.663822, -73.577406], [46.663858, -73.577374], [46.663901, -73.577365], [46.66396, -73.577364], [46.664019, -73.577409], [46.664031, -73.577494], [46.66401, -73.577579], [46.663968, -73.577635], [46.663878, -73.577668], [46.663841, -73.577669], [46.663782, -73.577616], [46.663738, -73.577532], [46.663742, -73.577455]] },
-  { type: "inlet", name: "Entrée nord", lat: 46.6634, lon: -73.57768,
-    coords: [[46.663112, -73.577804], [46.663219, -73.577856], [46.663332, -73.577884], [46.663421, -73.577796], [46.66343, -73.577656], [46.66346, -73.577524], [46.663513, -73.577453], [46.663678, -73.577456]] },
+  { type: "inlet", name: "Entrée nord", lat: 46.66038, lon: -73.56559,
+    coords: [[46.660406, -73.565625], [46.660401, -73.565617], [46.660374, -73.565587], [46.660336, -73.565549]] },
   { type: "outlet", name: "Sortie sud", lat: 46.6518, lon: -73.56522,
     coords: [[46.652346, -73.566968], [46.652263, -73.5667], [46.652135, -73.566269], [46.652123, -73.566215], [46.652053, -73.566101], [46.651864, -73.565928], [46.651782, -73.565822], [46.651733, -73.565699], [46.651703, -73.565398], [46.651664, -73.565275], [46.651625, -73.565191], [46.651603, -73.565145], [46.651564, -73.564992], [46.651546, -73.564806], [46.651562, -73.564372], [46.651554, -73.563722], [46.651654, -73.563657], [46.651732, -73.563462], [46.651741, -73.563376]] },
   { type: "outlet", name: "Sortie sud", lat: 46.65135, lon: -73.57314,
@@ -1119,7 +1119,7 @@ const FISHING_SPOTS = [
 ];
 
 // Trip dates
-const TRIP_DATES = ["2026-05-23", "2026-05-24", "2026-05-25"];
+const TRIP_DATES = ["2026-05-20", "2026-05-21", "2026-05-22"];
 let currentDate = TRIP_DATES[0];
 let currentDayIdx = 0;
 let currentTime = 6.0;

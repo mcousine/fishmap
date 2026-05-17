@@ -927,7 +927,7 @@ body {
 
 <!-- Top bar -->
 <div class="top-bar">
-  <h1>🎣 Lac Roméo</h1>
+  <h1>🎣 Lac de la Rencontre</h1>
   <div class="separator"></div>
   <span class="badge">Mastigouche</span>
   <div class="separator"></div>
@@ -974,7 +974,7 @@ body {
   </div>
   <div id="spotsContainer"></div>
 
-              <h3>📊 Stats Lac de la Rencontre</h3>
+                  <h3>📊 Stats Lac de la Rencontre</h3>
   <div class="stat-row"><span class="stat-label">Superficie</span><span class="stat-value">33.4 ha</span></div>
   <div class="stat-row"><span class="stat-label">Succès 2025</span><span class="stat-value">N/D</span></div>
   <div class="stat-row"><span class="stat-label">Masse moy.</span><span class="stat-value">N/D</span></div>
@@ -1025,7 +1025,7 @@ body {
 
 <!-- Map legend (bottom-left) -->
 <div class="map-legend">
-  <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,0.7);border:1px solid #3b82f6;"></div>Lac Roméo (contour PDF)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,0.7);border:1px solid #3b82f6;"></div>Lac de la Rencontre (contour PDF)</div>
   <div class="legend-item"><div class="legend-line" style="background:#60a5fa;"></div>Entrée d'eau (nord)</div>
   <div class="legend-item"><div class="legend-line" style="background:#34d399;"></div>Sortie d'eau (sud)</div>
   <div class="legend-item"><div class="legend-dot" style="background:#d97706;border:2px solid #fbbf24;"></div>Site Sépaq officiel</div>
@@ -1078,8 +1078,8 @@ const LAKE_POLYGON = [[46.745636, -73.549118], [46.745598, -73.54878], [46.74559
 const WATERWAYS = [
   { type: "inlet", name: "Entrée nord", lat: 46.75097, lon: -73.55376,
     coords: [[46.75177, -73.555191], [46.751519, -73.554888], [46.751325, -73.554724], [46.751178, -73.554528], [46.7511, -73.554321], [46.751078, -73.554172], [46.751089, -73.553992], [46.750996, -73.553695], [46.750995, -73.553565], [46.750951, -73.553327], [46.750936, -73.553277], [46.750768, -73.553012], [46.750609, -73.552897], [46.750465, -73.552891], [46.750417, -73.552892], [46.750368, -73.552833]] },
-  { type: "inlet", name: "Entrée nord", lat: 46.75091, lon: -73.55252,
-    coords: [[46.750368, -73.552833], [46.750441, -73.552592], [46.750645, -73.552497], [46.750755, -73.552494], [46.750899, -73.55247], [46.751077, -73.552495], [46.751398, -73.552387], [46.751734, -73.552378]] },
+  { type: "inlet", name: "Entrée nord", lat: 46.75022, lon: -73.55285,
+    coords: [[46.75, -73.552983], [46.750149, -73.552849], [46.750244, -73.552807], [46.75034, -73.552794], [46.750368, -73.552833]] },
   { type: "outlet", name: "Sortie sud", lat: 46.73496, lon: -73.53853,
     coords: [[46.735875, -73.538795], [46.735792, -73.538757], [46.735631, -73.538562], [46.735542, -73.538505], [46.735459, -73.538457], [46.735369, -73.53843], [46.735273, -73.538442], [46.734913, -73.538711], [46.734824, -73.538684], [46.734699, -73.538567], [46.734614, -73.53842], [46.73451, -73.538303], [46.734462, -73.538305], [46.734293, -73.538459], [46.734081, -73.538544], [46.734012, -73.538546]] },
   { type: "outlet", name: "Sortie sud", lat: 46.73494, lon: -73.55506,
@@ -1302,7 +1302,7 @@ const FISHING_SPOTS = [
 ];
 
 // Trip dates
-const TRIP_DATES = ["2026-05-23", "2026-05-24", "2026-05-25"];
+const TRIP_DATES = ["2026-05-20", "2026-05-21", "2026-05-22"];
 let currentDate = TRIP_DATES[0];
 let currentDayIdx = 0;
 let currentTime = 6.0;
