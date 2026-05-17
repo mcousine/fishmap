@@ -67,7 +67,7 @@ MASTIGOUCHE_STATS = {
     "des Joncs":    {"success": 6.0, "mass_g": 312, "vehicule": "Camion 4X4", "portage_min": 3,  "enst": ""},
     "des Loups":    {"success": 4.3, "mass_g": 185, "vehicule": "VUS (VTT)",  "portage_min": 20, "enst": ""},
     "des Mauves":   {"success": 2.8, "mass_g": 188, "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
-    "des Ronces":   {"success": 0.0, "mass_g": 0,   "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "des Ronces":   {"success": 7.1, "mass_g": 191, "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
     "des Saules":   {"success": 4.1, "mass_g": 195, "vehicule": "VUS",        "portage_min": 5,  "enst": ""},
     "Diablos":      {"success": 1.7, "mass_g": 204, "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
     "Doré":         {"success": 5.3, "mass_g": 293, "vehicule": "VUS",        "portage_min": 3,  "enst": ""},
@@ -78,7 +78,7 @@ MASTIGOUCHE_STATS = {
     "du Hêtre":     {"success": 4.4, "mass_g": 164, "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
     "du Méta":      {"success": 5.1, "mass_g": 336, "vehicule": "Camion 4X4", "portage_min": 15, "enst": ""},
     "du Rat Musqué":{"success": 0.0, "mass_g": 0,   "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
-    "du Rutabaga":  {"success": 0.0, "mass_g": 0,   "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "du Rutabaga":  {"success": 5.2, "mass_g": 185,   "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
     "du Serpent":   {"success": 3.6, "mass_g": 214, "vehicule": "Auto",       "portage_min": 0,  "enst": "++"},
     "du Soufflet":  {"success": 3.6, "mass_g": 123, "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
     "du Sud-Est":   {"success": 0.2, "mass_g": 1000,"vehicule": "Camion 4X4", "portage_min": 2,  "enst": ""},
@@ -99,7 +99,7 @@ MASTIGOUCHE_STATS = {
     "Osborn":       {"success": 1.1, "mass_g": 646, "vehicule": "Auto",       "portage_min": 0,  "enst": "5"},
     "Orignal":      {"success": 3.9, "mass_g": 452, "vehicule": "Traversée",  "portage_min": 3,  "enst": ""},
     "Oudiette":     {"success": 0.0, "mass_g": 0,   "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
-    "à Paner":      {"success": 0.0, "mass_g": 0,   "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "à Paner":      {"success": 4.7, "mass_g": 434,   "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
     "Portage":      {"success": 0.0, "mass_g": 0,   "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
     "Prudent":      {"success": 5.0, "mass_g": 207, "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
     "Punaise":      {"success": 4.6, "mass_g": 204, "vehicule": "Auto",       "portage_min": 0,  "enst": "++"},
@@ -107,7 +107,7 @@ MASTIGOUCHE_STATS = {
     "Recto":        {"success": 4.0, "mass_g": 169, "vehicule": "VUS",        "portage_min": 1,  "enst": ""},
     "Régis":        {"success": 4.5, "mass_g": 170, "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
     "Roméo":        {"success": 5.6, "mass_g": 304, "vehicule": "Auto",       "portage_min": 25, "enst": ""},
-    "Rutabaga":     {"success": 0.0, "mass_g": 0,   "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
+    "Rutabaga":     {"success": 5.2, "mass_g": 185,   "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
     "au Sable":     {"success": 3.9, "mass_g": 330, "vehicule": "Auto",       "portage_min": 0,  "enst": ""},
     "Siffleux":     {"success": 3.3, "mass_g": 407, "vehicule": "Auto",       "portage_min": 1,  "enst": "5"},
     "Sonois":       {"success": 6.2, "mass_g": 419, "vehicule": "VUS",        "portage_min": 5,  "enst": ""},
@@ -162,6 +162,142 @@ def _lookup_gblq(lake_name: str, index_path: str = GBLQ_INDEX_PATH) -> dict:
         if _norm(name_part) == key:
             return feat["properties"]
     return {}
+
+def download_gblq_isobaths(gpkg_url: str, cache_dir: str = None) -> dict:
+    """Download GBLQ GPKG ZIP, extract isobath lines, return WGS84 data.
+
+    Returns dict with:
+      isobaths  : [{"depth_m": float, "coords": [[lat,lon],...]}]
+      max_depth : float (deepest isobath depth)
+      deep_point: [lat, lon] (fosse — deepest surveyed point, or None)
+    """
+    import urllib.request, zipfile, io, tempfile, os
+    import fiona
+    from pyproj import Transformer
+
+    if cache_dir is None:
+        cache_dir = tempfile.gettempdir()
+
+    # Cache based on URL hash
+    import hashlib
+    cache_key = hashlib.md5(gpkg_url.encode()).hexdigest()[:12]
+    cache_path = os.path.join(cache_dir, f"gblq_{cache_key}.gpkg")
+
+    if not os.path.exists(cache_path):
+        try:
+            print(f"    Downloading GBLQ: {gpkg_url.split('/')[-1]}")
+            with urllib.request.urlopen(gpkg_url, timeout=45) as r:
+                zdata = r.read()
+            with zipfile.ZipFile(io.BytesIO(zdata)) as z:
+                gpkg_name = next((f for f in z.namelist() if f.endswith(".gpkg")), None)
+                if not gpkg_name:
+                    return {}
+                with z.open(gpkg_name) as zf, open(cache_path, "wb") as out:
+                    out.write(zf.read())
+        except Exception as e:
+            print(f"    GBLQ download failed: {e}")
+            return {}
+
+    # Read isobaths layer
+    try:
+        layers = fiona.listlayers(cache_path)
+        iso_layer = next((l for l in layers if l.startswith("iso_")), None)
+        fos_layer = next((l for l in layers if l.startswith("fos_")), None)
+        if not iso_layer:
+            return {}
+
+        xfm = Transformer.from_crs("EPSG:32198", "EPSG:4326", always_xy=True)
+
+        isobaths = []
+        with fiona.open(cache_path, layer=iso_layer) as src:
+            for feat in src:
+                depth = feat["properties"].get("PROFONDEUR_M")
+                if depth is None:
+                    continue
+                geom = feat["geometry"]
+                all_coords = []
+                lines = geom["coordinates"] if geom["type"] == "MultiLineString" else [geom["coordinates"]]
+                for line in lines:
+                    pts = []
+                    for x, y in line:
+                        lon, lat = xfm.transform(x, y)
+                        pts.append([round(lat, 6), round(lon, 6)])
+                    if pts:
+                        all_coords.append(pts)
+                if all_coords:
+                    isobaths.append({"depth_m": round(float(depth), 2), "coords": all_coords})
+
+        isobaths.sort(key=lambda x: x["depth_m"])
+        max_depth = max((x["depth_m"] for x in isobaths), default=0)
+
+        deep_point = None
+        if fos_layer:
+            with fiona.open(cache_path, layer=fos_layer) as src:
+                for feat in src:
+                    lat_d = feat["properties"].get("LATITUDE")
+                    lon_d = feat["properties"].get("LONGITUDE")
+                    dep_d = feat["properties"].get("PROFONDEUR_M")
+                    if lat_d and lon_d:
+                        deep_point = [round(lat_d, 6), round(lon_d, 6)]
+                        max_depth = max(max_depth, float(dep_d or 0))
+                        break
+
+        return {"isobaths": isobaths, "max_depth": round(max_depth, 2), "deep_point": deep_point}
+    except Exception as e:
+        print(f"    GBLQ parse failed: {e}")
+        return {}
+
+def _gblq_js_block(gblq_data: dict, lac_name_sq: str) -> str:
+    """Return JS code block to inject GBLQ isobaths into the Leaflet map."""
+    isobaths = gblq_data.get("isobaths", [])
+    max_depth = gblq_data.get("max_depth", 10)
+    deep_point = gblq_data.get("deep_point")
+
+    iso_json = json.dumps(isobaths, ensure_ascii=False)
+    deep_json = json.dumps(deep_point)
+
+    return f"""
+// ============================================================
+// GBLQ BATHYMÉTRIE — isobathes MELCCFP Québec
+// ============================================================
+(function buildGBLQIsobaths() {{
+  const isobaths = {iso_json};
+  const maxDepth = {max_depth};
+  const deepPt   = {deep_json};
+
+  // Color ramp: shallow cyan → deep navy
+  function depthColor(d) {{
+    const t = Math.min(d / maxDepth, 1);
+    const r = Math.round(147 - 117 * t);
+    const g = Math.round(197 - 133 * t);
+    const b = Math.round(253 -  78 * t);
+    return 'rgb(' + r + ',' + g + ',' + b + ')';
+  }}
+
+  const bathyLayer = L.layerGroup().addTo(map);
+  isobaths.forEach(function(iso) {{
+    const col = depthColor(iso.depth_m);
+    iso.coords.forEach(function(line) {{
+      L.polyline(line, {{
+        color: col, weight: 1.8, opacity: 0.75,
+        pane: 'overlayPane'
+      }}).bindTooltip(iso.depth_m + ' m', {{
+        sticky: true, className: 'lake-tooltip'
+      }}).addTo(bathyLayer);
+    }});
+  }});
+
+  if (deepPt) {{
+    L.circleMarker(deepPt, {{
+      radius: 6, color: '#1e40af', fillColor: '#3b82f6',
+      fillOpacity: 0.9, weight: 2, pane: 'markerPane'
+    }}).bindPopup(
+      '<div style="font-weight:700;color:#93c5fd">🔵 Fosse — ' + maxDepth + ' m</div>' +
+      '<div style="font-size:11px;color:#94a3b8">Lac {lac_name_sq}<br>Source: GBLQ MELCCFP Québec</div>'
+    ).addTo(map);
+  }}
+}})();
+"""
 
 def _polygon_area_ha(coords_latlon: list) -> float:
     """Approximate lake area in hectares via Shoelace formula."""
@@ -1490,8 +1626,12 @@ def build_pdf_html(data: dict, lac_config: dict, template_path: str) -> str:
     enst_code = st.get("enst", "")
 
     # GBLQ lookup
-    gblq     = _lookup_gblq(lac_name)
-    has_gblq = gblq.get("ISO_DISPO") == "Oui"
+    gblq      = _lookup_gblq(lac_name)
+    has_gblq  = gblq.get("ISO_DISPO") == "Oui"
+    gblq_data = {}
+    if has_gblq and gblq.get("URL_GPKG_ZIP"):
+        cache_dir = lac_config.get("output_dir", tempfile.gettempdir())
+        gblq_data = download_gblq_isobaths(gblq["URL_GPKG_ZIP"], cache_dir=cache_dir)
 
     def _js(obj):
         return json.dumps(obj, ensure_ascii=False)
@@ -1639,6 +1779,22 @@ def build_pdf_html(data: dict, lac_config: dict, template_path: str) -> str:
     html = re.sub(r'const TRIP_DATES\s*=\s*\[[^\]]*\];',
                   f'const TRIP_DATES = {_js(trip_dates)};', html, count=1)
 
+    # ── Inject GBLQ isobaths before </script> ────────────────────────────────
+    if gblq_data.get("isobaths"):
+        gblq_js = _gblq_js_block(gblq_data, lac_name_sq)
+        html = html.replace("</script>", gblq_js + "\n</script>", 1)
+        # Update stat panel: show real depth
+        max_d = gblq_data.get("max_depth", 0)
+        if max_d:
+            html = re.sub(
+                r'(<span class="stat-label">Bathymétrie</span><span class="stat-value">)[^<]*(</span>)',
+                lambda m, d=max_d: m.group(1) + f'GBLQ {d} m max' + m.group(2), html
+            )
+            html = re.sub(
+                r'(<span class="stat-label">Profondeur max</span><span class="stat-value">)[^<]*(</span>)',
+                lambda m, d=max_d: m.group(1) + f'{d} m (GBLQ)' + m.group(2), html
+            )
+
     return html
 
 
@@ -1694,9 +1850,9 @@ def batch_pdf_maps(pdf_dir: str, output_dir: str, template_path: str,
 
         print(f"[{i:02d}/{len(pdfs)}] {lac_name}")
 
-        # Skip curated files (they have real bathymetry data)
-        if os.path.basename(html_path) in CURATED and not force:
-            print(f"       → fichier curatée avec bathymétrie, skip")
+        # ALWAYS skip curated files — they have real MFFP/SDB bathymetry data
+        if os.path.basename(html_path) in CURATED:
+            print(f"       → fichier curatée (bathymétrie MFFP), skip permanent")
             results.append((lac_name, html_path, True))
             continue
 

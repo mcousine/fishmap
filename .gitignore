@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+gblq_*.gpkg
+*_render_test.png
+*.zip
