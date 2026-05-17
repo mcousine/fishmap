@@ -1827,7 +1827,7 @@ def batch_pdf_maps(pdf_dir: str, output_dir: str, template_path: str,
 
     # These have curated bathymetry (MFFP/SDB) — skip unless explicitly forced
     CURATED = {"lac_fox_peche.html", "lac_dore_peche.html", "lac_marcel_peche.html",
-               "lac_osborn_peche.html", "lac_sonois_peche.html",
+               "lac_osborn_peche.html",
                "lac_baie_peche.html", "lac_chutenoire_peche.html",
                "lac_saules_peche.html", "lac_sable_peche.html"}
 
