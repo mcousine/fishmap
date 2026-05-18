@@ -247,8 +247,45 @@ def download_gblq_isobaths(gpkg_url: str, cache_dir: str = None) -> dict:
         print(f"    GBLQ parse failed: {e}")
         return {}
 
+def _layer_control_js_block() -> str:
+    """Return JS block that sets up the 4-layer Leaflet control (bathy/thermal/sun/hotzones)."""
+    return """
+// ============================================================
+// LAYER CONTROLS — Bathymétrie · Thermique · Soleil · Frappe
+// ============================================================
+let currentMode = 'bathy';
+let showSun = true, showHotzones = false;
+const layerBathy    = L.layerGroup().addTo(map);
+const layerThermal  = L.layerGroup();
+const layerSun      = L.layerGroup().addTo(map);
+const layerHotzones = L.layerGroup();
+
+const baseMaps    = { "🌊 Bathymétrie": layerBathy, "🌡️ Carte Thermique": layerThermal };
+const overlayMaps = { "☀️ Soleil / Ombre": layerSun, "🎯 Zones de Frappe": layerHotzones };
+L.control.layers(baseMaps, overlayMaps, { position: 'topright', collapsed: false }).addTo(map);
+
+map.on('baselayerchange', function(e) {
+  currentMode = (e.name === "🌡️ Carte Thermique") ? 'thermal' : 'bathy';
+});
+map.on('overlayadd', function(e) {
+  if (e.name === "☀️ Soleil / Ombre") {
+    showSun = true;
+    const el = document.getElementById('sunOverlay'); if (el) el.style.display = 'block';
+  }
+  if (e.name === "🎯 Zones de Frappe") showHotzones = true;
+});
+map.on('overlayremove', function(e) {
+  if (e.name === "☀️ Soleil / Ombre") {
+    showSun = false;
+    const el = document.getElementById('sunOverlay'); if (el) el.style.display = 'none';
+  }
+  if (e.name === "🎯 Zones de Frappe") showHotzones = false;
+});
+"""
+
+
 def _gblq_js_block(gblq_data: dict, lac_name_sq: str) -> str:
-    """Return JS code block to inject GBLQ isobaths into the Leaflet map."""
+    """Return JS code block to inject GBLQ isobaths into layerBathy + thermal zones into layerThermal."""
     isobaths = gblq_data.get("isobaths", [])
     max_depth = gblq_data.get("max_depth", 10)
     deep_point = gblq_data.get("deep_point")
@@ -265,42 +302,73 @@ def _gblq_js_block(gblq_data: dict, lac_name_sq: str) -> str:
   const maxDepth = {max_depth};
   const deepPt   = {deep_json};
 
-  // Color ramp: shallow cyan → deep navy
+  // Bathymetry: shallow cyan → deep navy
   function depthColor(d) {{
     const t = Math.min(d / maxDepth, 1);
-    const r = Math.round(147 - 117 * t);
-    const g = Math.round(197 - 133 * t);
-    const b = Math.round(253 -  78 * t);
-    return 'rgb(' + r + ',' + g + ',' + b + ')';
+    return 'rgb(' + Math.round(147-117*t) + ',' + Math.round(197-133*t) + ',' + Math.round(253-78*t) + ')';
+  }}
+  // Thermal: estimate water temp at depth (simplified stratification)
+  function thermalTemp(d, surf) {{ return Math.max(4, surf - d * (surf - 4) / Math.max(maxDepth, 8)); }}
+  function thermalColor(temp) {{
+    const t = Math.max(0, Math.min(1, (temp - 4) / 14));
+    if (t < 0.5) return 'rgb(' + Math.round(t*2*80) + ',' + Math.round(t*2*180) + ',255)';
+    const tt = (t - 0.5) * 2;
+    return 'rgb(' + Math.round(80+tt*170) + ',' + Math.round(180-tt*80) + ',' + Math.round(255*(1-tt*0.9)) + ')';
   }}
 
-  const bathyLayer = L.layerGroup().addTo(map);
-  isobaths.forEach(function(iso) {{
+  const bGroup = (typeof layerBathy   !== 'undefined') ? layerBathy   : L.layerGroup().addTo(map);
+  const tGroup = (typeof layerThermal !== 'undefined') ? layerThermal : L.layerGroup();
+
+  // Draw deepest isobaths first (sorting) so shallower ones overlay correctly in thermal
+  const sortedAsc  = isobaths.slice().sort((a, b) => a.depth_m - b.depth_m);
+  const sortedDesc = isobaths.slice().sort((a, b) => b.depth_m - a.depth_m);
+
+  // Bathymétrie layer — isobath polylines
+  sortedAsc.forEach(function(iso) {{
     const col = depthColor(iso.depth_m);
     iso.coords.forEach(function(line) {{
-      L.polyline(line, {{
-        color: col, weight: 1.8, opacity: 0.75,
-        pane: 'overlayPane'
-      }}).bindTooltip(iso.depth_m + ' m', {{
-        sticky: true, className: 'lake-tooltip'
-      }}).addTo(bathyLayer);
+      L.polyline(line, {{ color: col, weight: 1.8, opacity: 0.75, pane: 'overlayPane' }})
+       .bindTooltip(iso.depth_m + ' m', {{ sticky: true, className: 'lake-tooltip' }})
+       .addTo(bGroup);
+    }});
+  }});
+
+  // Thermique layer — filled depth zones + temperature labels
+  const surfTemp = (typeof waterTemp !== 'undefined') ? waterTemp : 8;
+  sortedDesc.forEach(function(iso) {{
+    const tTemp = thermalTemp(iso.depth_m, surfTemp);
+    const tCol  = thermalColor(tTemp);
+    iso.coords.forEach(function(line) {{
+      if (line.length >= 3) {{
+        L.polygon(line, {{ color: tCol, fillColor: tCol, fillOpacity: 0.35, weight: 1, opacity: 0.7, pane: 'overlayPane' }})
+         .bindTooltip('~' + tTemp.toFixed(1) + '°C · ' + iso.depth_m + ' m', {{ sticky: true, className: 'lake-tooltip' }})
+         .addTo(tGroup);
+      }}
     }});
   }});
 
   if (deepPt) {{
+    const surf = (typeof waterTemp !== 'undefined') ? waterTemp : 8;
+    const dTemp = thermalTemp(maxDepth, surf);
     L.circleMarker(deepPt, {{
-      radius: 6, color: '#1e40af', fillColor: '#3b82f6',
-      fillOpacity: 0.9, weight: 2, pane: 'markerPane'
+      radius: 6, color: '#1e40af', fillColor: '#3b82f6', fillOpacity: 0.9, weight: 2, pane: 'markerPane'
     }}).bindPopup(
       '<div style="font-weight:700;color:#93c5fd">🔵 Fosse — ' + maxDepth + ' m</div>' +
-      '<div style="font-size:11px;color:#94a3b8">Lac {lac_name_sq}<br>Source: GBLQ MELCCFP Québec</div>'
-    ).addTo(map);
+      '<div style="font-size:11px;color:#94a3b8">~' + dTemp.toFixed(1) + '°C · Lac {lac_name_sq}<br>Source: GBLQ MELCCFP Québec</div>'
+    ).addTo(bGroup);
+    L.circleMarker(deepPt, {{
+      radius: 6, color: '#1e3a8a', fillColor: '#1e40af', fillOpacity: 0.9, weight: 2, pane: 'markerPane'
+    }}).bindPopup(
+      '<div style="font-weight:700;color:#93c5fd">❄️ Zone froide — ~' + dTemp.toFixed(1) + '°C</div>' +
+      '<div style="font-size:11px;color:#94a3b8">Profondeur max: ' + maxDepth + ' m</div>'
+    ).addTo(tGroup);
   }}
 }})();
 """
 
+
 def _mffp_js_block(mffp_isobaths: list, lac_name_sq: str) -> str:
-    """Return JS code block to inject MFFP PDF isobaths into the Leaflet map."""
+    """Return JS code block to inject MFFP PDF isobaths into layerBathy + thermal zones into layerThermal."""
     max_depth = max((x["depth_m"] for x in mffp_isobaths), default=10)
     iso_json  = json.dumps(mffp_isobaths, ensure_ascii=False)
     return f"""
@@ -313,21 +381,40 @@ def _mffp_js_block(mffp_isobaths: list, lac_name_sq: str) -> str:
 
   function depthColor(d) {{
     const t = Math.min(d / maxDepth, 1);
-    const r = Math.round(0   + 38  * t);
-    const g = Math.round(56  - 18  * t);
-    const b = Math.round(101 + 13  * t);
-    return 'rgb(' + r + ',' + g + ',' + b + ')';
+    return 'rgb(' + Math.round(t*38) + ',' + Math.round(56-18*t) + ',' + Math.round(101+13*t) + ')';
+  }}
+  function thermalTemp(d, surf) {{ return Math.max(4, surf - d * (surf - 4) / Math.max(maxDepth, 8)); }}
+  function thermalColor(temp) {{
+    const t = Math.max(0, Math.min(1, (temp - 4) / 14));
+    if (t < 0.5) return 'rgb(' + Math.round(t*2*80) + ',' + Math.round(t*2*180) + ',255)';
+    const tt = (t - 0.5) * 2;
+    return 'rgb(' + Math.round(80+tt*170) + ',' + Math.round(180-tt*80) + ',' + Math.round(255*(1-tt*0.9)) + ')';
   }}
 
-  const mffpLayer = L.layerGroup().addTo(map);
+  const bGroup = (typeof layerBathy   !== 'undefined') ? layerBathy   : L.layerGroup().addTo(map);
+  const tGroup = (typeof layerThermal !== 'undefined') ? layerThermal : L.layerGroup();
+
+  const sortedDesc = isobaths.slice().sort((a, b) => b.depth_m - a.depth_m);
+  const surfTemp = (typeof waterTemp !== 'undefined') ? waterTemp : 8;
+
+  // Bathymétrie — polylines
   isobaths.forEach(function(iso) {{
     const col = depthColor(iso.depth_m);
-    L.polyline(iso.coords, {{
-      color: col, weight: 1.6, opacity: 0.80,
-      pane: 'overlayPane'
-    }}).bindTooltip(iso.depth_m + ' m (' + iso.depth_ft + ' pi — MFFP)', {{
-      sticky: true, className: 'lake-tooltip'
-    }}).addTo(mffpLayer);
+    L.polyline(iso.coords, {{ color: col, weight: 1.6, opacity: 0.80, pane: 'overlayPane' }})
+     .bindTooltip(iso.depth_m + ' m (' + iso.depth_ft + ' pi — MFFP)', {{ sticky: true, className: 'lake-tooltip' }})
+     .addTo(bGroup);
+  }});
+
+  // Thermique — filled depth zones (deepest first)
+  sortedDesc.forEach(function(iso) {{
+    const tTemp = thermalTemp(iso.depth_m, surfTemp);
+    const tCol  = thermalColor(tTemp);
+    const line  = iso.coords;
+    if (line.length >= 3) {{
+      L.polygon(line, {{ color: tCol, fillColor: tCol, fillOpacity: 0.35, weight: 1, opacity: 0.7, pane: 'overlayPane' }})
+       .bindTooltip('~' + tTemp.toFixed(1) + '°C · ' + iso.depth_m + ' m (MFFP)', {{ sticky: true, className: 'lake-tooltip' }})
+       .addTo(tGroup);
+    }}
   }});
 }})();
 """
@@ -1879,9 +1966,12 @@ def build_pdf_html(data: dict, lac_config: dict, template_path: str) -> str:
     html = re.sub(r'const TRIP_DATES\s*=\s*\[[^\]]*\];',
                   f'const TRIP_DATES = {_js(trip_dates)};', html, count=1)
 
-    # ── Strip any pre-existing GBLQ/MFFP blocks (template contamination) ───────
-    # When batch processes lac_romeo_peche.html as template, Roméo's GBLQ block
-    # ends up in every subsequent lake. Remove it before injecting the new block.
+    # ── Strip any pre-existing layer-control / GBLQ / MFFP blocks ─────────────
+    # Prevents template contamination when batch reuses lac_romeo_peche.html.
+    html = re.sub(
+        r'\n?// =+\n// LAYER CONTROLS[^\n]*\n// =+\n[\s\S]*?map\.on\(\'overlayremove\'[\s\S]*?\}\);\n',
+        '', html
+    )
     html = re.sub(
         r'\n?// =+\n// (?:GBLQ|MFFP) BATH[^\n]*\n// =+\n\(function build(?:GBLQ|MFFP)Isobaths\(\)[^\n]*\n[\s\S]*?\}\)\(\);',
         '', html
@@ -1894,11 +1984,13 @@ def build_pdf_html(data: dict, lac_config: dict, template_path: str) -> str:
             return html_str + js_block
         return html_str[:idx] + js_block + "\n</script>" + html_str[idx + len("</script>"):]
 
-    # ── Inject GBLQ isobaths inside main app script ──────────────────────────
+    # ── Always inject layer control (layerBathy / layerThermal / layerSun / layerHotzones) ──
+    html = _inject_before_last_script(html, _layer_control_js_block())
+
+    # ── Inject GBLQ isobaths → layerBathy + thermal zones → layerThermal ────
     if gblq_data.get("isobaths"):
         gblq_js = _gblq_js_block(gblq_data, lac_name_sq)
         html = _inject_before_last_script(html, gblq_js)
-        # Remove "SANS BATHYMÉTRIE" badge; update stat panel
         html = html.replace('<span class="badge-nosdb">SANS BATHYMÉTRIE</span>', '')
         max_d = gblq_data.get("max_depth", 0)
         if max_d:
@@ -1916,7 +2008,6 @@ def build_pdf_html(data: dict, lac_config: dict, template_path: str) -> str:
     if mffp_isobaths and not gblq_data.get("isobaths"):
         mffp_js = _mffp_js_block(mffp_isobaths, lac_name_sq)
         html = _inject_before_last_script(html, mffp_js)
-        # Remove "SANS BATHYMÉTRIE" badge; update stat panel
         html = html.replace('<span class="badge-nosdb">SANS BATHYMÉTRIE</span>', '')
         max_d_ft = max(x["depth_ft"] for x in mffp_isobaths)
         max_d_m  = round(max_d_ft * 0.3048, 1)

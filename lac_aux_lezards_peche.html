@@ -974,7 +974,7 @@ body {
   </div>
   <div id="spotsContainer"></div>
 
-                      <h3>📊 Stats Lac aux Lézards</h3>
+                        <h3>📊 Stats Lac aux Lézards</h3>
   <div class="stat-row"><span class="stat-label">Superficie</span><span class="stat-value">125.3 ha</span></div>
   <div class="stat-row"><span class="stat-label">Succès 2025</span><span class="stat-value">N/D</span></div>
   <div class="stat-row"><span class="stat-label">Masse moy.</span><span class="stat-value">N/D</span></div>
@@ -1604,6 +1604,40 @@ fetchWeatherForecast().then(function(data) {
   buildForecastPanel(data);
 });
 
+
+// ============================================================
+// LAYER CONTROLS — Bathymétrie · Thermique · Soleil · Frappe
+// ============================================================
+let currentMode = 'bathy';
+let showSun = true, showHotzones = false;
+const layerBathy    = L.layerGroup().addTo(map);
+const layerThermal  = L.layerGroup();
+const layerSun      = L.layerGroup().addTo(map);
+const layerHotzones = L.layerGroup();
+
+const baseMaps    = { "🌊 Bathymétrie": layerBathy, "🌡️ Carte Thermique": layerThermal };
+const overlayMaps = { "☀️ Soleil / Ombre": layerSun, "🎯 Zones de Frappe": layerHotzones };
+L.control.layers(baseMaps, overlayMaps, { position: 'topright', collapsed: false }).addTo(map);
+
+map.on('baselayerchange', function(e) {
+  currentMode = (e.name === "🌡️ Carte Thermique") ? 'thermal' : 'bathy';
+});
+map.on('overlayadd', function(e) {
+  if (e.name === "☀️ Soleil / Ombre") {
+    showSun = true;
+    const el = document.getElementById('sunOverlay'); if (el) el.style.display = 'block';
+  }
+  if (e.name === "🎯 Zones de Frappe") showHotzones = true;
+});
+map.on('overlayremove', function(e) {
+  if (e.name === "☀️ Soleil / Ombre") {
+    showSun = false;
+    const el = document.getElementById('sunOverlay'); if (el) el.style.display = 'none';
+  }
+  if (e.name === "🎯 Zones de Frappe") showHotzones = false;
+});
+
+
 // ============================================================
 // MFFP BATHYMÉTRIE — isobathes extraites du PDF Sépaq
 // ============================================================
@@ -1613,21 +1647,40 @@ fetchWeatherForecast().then(function(data) {
 
   function depthColor(d) {
     const t = Math.min(d / maxDepth, 1);
-    const r = Math.round(0   + 38  * t);
-    const g = Math.round(56  - 18  * t);
-    const b = Math.round(101 + 13  * t);
-    return 'rgb(' + r + ',' + g + ',' + b + ')';
+    return 'rgb(' + Math.round(t*38) + ',' + Math.round(56-18*t) + ',' + Math.round(101+13*t) + ')';
+  }
+  function thermalTemp(d, surf) { return Math.max(4, surf - d * (surf - 4) / Math.max(maxDepth, 8)); }
+  function thermalColor(temp) {
+    const t = Math.max(0, Math.min(1, (temp - 4) / 14));
+    if (t < 0.5) return 'rgb(' + Math.round(t*2*80) + ',' + Math.round(t*2*180) + ',255)';
+    const tt = (t - 0.5) * 2;
+    return 'rgb(' + Math.round(80+tt*170) + ',' + Math.round(180-tt*80) + ',' + Math.round(255*(1-tt*0.9)) + ')';
   }
 
-  const mffpLayer = L.layerGroup().addTo(map);
+  const bGroup = (typeof layerBathy   !== 'undefined') ? layerBathy   : L.layerGroup().addTo(map);
+  const tGroup = (typeof layerThermal !== 'undefined') ? layerThermal : L.layerGroup();
+
+  const sortedDesc = isobaths.slice().sort((a, b) => b.depth_m - a.depth_m);
+  const surfTemp = (typeof waterTemp !== 'undefined') ? waterTemp : 8;
+
+  // Bathymétrie — polylines
   isobaths.forEach(function(iso) {
     const col = depthColor(iso.depth_m);
-    L.polyline(iso.coords, {
-      color: col, weight: 1.6, opacity: 0.80,
-      pane: 'overlayPane'
-    }).bindTooltip(iso.depth_m + ' m (' + iso.depth_ft + ' pi — MFFP)', {
-      sticky: true, className: 'lake-tooltip'
-    }).addTo(mffpLayer);
+    L.polyline(iso.coords, { color: col, weight: 1.6, opacity: 0.80, pane: 'overlayPane' })
+     .bindTooltip(iso.depth_m + ' m (' + iso.depth_ft + ' pi — MFFP)', { sticky: true, className: 'lake-tooltip' })
+     .addTo(bGroup);
+  });
+
+  // Thermique — filled depth zones (deepest first)
+  sortedDesc.forEach(function(iso) {
+    const tTemp = thermalTemp(iso.depth_m, surfTemp);
+    const tCol  = thermalColor(tTemp);
+    const line  = iso.coords;
+    if (line.length >= 3) {
+      L.polygon(line, { color: tCol, fillColor: tCol, fillOpacity: 0.35, weight: 1, opacity: 0.7, pane: 'overlayPane' })
+       .bindTooltip('~' + tTemp.toFixed(1) + '°C · ' + iso.depth_m + ' m (MFFP)', { sticky: true, className: 'lake-tooltip' })
+       .addTo(tGroup);
+    }
   });
 })();
 

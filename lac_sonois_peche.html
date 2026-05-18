@@ -974,7 +974,7 @@ body {
   </div>
   <div id="spotsContainer"></div>
 
-                      <h3>📊 Stats Lac Sonois</h3>
+                        <h3>📊 Stats Lac Sonois</h3>
   <div class="stat-row"><span class="stat-label">Superficie</span><span class="stat-value">4.5 ha</span></div>
   <div class="stat-row"><span class="stat-label">Succès 2025</span><span class="stat-value">6.2 omble/j</span></div>
   <div class="stat-row"><span class="stat-label">Masse moy.</span><span class="stat-value">419 g</span></div>
@@ -1574,6 +1574,40 @@ document.head.appendChild(popupStyle);
 fetchWeatherForecast().then(function(data) {
   buildForecastPanel(data);
 });
+
+
+// ============================================================
+// LAYER CONTROLS — Bathymétrie · Thermique · Soleil · Frappe
+// ============================================================
+let currentMode = 'bathy';
+let showSun = true, showHotzones = false;
+const layerBathy    = L.layerGroup().addTo(map);
+const layerThermal  = L.layerGroup();
+const layerSun      = L.layerGroup().addTo(map);
+const layerHotzones = L.layerGroup();
+
+const baseMaps    = { "🌊 Bathymétrie": layerBathy, "🌡️ Carte Thermique": layerThermal };
+const overlayMaps = { "☀️ Soleil / Ombre": layerSun, "🎯 Zones de Frappe": layerHotzones };
+L.control.layers(baseMaps, overlayMaps, { position: 'topright', collapsed: false }).addTo(map);
+
+map.on('baselayerchange', function(e) {
+  currentMode = (e.name === "🌡️ Carte Thermique") ? 'thermal' : 'bathy';
+});
+map.on('overlayadd', function(e) {
+  if (e.name === "☀️ Soleil / Ombre") {
+    showSun = true;
+    const el = document.getElementById('sunOverlay'); if (el) el.style.display = 'block';
+  }
+  if (e.name === "🎯 Zones de Frappe") showHotzones = true;
+});
+map.on('overlayremove', function(e) {
+  if (e.name === "☀️ Soleil / Ombre") {
+    showSun = false;
+    const el = document.getElementById('sunOverlay'); if (el) el.style.display = 'none';
+  }
+  if (e.name === "🎯 Zones de Frappe") showHotzones = false;
+});
+
 </script>
 </body>
 </html>
