@@ -299,6 +299,40 @@ def _gblq_js_block(gblq_data: dict, lac_name_sq: str) -> str:
 }})();
 """
 
+def _mffp_js_block(mffp_isobaths: list, lac_name_sq: str) -> str:
+    """Return JS code block to inject MFFP PDF isobaths into the Leaflet map."""
+    max_depth = max((x["depth_m"] for x in mffp_isobaths), default=10)
+    iso_json  = json.dumps(mffp_isobaths, ensure_ascii=False)
+    return f"""
+// ============================================================
+// MFFP BATHYMÉTRIE — isobathes extraites du PDF Sépaq
+// ============================================================
+(function buildMFFPIsobaths() {{
+  const isobaths = {iso_json};
+  const maxDepth = {max_depth};
+
+  function depthColor(d) {{
+    const t = Math.min(d / maxDepth, 1);
+    const r = Math.round(0   + 38  * t);
+    const g = Math.round(56  - 18  * t);
+    const b = Math.round(101 + 13  * t);
+    return 'rgb(' + r + ',' + g + ',' + b + ')';
+  }}
+
+  const mffpLayer = L.layerGroup().addTo(map);
+  isobaths.forEach(function(iso) {{
+    const col = depthColor(iso.depth_m);
+    L.polyline(iso.coords, {{
+      color: col, weight: 1.6, opacity: 0.80,
+      pane: 'overlayPane'
+    }}).bindTooltip(iso.depth_m + ' m (' + iso.depth_ft + ' pi — MFFP)', {{
+      sticky: true, className: 'lake-tooltip'
+    }}).addTo(mffpLayer);
+  }});
+}})();
+"""
+
+
 def _polygon_area_ha(coords_latlon: list) -> float:
     """Approximate lake area in hectares via Shoelace formula."""
     if len(coords_latlon) < 3:
@@ -1201,6 +1235,33 @@ def gen_pdf_map(pdf_path, lac_config):
             dlon =  (px - W / 2) * scale_approx / (111320.0 * math.cos(math.radians(center_lat)))
             return center_lon + dlon, center_lat + dlat
 
+    # ── 2b. Extract numeric text positions for filtering ─────────────────────
+    # Collect (px, py) for any numeric text span — used to:
+    #   • detect route-number circles (filter from boat access)
+    #   • match depth labels to MFFP isobath candidates (dark navy strokes)
+    all_numeric_text_px = []   # (px, py) of any numeric span in the page
+    depth_labels_px     = []   # (px, py, depth_ft) — small font, 5-150 range, in map area
+
+    for block in blocks:
+        if block.get("type") != 0:
+            continue
+        for line in block.get("lines", []):
+            for span in line.get("spans", []):
+                text = span["text"].strip()
+                if not text:
+                    continue
+                digits_only = _re.sub(r'[^\d]', '', text)
+                if not digits_only:
+                    continue
+                bx = (span["bbox"][0] + span["bbox"][2]) / 2
+                by = (span["bbox"][1] + span["bbox"][3]) / 2
+                all_numeric_text_px.append((bx, by))
+                font_sz = span.get("size", 10)
+                if text.isdigit() and 5 <= float(text) <= 150 and bx < MAP_X_MAX and font_sz < 7.5:
+                    depth_labels_px.append((bx, by, float(text)))
+
+    print(f"  Numeric text spans: {len(all_numeric_text_px)}, depth label candidates: {len(depth_labels_px)} → {[int(d[2]) for d in depth_labels_px]}")
+
     # ── 3. Extract drawing paths ──────────────────────────────────────────────
     # Color signatures calibrated on real Sépaq Mastigouche PDFs (fitz 0-1 scale)
     # These are the EXACT colors found in the PDF, not theoretical values.
@@ -1252,13 +1313,14 @@ def gen_pdf_map(pdf_path, lac_config):
             coords.append([round(lat, 6), round(lon, 6)])
         return coords
 
-    lake_polygon   = []
-    waterways      = []
-    fishing_spots  = []
-    boat_access    = []
-    portage        = []
-    trout_line     = []
-    access_path    = []
+    lake_polygon            = []
+    waterways               = []
+    fishing_spots           = []
+    boat_access             = []
+    portage                 = []
+    trout_line              = []
+    access_path             = []
+    mffp_isobath_candidates = []   # dark navy stroke paths; matched to depth labels later
 
     largest_lake_path = None
     largest_lake_pts  = 0
@@ -1315,8 +1377,24 @@ def gen_pdf_map(pdf_path, lac_config):
         # ── Boat access: small black filled square ────────────────────────
         elif fill and _cdist(fill, (0.0, 0.0, 0.0), 0.05):
             if 2 < max(w_span, h_span) < 25 and min(w_span, h_span) > 1:
-                lon, lat = pixel_to_wgs84(cx_px, cy_px)
-                boat_access.append({"lat": round(lat, 6), "lon": round(lon, 6)})
+                # Route-number circles are oval (w/h ≈ 1.45) with nearby numeric text;
+                # real chaloupe squares are nearly square (aspect ≈ 1.0) with no text.
+                aspect = max(w_span, h_span) / max(min(w_span, h_span), 0.01)
+                has_route_text = any(abs(tx - cx_px) < 20 and abs(ty - cy_px) < 20
+                                     for tx, ty in all_numeric_text_px)
+                if aspect <= 1.35 and not has_route_text:
+                    lon, lat = pixel_to_wgs84(cx_px, cy_px)
+                    boat_access.append({"lat": round(lat, 6), "lon": round(lon, 6)})
+
+        # ── MFFP isobaths: dark navy stroke (0.000, 0.149, 0.451) ────────
+        elif color and _cdist(color, (0.000, 0.149, 0.451), 0.06) and len(pts) >= 10:
+            coords = _pts_to_latlon(pts)
+            mffp_isobath_candidates.append({
+                "coords":    coords,
+                "cx_px":     cx_px,
+                "cy_px":     cy_px,
+                "bbox_area": w_span * h_span,   # larger = outer ring = shallower
+            })
 
     # ── Convert lake polygon ──────────────────────────────────────────────
     if largest_lake_path:
@@ -1442,6 +1520,35 @@ def gen_pdf_map(pdf_path, lac_config):
         waterways = deduped[:6]
         print(f"  Deduplicated {before2} → {len(waterways)} waterways after clustering")
 
+    # ── Match MFFP isobath candidates to depth labels ────────────────────────
+    # Concentric isobaths: largest bounding-box area = outermost = shallowest.
+    # Strategy: sort all candidates by bbox_area descending (largest = shallowest),
+    # sort depth labels ascending (smallest = shallowest), then assign each
+    # candidate a depth by proportional rank so ALL segments are included.
+    # This handles both simple lakes (1 path/depth) and large lakes (many segments/depth).
+    mffp_isobaths = []
+    if mffp_isobath_candidates and depth_labels_px:
+        unique_depths_ft = sorted(set(d[2] for d in depth_labels_px))
+        n_depths  = len(unique_depths_ft)
+        n_cands   = len(mffp_isobath_candidates)
+        sorted_cands = sorted(mffp_isobath_candidates,
+                              key=lambda c: c["bbox_area"], reverse=True)
+        for i, cand in enumerate(sorted_cands):
+            depth_idx = min(int(i * n_depths / n_cands), n_depths - 1)
+            depth_ft  = unique_depths_ft[depth_idx]
+            depth_m   = round(depth_ft * 0.3048, 1)
+            mffp_isobaths.append({
+                "depth_m":  depth_m,
+                "depth_ft": depth_ft,
+                "coords":   cand["coords"],
+            })
+        depth_summary = sorted(set(x["depth_m"] for x in mffp_isobaths))
+        print(f"  MFFP isobaths: {n_cands} paths → {n_depths} levels {depth_summary} m")
+    elif mffp_isobath_candidates:
+        print(f"  MFFP isobaths: {len(mffp_isobath_candidates)} candidates but no depth labels in map area")
+    else:
+        print(f"  MFFP isobaths: none (no dark-navy strokes found)")
+
     doc.close()
 
     result = {
@@ -1454,6 +1561,7 @@ def gen_pdf_map(pdf_path, lac_config):
         "access_path":   access_path,
         "lake_center":   lake_center,
         "lake_bbox":     lake_bbox,
+        "mffp_isobaths": mffp_isobaths,
     }
 
     print(f"\n  Summary for Lac {lac_config['name']}:")
@@ -1463,6 +1571,7 @@ def gen_pdf_map(pdf_path, lac_config):
     print(f"    Boat access:   {len(boat_access)}")
     print(f"    Trout line:    {len(trout_line)} points")
     print(f"    Access path:   {len(access_path)} points")
+    print(f"    MFFP isobaths: {len(mffp_isobaths)} ({[x['depth_m'] for x in mffp_isobaths]} m)")
     print(f"    Center:        {lake_center['lat']:.5f}°N, {lake_center['lon']:.5f}°W")
 
     # Optionally save to JSON for later HTML generation
@@ -1785,6 +1894,18 @@ def build_pdf_html(data: dict, lac_config: dict, template_path: str) -> str:
                 r'(<span class="stat-label">Profondeur max</span><span class="stat-value">)[^<]*(</span>)',
                 lambda m, d=max_d: m.group(1) + f'{d} m (GBLQ)' + m.group(2), html
             )
+
+    # ── Inject MFFP PDF isobaths (when no GBLQ data available) ──────────────
+    mffp_isobaths = data.get("mffp_isobaths", [])
+    if mffp_isobaths and not gblq_data.get("isobaths"):
+        mffp_js = _mffp_js_block(mffp_isobaths, lac_name_sq)
+        html = html.replace("</script>", mffp_js + "\n</script>", 1)
+        max_d_ft = max(x["depth_ft"] for x in mffp_isobaths)
+        max_d_m  = round(max_d_ft * 0.3048, 1)
+        html = re.sub(
+            r'(<span class="stat-label">Bathymétrie</span><span class="stat-value">)[^<]*(</span>)',
+            lambda m, d=max_d_m: m.group(1) + f'MFFP PDF {d} m max' + m.group(2), html
+        )
 
     return html
 

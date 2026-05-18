@@ -838,12 +838,7 @@
     }
   ],
   "fishing_spots": [],
-  "boat_access": [
-    {
-      "lat": 46.797264,
-      "lon": -73.343295
-    }
-  ],
+  "boat_access": [],
   "portage": [],
   "trout_line": [],
   "access_path": [],
@@ -856,5 +851,6 @@
     "N": 46.796561,
     "W": -73.342536,
     "E": -73.337449
-  }
+  },
+  "mffp_isobaths": []
 }
