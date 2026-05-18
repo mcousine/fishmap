@@ -1879,11 +1879,27 @@ def build_pdf_html(data: dict, lac_config: dict, template_path: str) -> str:
     html = re.sub(r'const TRIP_DATES\s*=\s*\[[^\]]*\];',
                   f'const TRIP_DATES = {_js(trip_dates)};', html, count=1)
 
-    # ── Inject GBLQ isobaths before </script> ────────────────────────────────
+    # ── Strip any pre-existing GBLQ/MFFP blocks (template contamination) ───────
+    # When batch processes lac_romeo_peche.html as template, Roméo's GBLQ block
+    # ends up in every subsequent lake. Remove it before injecting the new block.
+    html = re.sub(
+        r'\n?// =+\n// (?:GBLQ|MFFP) BATH[^\n]*\n// =+\n\(function build(?:GBLQ|MFFP)Isobaths\(\)[^\n]*\n[\s\S]*?\}\)\(\);',
+        '', html
+    )
+
+    def _inject_before_last_script(html_str, js_block):
+        """Insert js_block before the LAST </script> tag (main app script where map lives)."""
+        idx = html_str.rfind("</script>")
+        if idx < 0:
+            return html_str + js_block
+        return html_str[:idx] + js_block + "\n</script>" + html_str[idx + len("</script>"):]
+
+    # ── Inject GBLQ isobaths inside main app script ──────────────────────────
     if gblq_data.get("isobaths"):
         gblq_js = _gblq_js_block(gblq_data, lac_name_sq)
-        html = html.replace("</script>", gblq_js + "\n</script>", 1)
-        # Update stat panel: show real depth
+        html = _inject_before_last_script(html, gblq_js)
+        # Remove "SANS BATHYMÉTRIE" badge; update stat panel
+        html = html.replace('<span class="badge-nosdb">SANS BATHYMÉTRIE</span>', '')
         max_d = gblq_data.get("max_depth", 0)
         if max_d:
             html = re.sub(
@@ -1899,7 +1915,9 @@ def build_pdf_html(data: dict, lac_config: dict, template_path: str) -> str:
     mffp_isobaths = data.get("mffp_isobaths", [])
     if mffp_isobaths and not gblq_data.get("isobaths"):
         mffp_js = _mffp_js_block(mffp_isobaths, lac_name_sq)
-        html = html.replace("</script>", mffp_js + "\n</script>", 1)
+        html = _inject_before_last_script(html, mffp_js)
+        # Remove "SANS BATHYMÉTRIE" badge; update stat panel
+        html = html.replace('<span class="badge-nosdb">SANS BATHYMÉTRIE</span>', '')
         max_d_ft = max(x["depth_ft"] for x in mffp_isobaths)
         max_d_m  = round(max_d_ft * 0.3048, 1)
         html = re.sub(
