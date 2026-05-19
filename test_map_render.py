@@ -122,6 +122,128 @@ def check_map_renders(html_path: str, screenshot_path: str = None, timeout_ms: i
     return results
 
 
+def check_map_buttons(html_path: str, screenshot_dir: str = None, timeout_ms: int = 12000) -> dict:
+    """
+    Test the 3 map mode buttons (Sombre/Satellite/Thermique) and thermal time-slider update.
+    Takes a screenshot after each button click and after advancing the time slider.
+    Returns a dict with per-button pass/fail and screenshot paths.
+    """
+    from playwright.sync_api import sync_playwright
+
+    html_path = os.path.abspath(html_path)
+    base_name = os.path.splitext(os.path.basename(html_path))[0]
+    if screenshot_dir is None:
+        screenshot_dir = os.path.dirname(html_path)
+    os.makedirs(screenshot_dir, exist_ok=True)
+
+    results = {
+        "success": False,
+        "buttons_found": {},
+        "mode_switches": {},
+        "thermal_update": False,
+        "screenshots": {},
+        "console_errors": [],
+    }
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page(viewport={"width": 1280, "height": 900})
+
+        console_errors = []
+        page.on("console", lambda msg: console_errors.append(msg.text) if msg.type == "error" else None)
+
+        page.goto(f"file://{html_path}")
+        try:
+            page.wait_for_selector(".leaflet-container", timeout=timeout_ms)
+        except Exception:
+            results["error"] = "Map never loaded"
+            browser.close()
+            return results
+
+        page.wait_for_timeout(3000)
+
+        # ── Check buttons exist (2-button design: Carte + Thermique) ──────────
+        for btn_id in ["btnSat", "btnThermal"]:
+            exists = page.evaluate(f"() => !!document.getElementById('{btn_id}')")
+            results["buttons_found"][btn_id] = exists
+
+        # ── Initial screenshot ──────────────────────────────────────────────
+        ss = os.path.join(screenshot_dir, f"{base_name}_btn_00_initial.png")
+        page.screenshot(path=ss)
+        results["screenshots"]["initial"] = ss
+
+        # ── Test each mode button ───────────────────────────────────────────
+        modes = [
+            ("satellite","btnSat",     "Carte"),
+            ("thermal",  "btnThermal", "Thermique"),
+        ]
+
+        for mode, btn_id, label in modes:
+            btn = page.query_selector(f"#{btn_id}")
+            if btn:
+                btn.click()
+                page.wait_for_timeout(800)
+
+                active_id = page.evaluate(
+                    "() => { const btns = document.querySelectorAll('.map-mode-btn');"
+                    " for (const b of btns) { if (b.classList.contains('active')) return b.id; }"
+                    " return null; }"
+                )
+                correct_active = (active_id == btn_id)
+                results["mode_switches"][mode] = correct_active
+
+                ss = os.path.join(screenshot_dir, f"{base_name}_btn_{mode}.png")
+                page.screenshot(path=ss)
+                results["screenshots"][mode] = ss
+            else:
+                results["mode_switches"][mode] = False
+
+        # ── Test thermal update with time slider ────────────────────────────
+        # Switch to thermal mode, record initial waterTemp, advance slider, check update
+        thermal_btn = page.query_selector("#btnThermal")
+        if thermal_btn:
+            thermal_btn.click()
+            page.wait_for_timeout(500)
+
+            temp_before = page.evaluate(
+                "() => document.getElementById('waterTempText')?.textContent || ''"
+            )
+
+            update_fn_exists = page.evaluate(
+                "() => typeof window._updateThermalColors === 'function'"
+            )
+
+            # Advance time slider to 20h (evening)
+            slider = page.query_selector("#timeSlider")
+            if slider:
+                page.evaluate("() => { const s = document.getElementById('timeSlider');"
+                               " s.value = '20'; s.dispatchEvent(new Event('input')); }")
+                page.wait_for_timeout(600)
+
+            temp_after = page.evaluate(
+                "() => document.getElementById('waterTempText')?.textContent || ''"
+            )
+
+            thermal_updated = (temp_before != temp_after) and update_fn_exists
+            results["thermal_update"] = thermal_updated
+            results["thermal_update_fn_exists"] = update_fn_exists
+            results["temp_before"] = temp_before
+            results["temp_after"] = temp_after
+
+            ss = os.path.join(screenshot_dir, f"{base_name}_btn_thermal_after_slider.png")
+            page.screenshot(path=ss)
+            results["screenshots"]["thermal_after_slider"] = ss
+
+        results["console_errors"] = console_errors
+        all_btns_found = all(results["buttons_found"].values())
+        all_modes_ok = all(results["mode_switches"].values())
+        results["success"] = all_btns_found and all_modes_ok and results.get("thermal_update_fn_exists", False)
+
+        browser.close()
+
+    return results
+
+
 def render_test(html_path: str, verbose: bool = True) -> bool:
     """Run rendering test and print results. Returns True if passed."""
     print(f"\n=== Map Render Test: {os.path.basename(html_path)} ===")
@@ -152,14 +274,48 @@ def render_test(html_path: str, verbose: bool = True) -> bool:
     return results["success"]
 
 
+def button_test(html_path: str) -> bool:
+    """Run button behavior test and print results. Returns True if passed."""
+    print(f"\n=== Button Behavior Test: {os.path.basename(html_path)} ===")
+
+    results = check_map_buttons(html_path)
+
+    status = "PASS" if results["success"] else "FAIL"
+    print(f"Status           : {status}")
+    print(f"Buttons found    : {results.get('buttons_found', {})}")
+    print(f"Mode switches    : {results.get('mode_switches', {})}")
+    print(f"Update fn exists : {results.get('thermal_update_fn_exists', False)}")
+    print(f"Thermal update   : {results.get('thermal_update', False)} "
+          f"({results.get('temp_before','?')} → {results.get('temp_after','?')})")
+
+    if results.get("console_errors"):
+        print(f"JS Errors        : {len(results['console_errors'])}")
+        for err in results["console_errors"][:5]:
+            print(f"  ✗ {err[:120]}")
+
+    for label, path in results.get("screenshots", {}).items():
+        if os.path.exists(path):
+            print(f"Screenshot [{label}]: {path}")
+
+    print("=" * 50)
+    return results["success"]
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python3.11 test_map_render.py <map.html> [map2.html ...]")
+        print("       python3.11 test_map_render.py --buttons <map.html> [map2.html ...]")
         sys.exit(1)
 
+    run_buttons = "--buttons" in sys.argv
+    paths = [p for p in sys.argv[1:] if not p.startswith("--")]
+
     all_pass = True
-    for path in sys.argv[1:]:
-        ok = render_test(path)
+    for path in paths:
+        if run_buttons:
+            ok = button_test(path)
+        else:
+            ok = render_test(path)
         if not ok:
             all_pass = False
 

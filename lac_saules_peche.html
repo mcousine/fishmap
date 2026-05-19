@@ -886,18 +886,15 @@ body {
   box-shadow: 0 1px 4px rgba(0,0,0,0.5);
 }
 
-.sat-topbar { display: flex; align-items: center; gap: 5px; }
-.sat-icon { font-size: 13px; line-height: 1; filter: drop-shadow(0 0 3px rgba(59,130,246,0.6)); }
-.sat-pct { font-size: 9px; font-weight: 700; color: var(--text-dim); min-width: 24px; font-variant-numeric: tabular-nums; }
-#satSlider {
-  -webkit-appearance: none; appearance: none; width: 64px; height: 3px;
-  border-radius: 2px; background: linear-gradient(90deg, var(--text-muted), #3b82f6);
-  outline: none; cursor: pointer;
+.map-mode-btns { display: flex; align-items: center; gap: 4px; }
+.map-mode-btn {
+  background: rgba(30,41,59,0.7); border: 1px solid rgba(148,163,184,0.2);
+  color: var(--text-dim); border-radius: 6px; padding: 3px 8px;
+  font-size: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+  font-family: inherit; letter-spacing: 0.3px; white-space: nowrap;
 }
-#satSlider::-webkit-slider-thumb {
-  -webkit-appearance: none; width: 11px; height: 11px; border-radius: 50%;
-  background: #fff; border: 2px solid #3b82f6; box-shadow: 0 0 5px rgba(59,130,246,0.5); cursor: grab;
-}
+.map-mode-btn:hover { background: rgba(59,130,246,0.2); color: var(--text-main); }
+.map-mode-btn.active { background: rgba(59,130,246,0.3); color: #93c5fd; border-color: rgba(59,130,246,0.5); }
 
 .species-select {
   background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2);
@@ -923,6 +920,25 @@ body {
 .thermal-opt  { background: rgba(16,185,129,0.18); color:#10b981; border:1px solid rgba(16,185,129,0.4); }
 .thermal-good { background: rgba(245,158,11,0.18); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); }
 .thermal-bad  { background: rgba(239,68,68,0.18);  color:#ef4444; border:1px solid rgba(239,68,68,0.4); }
+.temp-bar-wrap { margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--border); }
+.temp-bar-track {
+  position: relative; height: 7px; border-radius: 4px; overflow: visible;
+  background: linear-gradient(to right, #1e3a8a 0%, #3b82f6 20%, #06b6d4 35%, #10b981 50%, #fde047 65%, #f59e0b 80%, #ef4444 100%);
+}
+.temp-bar-comfort {
+  position: absolute; top: 0; height: 100%; border-radius: 2px;
+  background: rgba(255,255,255,0.28); border: 1px solid rgba(255,255,255,0.5);
+  box-sizing: border-box; pointer-events: none; transition: left 0.5s, width 0.5s;
+}
+.temp-bar-needle {
+  position: absolute; top: -4px; width: 3px; height: 15px;
+  background: #fff; border-radius: 2px; box-shadow: 0 0 6px rgba(0,0,0,0.7);
+  transform: translateX(-50%); pointer-events: none; transition: left 0.4s ease;
+}
+.temp-bar-labels {
+  display: flex; justify-content: space-between;
+  font-size: 8px; color: var(--text-dim); margin-top: 3px;
+}
 
 @media (max-width: 768px) {
   .info-panel { display: none; }
@@ -931,7 +947,7 @@ body {
   .control-panel { flex-wrap: wrap; padding: 10px 16px; gap: 10px; }
   #timeSlider { width: 140px; }
   .sun-indicator { display: none; }
-  .sat-topbar { display: none; }
+  .map-mode-btns { display: none; }
 }
 </style>
 </head>
@@ -964,12 +980,21 @@ body {
     <option value="perchaude">🐟 Perchaude</option>
   </select>
   <div class="separator"></div>
-  <div class="sat-topbar" title="Opacité satellite">
-    <span class="sat-icon">🛰️</span>
-    <input type="range" id="satSlider" min="0" max="100" value="50"
-      oninput="setSatOpacity(this.value); document.getElementById('satPct').textContent=Math.round(this.value)+'%'">
-    <span class="sat-pct" id="satPct">50%</span>
-  </div>
+  <div class="map-mode-btns">
+  <button class="map-mode-btn active" onclick="setMapMode('satellite')" id="btnSat">🛰️ Carte</button>
+  <button class="map-mode-btn" onclick="setMapMode('thermal')" id="btnThermal">🌡️ Thermique</button>
+</div>
+<div class="separator"></div>
+<span class="unit-toggle" onclick="toggleUnit()" title="Basculer m / pi"><span id="unitM" style="color:var(--accent)">M</span> | <span id="unitPi">Pi</span></span>
+<span class="unit-toggle" onclick="toggleTempUnit()" title="Basculer °C / °F" style="margin-left:4px"><span id="unitC" style="color:var(--accent)">°C</span> | <span id="unitF">°F</span></span>
+<div class="separator"></div>
+<select id="speciesSelect" class="species-select" onchange="setSpecies(this.value)">
+  <option value="omble">🐟 Omble de fontaine</option>
+  <option value="touladi">🐟 Touladi</option>
+  <option value="brochet">🐟 Grand Brochet</option>
+  <option value="dore">🐟 Doré jaune</option>
+  <option value="perchaude">🐟 Perchaude</option>
+</select>
   <div class="separator"></div>
   <span style="font-size:11px;color:var(--text-dim)">46.7832°N, 73.3548°W</span>
 </div>
@@ -994,6 +1019,13 @@ body {
     <div class="water-temp-val" id="waterTempText">~10°C</div>
     <div class="water-temp-label">Eau surface (est.)</div>
     <div id="thermalStatus" class="thermal-status thermal-opt">Optimal omble</div>
+    <div class="temp-bar-wrap">
+      <div class="temp-bar-track">
+        <div class="temp-bar-comfort" id="tempBarComfort" style="left:27%;width:27%"></div>
+        <div class="temp-bar-needle" id="tempBarNeedle" style="left:40%"></div>
+      </div>
+      <div class="temp-bar-labels"><span>0°</span><span>10°</span><span>20°</span><span>30°</span></div>
+    </div>
   </div>
 </div>
 
@@ -1073,8 +1105,8 @@ body {
 // DATA & STATE
 // ============================================================
 const LAT = 46.783183, LON = -73.354804;
-let currentUnit = 'm';
-let currentMode = 'bathy';
+// currentUnit: see LAYER CONTROLS
+// currentMode: see LAYER CONTROLS
 let showSun = true;
 let showHotzones = false;
 let geoJsonLayer = null;
@@ -1088,7 +1120,7 @@ function toggleUnit() {
   document.getElementById('statDepthMax').textContent = currentUnit === 'm' ? '14.2 m' : '46 pi';
 }
 
-let tempUnit = 'C';
+// tempUnit: see LAYER CONTROLS
 function tempDisp(t_c) {
   if (tempUnit === 'F') return (t_c * 9 / 5 + 32).toFixed(1) + '°F';
   return t_c.toFixed(1) + '°C';
@@ -1215,7 +1247,7 @@ const SPECIES = {
   },
 };
 
-let currentSpecies = 'omble';
+// currentSpecies: see LAYER CONTROLS
 
 // ============================================================
 // FISH SVG ICONS
@@ -1395,37 +1427,6 @@ const satTile = L.tileLayer(
 function setSatOpacity(val) { satTile.setOpacity(val / 100); }
 
 // ============================================================
-// LAYER CONTROLS
-// ============================================================
-const layerBathy   = L.layerGroup().addTo(map);
-const layerThermal = L.layerGroup();
-const layerSun     = L.layerGroup().addTo(map);
-const layerHotzones = L.layerGroup();
-
-const baseMaps   = { "🌊 Bathymétrie": layerBathy, "🌡️ Carte Thermique": layerThermal };
-const overlayMaps = { "☀️ Soleil / Ombre": layerSun, "🎯 Zones de Frappe": layerHotzones };
-L.control.layers(baseMaps, overlayMaps, { position: 'topright', collapsed: false }).addTo(map);
-
-map.on('baselayerchange', function(e) {
-  currentMode = (e.name === "🌡️ Carte Thermique") ? 'thermal' : 'bathy';
-  if (geoJsonLayer) {
-    if (currentMode === 'thermal') { layerBathy.removeLayer(geoJsonLayer); layerThermal.addLayer(geoJsonLayer); }
-    else { layerThermal.removeLayer(geoJsonLayer); layerBathy.addLayer(geoJsonLayer); }
-    geoJsonLayer.setStyle(styleFunction);
-  }
-});
-map.on('overlayadd', function(e) {
-  if (e.name === "☀️ Soleil / Ombre") { showSun = true; document.getElementById('sunOverlay').style.display = 'block'; }
-  if (e.name === "🎯 Zones de Frappe") { showHotzones = true; }
-  if (geoJsonLayer) geoJsonLayer.setStyle(styleFunction);
-});
-map.on('overlayremove', function(e) {
-  if (e.name === "☀️ Soleil / Ombre") { showSun = false; document.getElementById('sunOverlay').style.display = 'none'; }
-  if (e.name === "🎯 Zones de Frappe") { showHotzones = false; }
-  if (geoJsonLayer) geoJsonLayer.setStyle(styleFunction);
-});
-
-// ============================================================
 // DEPTH LABEL POSITIONS — Lac Fox (4 depth levels)
 // Main basin SW + NE basin
 // ============================================================
@@ -1548,6 +1549,15 @@ function updateThermalLabels() {
 // ============================================================
 const BATHYMETRY_GEOJSON = {"type":"FeatureCollection","features":[{"type":"Feature","properties":{"depth_m":2.0},"geometry":{"type":"Polygon","coordinates":[[[-73.35764187693131,46.78337067224061],[-73.35759402468798,46.783503306385825],[-73.3575081964844,46.78362719233323],[-73.35739052255235,46.783818473038934],[-73.35729806586676,46.784053290477345],[-73.35721190229252,46.78430334189813],[-73.35710360335162,46.78454031313149],[-73.35701754116941,46.78475121135678],[-73.35695955290223,46.785024174456815],[-73.35690059909287,46.78522143226196],[-73.35683678685854,46.78541533745252],[-73.35678752698716,46.78562933026291],[-73.35675268150287,46.78591691968155],[-73.35675715116787,46.78606743184247],[-73.35681527112096,46.78618456562753],[-73.3569562479764,46.78627170156312],[-73.35710698030626,46.78635216017749],[-73.35715064191616,46.786412415585026],[-73.35714552623466,46.78650605865389],[-73.35699917546381,46.78660955806862],[-73.35685777305206,46.78668296230482],[-73.35676221458888,46.786754164489544],[-73.35667987187621,46.78682393143517],[-73.35648016773679,46.786890862856836],[-73.35630406047407,46.78691214018793],[-73.35610843124218,46.78691726735147],[-73.35594019704405,46.78691974274094],[-73.35574859800761,46.786881880864975],[-73.35538113881314,46.7867712394599],[-73.35511921227847,46.78669835223694],[-73.35490809621844,46.786644340452206],[-73.35480259580218,46.78659583411499],[-73.35468162605709,46.78648012997675],[-73.35455692188673,46.78629992575512],[-73.35448308203904,46.78611709849975],[-73.35448330564809,46.78603379408431],[-73.35448354593309,46.785945116088385],[-73.35446039719768,46.7858241604115],[-73.35447237291315,46.78573549462602],[-73.35451974490941,46.78557700634893],[-73.354547413509,46.78547223925776],[-73.35455160195247,46.78537013016952],[-73.35454393020812,46.78531368814076],[-73.35452140932442,46.78523145434274],[-73.35449353643543,46.78515148942205],[-73.35447762172821,46.78510185961031],[-73.35442963556883,46.78504116411812],[-73.35440970563333,46.78499152845626],[-73.35443800986431,46.784911636354025],[-73.354526534893,46.784818040055995],[-73.35467134672804,46.78468317224557],[-73.35488446847849,46.784509805359235],[-73.35533091263798,46.78411073078892],[-73.35553602176758,46.78393183999099],[-73.35570096162235,46.783769436190006],[-73.35582962664085,46.78366762049148],[-73.35607073252599,46.783530117213836],[-73.35622339977827,46.78345589556111],[-73.35640029873267,46.78332106405474],[-73.35659322036375,46.78319727898705],[-73.35677161883999,46.78306721864248],[-73.3569677533853,46.782910191793704],[-73.35716760586922,46.7827430201085],[-73.35732682913788,46.78257833412925],[-73.35747126527548,46.78241870533671],[-73.35758604444726,46.78230469530416],[-73.35767493739507,46.78220334041877],[-73.35775990255513,46.78219076315587],[-73.35778931695131,46.782238996114934],[-73.3578000678629,46.78236330546235],[-73.3577921475879,46.78256623081876],[-73.35775071903072,46.78287311686784],[-73.357679573191,46.78324591874032],[-73.35764187693131,46.78337067224061]]]}},{"type":"Feature","properties":{"depth_m":4.0},"geometry":{"type":"Polygon","coordinates":[[[-73.35722640092203,46.78392112301589],[-73.35716156464996,46.78409903155974],[-73.35709343128225,46.78427580096588],[-73.35699715715677,46.78448314498532],[-73.35691241138095,46.78470070711891],[-73.35681465284041,46.784896627040695],[-73.35672641646354,46.785120125830744],[-73.35668408003126,46.78534654911695],[-73.35663333315438,46.78559589667081],[-73.35660777534129,46.78579080593352],[-73.35660310058249,46.78598000853529],[-73.35660700637276,46.786080349479306],[-73.35664432599457,46.78617213576692],[-73.35672755388086,46.78626397650236],[-73.3568024656255,46.78634433830736],[-73.35680232832293,46.78639594193861],[-73.3567979658286,46.78646760516516],[-73.35673092870377,46.78656499174636],[-73.35656783245724,46.7866880601084],[-73.35642991912144,46.78675669013276],[-73.35630467930196,46.786768000235305],[-73.35609176333409,46.78679066695844],[-73.35594151057569,46.7867904788786],[-73.35576214434289,46.78675298512138],[-73.35554947409457,46.786683912926165],[-73.35523266464094,46.786540172505966],[-73.35502004878519,46.78645103404773],[-73.35492013409791,46.786356302906626],[-73.35480364477507,46.78621855002987],[-73.35469553832701,46.78606647264911],[-73.35465420448249,46.78591734706046],[-73.35463359241307,46.78582271809782],[-73.35463806698604,46.785710917300044],[-73.35467611432261,46.78553035791048],[-73.354676399248,46.78542428623729],[-73.35466002256437,46.78530672774578],[-73.35462698160808,46.78517768075922],[-73.35458552290862,46.785074424230025],[-73.35458153668345,46.78500561621487],[-73.35459846962462,46.78491676791995],[-73.35471150686965,46.78478503726144],[-73.35485794394373,46.78465048521608],[-73.35507710106701,46.784446403572],[-73.35545166574431,46.784116229838055],[-73.35580705498188,46.78385129166044],[-73.35627032498923,46.783503827985534],[-73.3566320202058,46.783245420856],[-73.35682866784953,46.78312819947581],[-73.35697776438458,46.783030497645186],[-73.35709821986052,46.78298496604676],[-73.35727873825128,46.78297866555691],[-73.35738005609913,46.78298531905835],[-73.35745279195359,46.783022389006824],[-73.35747479263043,46.783085499299915],[-73.35746805213373,46.78323993861299],[-73.35739459274686,46.7834769534342],[-73.35734988472808,46.78361829356489],[-73.35732744780195,46.783720503629986],[-73.35726692706662,46.78385312242716],[-73.35722640092203,46.78392112301589]]]}},{"type":"Feature","properties":{"depth_m":6.0},"geometry":{"type":"Polygon","coordinates":[[[-73.35674565918275,46.78475717901439],[-73.35668986775643,46.78488802721379],[-73.35662707745972,46.78504504948748],[-73.35658167582476,46.78517828769487],[-73.3565361206388,46.785368656516965],[-73.35650435164276,46.78558760443199],[-73.35649361285317,46.78571612704771],[-73.3564932457947,46.78585418328145],[-73.35649293728328,46.78597081775596],[-73.35649619375718,46.786049374435265],[-73.3565548460596,46.7861470383624],[-73.35661008107553,46.78622565691092],[-73.35662723745533,46.786289947472326],[-73.35663055229892,46.78634707878936],[-73.35663384672247,46.786411350155134],[-73.35660943023127,46.786470827318475],[-73.35653650036902,46.78653024336584],[-73.35636650170365,46.78660382074771],[-73.35624340692583,46.78663103896738],[-73.3561047945544,46.78663086576395],[-73.35598351903982,46.78662476125328],[-73.35585798730209,46.78659187557363],[-73.35571512113822,46.78656194083262],[-73.35543383923284,46.78645744832094],[-73.35526937799314,46.78640368321974],[-73.3550789932097,46.78632608237406],[-73.35493627576294,46.786239615835385],[-73.35484574226295,46.78607882984122],[-73.35479419664908,46.78591809521584],[-73.3547901203348,46.78582287692053],[-73.35478184194783,46.78568004846242],[-73.35478651587407,46.785552112704856],[-73.35476092097217,46.78540628729508],[-73.35472677066541,46.78521879618896],[-73.35469248627437,46.78508188441118],[-73.35468840230561,46.78498964287671],[-73.35471029346468,46.78490338409705],[-73.35478146313217,46.78482504725105],[-73.35489287137646,46.78474270482825],[-73.35502214498787,46.78463288652622],[-73.35521389296332,46.78444371907413],[-73.35567747539639,46.78405326294993],[-73.35582011946032,46.78393124309765],[-73.35594040453809,46.783855019148696],[-73.35614981440098,46.783711695603024],[-73.35639935577221,46.78352870950146],[-73.35660429420837,46.78339454602217],[-73.35681817423219,46.78324206188568],[-73.35696518679738,46.78314754019423],[-73.35704982520875,46.78309571132875],[-73.35714773912918,46.78306833854933],[-73.3572633620381,46.78307153934193],[-73.35736115467098,46.78308998983639],[-73.35739215673355,46.78313890916316],[-73.357391922685,46.78322750363406],[-73.35732923343511,46.78338934155949],[-73.35728427529568,46.78357258676101],[-73.35720807103904,46.78379856328332],[-73.3570248463129,46.78413132979802],[-73.35692180156616,46.78441531629014],[-73.35681447303146,46.78463819851649],[-73.35674565918275,46.78475717901439]]]}},{"type":"Feature","properties":{"depth_m":8.0},"geometry":{"type":"MultiPolygon","coordinates":[[[[-73.3562526097949,46.78373296394207],[-73.35646186935698,46.78357821125696],[-73.35664724390912,46.783444610759396],[-73.3568354167382,46.7833138988576],[-73.35693088395287,46.78325528685568],[-73.35701226623185,46.783222650555025],[-73.35708657112023,46.7832169684925],[-73.35716364414498,46.783222840024656],[-73.35722380494762,46.78326431702927],[-73.35724333298585,46.78330092986376],[-73.35724456285388,46.783365439997475],[-73.35721200296675,46.7834886423098],[-73.35714990643055,46.783647432868136],[-73.35709773263191,46.78376579720818],[-73.35706239573686,46.78387744266433],[-73.35702159215478,46.78398095277609],[-73.35695525861394,46.784102174344525],[-73.35690057945413,46.78418259805765],[-73.35685749314503,46.784249430378026],[-73.35684576785754,46.784314038027844],[-73.35684227219133,46.78438772298422],[-73.35680909055885,46.78445343543815],[-73.35675281215755,46.78451458260807],[-73.35668831688436,46.784563249354626],[-73.35661725367068,46.78459943994073],[-73.35655282458774,46.78462316462809],[-73.35644883338956,46.78462870437988],[-73.35634816260334,46.78462631061767],[-73.35616177204129,46.78458639727603],[-73.35601826115963,46.78455787499218],[-73.35588957448508,46.78454070820668],[-73.35580383533261,46.784509990701146],[-73.35573793144117,46.78446796095839],[-73.35569184085432,46.78442255554251],[-73.35567712524228,46.78437038672284],[-73.35566078624753,46.78430801402286],[-73.35566255565641,46.78426493634282],[-73.35568576345025,46.78422642031718],[-73.35574037948044,46.78416867080265],[-73.35579166910998,46.78412112143144],[-73.35599844564298,46.783943394321405],[-73.35608404276954,46.78386947768116],[-73.3562526097949,46.78373296394207]]],[[[-73.35559853588154,46.78480334538402],[-73.35577184320996,46.784786900671186],[-73.35593818751757,46.784782351682935],[-73.3560559739797,46.78479439986606],[-73.35612867653714,46.78482067448478],[-73.35617010534025,46.784877853927235],[-73.35620447454866,46.78498501135952],[-73.35620422757087,46.785077841643194],[-73.35620737884751,46.78519448056283],[-73.35620361810598,46.78530635111699],[-73.35623769477625,46.78552299955786],[-73.3562650606736,46.785656333202056],[-73.35631657230087,46.78583254074971],[-73.35633710347699,46.785930158611926],[-73.35637154988027,46.78600875087111],[-73.35642679225796,46.786084990643445],[-73.35647160552912,46.7861731167365],[-73.35653015665204,46.78630886838577],[-73.35654731426494,46.78637315890805],[-73.35652984059796,46.78642788360242],[-73.3564569296703,46.78648015780894],[-73.35633901048917,46.78651571478916],[-73.35621076118723,46.78652745426183],[-73.35606870754468,46.78651775614322],[-73.35587132765751,46.786462761920895],[-73.35557008852962,46.78636954976945],[-73.35537622919196,46.78629551412954],[-73.35518245134703,46.786190535951164],[-73.35503373947809,46.786078474960256],[-73.35493008016168,46.78596646742975],[-73.35489914829296,46.78587121849019],[-73.35491669263433,46.78579030768117],[-73.35492731727891,46.7857046305685],[-73.35493447877056,46.78561894895143],[-73.3549278093109,46.785521346823735],[-73.35492117631985,46.78541184697441],[-73.35490754463619,46.785326137177],[-73.35490430259092,46.78524282302096],[-73.35491148982143,46.785147620915254],[-73.35491861892055,46.78507383872258],[-73.35493963276824,46.78499055553981],[-73.35502639157083,46.78494305952413],[-73.35516515574037,46.78488610713313],[-73.35531427573858,46.78484345134992],[-73.35559853588154,46.78480334538402]]]]}},{"type":"Feature","properties":{"depth_m":10.0},"geometry":{"type":"MultiPolygon","coordinates":[[[[-73.35703875533659,46.78365943896119],[-73.35699679216917,46.783803634244165],[-73.35696540278165,46.78388071658636],[-73.35692986794916,46.78395208149983],[-73.35688179068744,46.78404913707031],[-73.35683795105807,46.78411620681776],[-73.35680243496408,46.78418043175934],[-73.35676685825503,46.78426750525269],[-73.35675423007542,46.78432604539283],[-73.35675411600367,46.784368890534445],[-73.3567207319217,46.78441312296586],[-73.35668322397008,46.78444449606707],[-73.3566270077811,46.784474416545365],[-73.356554220596,46.7844814667107],[-73.3564689755144,46.78448135982039],[-73.35636507238151,46.784459807396],[-73.35625700019365,46.78444396138471],[-73.35615308003536,46.784430977151175],[-73.35608240377285,46.784425176368096],[-73.35601592078598,46.784406525232804],[-73.35595986392859,46.78437646291422],[-73.35592253087552,46.78434213844053],[-73.35590395029482,46.78429355797618],[-73.35590200771276,46.784242141965414],[-73.35590217054938,46.78418072906633],[-73.3559314417284,46.78411935510682],[-73.35597731640453,46.784069427110765],[-73.35605237388425,46.78399096925515],[-73.35615030905947,46.78390968784803],[-73.3564877751727,46.783665892260125],[-73.35660861553171,46.78357178218883],[-73.35671440372239,46.7834899457348],[-73.3568969343271,46.783371745346464],[-73.35696990353502,46.78334006358597],[-73.35702884188917,46.78331414066336],[-73.35707508924408,46.78331804921259],[-73.35710586889495,46.78333927160731],[-73.35710715435289,46.78338260036038],[-73.35709714384438,46.78345768929648],[-73.35706396246293,46.783562355055444],[-73.35703875533659,46.78365943896119]]],[[[-73.35598287322838,46.78517801444762],[-73.35599919529949,46.785294192014256],[-73.35604869057912,46.78544659319909],[-73.35609272313118,46.785568520527754],[-73.35612843939438,46.78568853167449],[-73.35613654940904,46.78576661609914],[-73.35616963410637,46.78583521078224],[-73.35624968613345,46.78596480077392],[-73.3563380435738,46.78609820915506],[-73.35639323017134,46.78619539384334],[-73.35640411833798,46.786271576954526],[-73.35639566304661,46.78632298195323],[-73.35638173095766,46.786349622431516],[-73.35631505924393,46.78640143186656],[-73.35623875104434,46.78642751869909],[-73.35613824857063,46.78642977254516],[-73.35603430566863,46.78642249956405],[-73.35590615117519,46.786398537011635],[-73.35573651972493,46.78633405524045],[-73.35559462131518,46.786267227582016],[-73.35539384747918,46.78618604338698],[-73.35517931015058,46.78606913766689],[-73.35508245390324,46.78600474729618],[-73.35504450772673,46.78594043005245],[-73.35504466689629,46.78588092252186],[-73.35506563071122,46.78581668027345],[-73.35509366590115,46.78570008106315],[-73.3551216509935,46.78560252472937],[-73.35514612388565,46.78552162461142],[-73.35520885813483,46.78538840707906],[-73.3552645874773,46.785281363777145],[-73.35535496852665,46.785176744791],[-73.35542441936695,46.78512208650292],[-73.3555285165237,46.78506985088869],[-73.35559791837122,46.78503423347983],[-73.35572282592025,46.7849748840614],[-73.35579218918902,46.784953548256304],[-73.35587880033778,46.78496079785549],[-73.35593762238129,46.784994195070496],[-73.3559610417468,46.78504849682348],[-73.35598287322838,46.78517801444762]]]]}},{"type":"Feature","properties":{"depth_m":12.0},"geometry":{"type":"MultiPolygon","coordinates":[[[[-73.35686348034919,46.783897727559435],[-73.35684244884374,46.78398767606668],[-73.35681317243282,46.78405190763994],[-73.35677351153393,46.784111841834196],[-73.35672968627047,46.784173200333896],[-73.35669834604653,46.7842302880461],[-73.35669616112703,46.78427027346967],[-73.3566794490296,46.78430024394342],[-73.35663990577956,46.78431447572034],[-73.35659208762773,46.78431441658845],[-73.35653184841523,46.78429291878773],[-73.35647163407042,46.78426285038996],[-73.35637412695807,46.784182750915676],[-73.35633476778895,46.78412842960109],[-73.3563244584028,46.78409556882353],[-73.35633085871956,46.784035594831096],[-73.35637053583856,46.78396994774696],[-73.35641432796868,46.78392144417384],[-73.35649353724929,46.78384442113047],[-73.35657897159852,46.78377311949509],[-73.35665188306282,46.78371893990413],[-73.3567746243335,46.783691957818014],[-73.35685362057635,46.78369491344995],[-73.35688890190384,46.7837192361001],[-73.35689712398833,46.78375495201935],[-73.356884534508,46.78379778006418],[-73.35686348034919,46.783897727559435]]],[[[-73.35585204260103,46.78544361004859],[-73.35588289462751,46.78556980444852],[-73.35593793418785,46.78572221241115],[-73.3559930940424,46.78582939640352],[-73.3560552276013,46.78591992687791],[-73.35614159972836,46.786017626106045],[-73.35625222249554,46.786117738300916],[-73.35629011567717,46.78620347673835],[-73.35628650489696,46.78625821876868],[-73.35623437206142,46.78631528026216],[-73.3561338189354,46.78633657704992],[-73.35601255794062,46.786326905098605],[-73.35586364321381,46.78629101146645],[-73.35557629257757,46.78618829629712],[-73.35539978322271,46.78610476225538],[-73.35523368845726,46.78601410122144],[-73.35519572423404,46.78595692574517],[-73.35521317368884,46.78591172368226],[-73.35527573888184,46.785840392521166],[-73.35534882166945,46.78572385049923],[-73.35541496495705,46.785612058832264],[-73.35545684674045,46.785500238373686],[-73.35546405204926,46.78539789442143],[-73.35547462434107,46.78533125842516],[-73.35555107950607,46.78525042398819],[-73.35563091967119,46.78519815932341],[-73.35570721356804,46.785176834165924],[-73.355773023229,46.78518881678271],[-73.35579718355483,46.78522455275454],[-73.3558108868277,46.78528407774059],[-73.35585204260103,46.78544361004859]]]]}},{"type":"Feature","properties":{"depth_m":14.0},"geometry":{"type":"Polygon","coordinates":[[[-73.35669456654236,46.78408746472075],[-73.35664023145138,46.784191655243355],[-73.35661517934811,46.78423161211715],[-73.35657774159215,46.784235848758506],[-73.35655074222998,46.784224389806305],[-73.35653211826613,46.78419151812263],[-73.35653223576314,46.78414724430808],[-73.3565427442898,46.78410441232464],[-73.35658867665839,46.7840330605407],[-73.35663665261397,46.78397456404361],[-73.35668659192004,46.783958918577206],[-73.35673231809446,46.78396468833219],[-73.35674681360628,46.783986127606084],[-73.3567404941402,46.78401754161845],[-73.35669456654236,46.78408746472075]]]}}]};
 
+// Forward declarations — layer groups + shared vars needed before LAYER CONTROLS block
+var layerBathy    = L.layerGroup().addTo(map);
+var layerThermal  = L.layerGroup();
+var layerSun      = L.layerGroup().addTo(map);
+var layerHotzones = L.layerGroup();
+var currentUnit   = 'm';
+var tempUnit      = 'C';
+var currentSpecies = 'omble';
+var currentMode   = 'satellite';
 (function initGeoJSON() {
   geoJsonLayer = L.geoJSON(BATHYMETRY_GEOJSON, {
     style: styleFunction,
@@ -1793,6 +1803,403 @@ style.textContent = `
 .leaflet-popup-close-button { color: #94a3b8 !important; }
 `;
 document.head.appendChild(style);
+
+window._updateThermalColors = function(wt) { updateThermalLabels(); };
+
+// ============================================================
+// LAYER CONTROLS — Carte (Satellite) · Thermique
+// ============================================================
+var currentMode = 'satellite';
+if (typeof layerBathy    === 'undefined') var layerBathy    = L.layerGroup().addTo(map);
+if (typeof layerThermal  === 'undefined') var layerThermal  = L.layerGroup();
+if (typeof layerSun      === 'undefined') var layerSun      = L.layerGroup().addTo(map);
+if (typeof layerHotzones === 'undefined') var layerHotzones = L.layerGroup();
+
+// ── Unit toggles (m ↔ pi, °C ↔ °F) ─────────────────────────
+var currentUnit = 'm';
+var tempUnit    = 'C';
+
+function depthVal(d) {
+  return currentUnit === 'ft' ? (d * 3.28084).toFixed(0) + ' pi' : d.toFixed(1) + ' m';
+}
+function tempDisp(t_c) {
+  return tempUnit === 'F' ? (t_c * 9 / 5 + 32).toFixed(1) + '°F' : t_c.toFixed(1) + '°C';
+}
+function toggleUnit() {
+  currentUnit = currentUnit === 'm' ? 'ft' : 'm';
+  const mEl = document.getElementById('unitM'), pEl = document.getElementById('unitPi');
+  if (mEl) mEl.style.color = currentUnit === 'm' ? 'var(--accent)' : 'var(--text-dim)';
+  if (pEl) pEl.style.color = currentUnit === 'ft' ? 'var(--accent)' : 'var(--text-dim)';
+  if (typeof window._onUnitChange === 'function') window._onUnitChange();
+}
+function toggleTempUnit() {
+  tempUnit = tempUnit === 'C' ? 'F' : 'C';
+  const cEl = document.getElementById('unitC'), fEl = document.getElementById('unitF');
+  if (cEl) cEl.style.color = tempUnit === 'C' ? 'var(--accent)' : 'var(--text-dim)';
+  if (fEl) fEl.style.color = tempUnit === 'F' ? 'var(--accent)' : 'var(--text-dim)';
+  if (typeof window._onTempUnitChange === 'function') window._onTempUnitChange();
+}
+
+// ── Species data ─────────────────────────────────────────────
+var SPECIES_DATA = {
+  omble: {
+    name: 'Omble de fontaine',
+    tempMin: 8, tempOpt1: 12, tempOpt2: 16, tempMax: 22, depthPref: [0, 4],
+    bonus: { 'embouchure':15, 'baie/herbier':10, 'pointe/étranglement':8, 'émissaire':12, 'escarpement/pente raide':5, 'connexion/passage':8 },
+    malus: { 'fosse profonde':-8 },
+  },
+  touladi: {
+    name: 'Touladi',
+    tempMin: 4, tempOpt1: 8, tempOpt2: 12, tempMax: 18, depthPref: [5, 12],
+    bonus: { 'fosse profonde':25, 'escarpement/pente raide':15 },
+    malus: { 'baie/herbier':-15, 'embouchure':-5, 'connexion/passage':-5 },
+  },
+  brochet: {
+    name: 'Grand Brochet',
+    tempMin: 10, tempOpt1: 16, tempOpt2: 22, tempMax: 28, depthPref: [0, 3],
+    bonus: { 'baie/herbier':25, 'embouchure':10, 'connexion/passage':12 },
+    malus: { 'fosse profonde':-25, 'escarpement/pente raide':-10 },
+  },
+  dore: {
+    name: 'Doré jaune',
+    tempMin: 10, tempOpt1: 16, tempOpt2: 22, tempMax: 26, depthPref: [3, 8],
+    bonus: { 'fosse profonde':12, 'escarpement/pente raide':20, 'pointe/étranglement':10 },
+    malus: { 'baie/herbier':-5 },
+  },
+  perchaude: {
+    name: 'Perchaude',
+    tempMin: 12, tempOpt1: 18, tempOpt2: 24, tempMax: 28, depthPref: [0, 5],
+    bonus: { 'baie/herbier':20, 'embouchure':8, 'pointe/étranglement':5, 'émissaire':6 },
+    malus: { 'fosse profonde':-15, 'escarpement/pente raide':-8 },
+  },
+};
+var currentSpecies = 'omble';
+
+function setSpecies(key) {
+  currentSpecies = key;
+  if (typeof update === 'function') update();
+}
+
+// Species-aware scoreSpot (overrides simpler template version)
+function scoreSpot(spot, hour) {
+  const weather = (typeof WEATHER !== 'undefined' && typeof currentDayIdx !== 'undefined')
+    ? WEATHER[currentDayIdx] : { max: 15, min: 5, cloud: 0.5 };
+  const sp = (SPECIES_DATA && (SPECIES_DATA[currentSpecies] || SPECIES_DATA.omble)) || null;
+  let score = spot.score_base;
+  if (sp) score += (sp.bonus[spot.type] || 0) + (sp.malus[spot.type] || 0);
+  const wt = (typeof estimateWaterTemp === 'function')
+    ? estimateWaterTemp(weather.max, weather.min, hour, weather.cloud || 0.5) : 12;
+  if (sp) {
+    if (wt >= sp.tempOpt1 && wt <= sp.tempOpt2) score += 15;
+    else if (wt >= sp.tempMin && wt <= sp.tempMax) score += 5;
+    else score -= 12;
+  } else {
+    if (wt >= 8 && wt <= 16) score += 10;
+    else if (wt < 5 || wt > 20) score -= 12;
+  }
+  const h = Math.round(hour * 2) / 2;
+  if (spot.peakTime && spot.peakTime.includes(h)) score += 20;
+  else if (spot.bestTime && spot.bestTime.includes(Math.floor(h))) score += 10;
+  else score -= 15;
+  if ((hour >= 5 && hour <= 7.5) || (hour >= 17.5 && hour <= 20)) score += 10;
+  if (hour >= 11 && hour <= 14) {
+    if (sp && sp.depthPref[0] >= 4) score += 15;
+    else if (spot.type !== 'fosse profonde') score -= 10;
+  }
+  if ((weather.cloud || 0) > 0.6) score += 5;
+  return Math.max(0, Math.min(100, score));
+}
+
+// ── Inject depth/thermal label CSS once ─────────────────────
+(function() {
+  if (document.getElementById('_dlCSS')) return;
+  const s = document.createElement('style'); s.id = '_dlCSS';
+  s.textContent =
+    '.dlabel-icon{background:transparent!important;border:none!important;box-shadow:none!important}' +
+    '.dlabel-txt{font-size:11px;font-weight:700;color:rgba(255,255,255,0.92);background:rgba(0,0,0,0.58);padding:2px 5px;border-radius:4px;white-space:nowrap;pointer-events:none;display:inline-block;text-shadow:0 1px 3px rgba(0,0,0,0.9)}' +
+    '.tlabel-txt{font-size:11px;font-weight:800;color:#fff;padding:2px 6px;border-radius:5px;border:1.5px solid rgba(255,255,255,0.4);white-space:nowrap;pointer-events:none;display:inline-block;text-shadow:0 1px 3px rgba(0,0,0,0.9);box-shadow:0 1px 4px rgba(0,0,0,0.5)}';
+  document.head.appendChild(s);
+})();
+
+// ── Map mode switch ───────────────────────────────────────────
+function setMapMode(mode) {
+  currentMode = mode;
+  if (typeof satTile !== 'undefined') satTile.setOpacity(1);
+  if (mode === 'thermal') {
+    if (!map.hasLayer(layerThermal)) layerThermal.addTo(map);
+    if (map.hasLayer(layerBathy))    map.removeLayer(layerBathy);
+  } else {
+    if (!map.hasLayer(layerBathy))   layerBathy.addTo(map);
+    if (map.hasLayer(layerThermal))  map.removeLayer(layerThermal);
+  }
+  ['btnSat','btnThermal'].forEach(function(id) {
+    const el = document.getElementById(id); if (el) el.classList.remove('active');
+  });
+  const activeEl = document.getElementById(mode === 'thermal' ? 'btnThermal' : 'btnSat');
+  if (activeEl) activeEl.classList.add('active');
+}
+
+// Observe waterTempText — update thermal colors live when time slider moves
+const _wtEl = document.getElementById('waterTempText');
+if (_wtEl) {
+  new MutationObserver(function() {
+    if (typeof window._updateThermalColors !== 'function') return;
+    const m = _wtEl.textContent.match(/[\d.]+/);
+    if (m) window._updateThermalColors(parseFloat(m[0]));
+  }).observe(_wtEl, { childList: true, characterData: true, subtree: true });
+}
+
+setMapMode('satellite');
+// END LAYER CONTROLS
+
+
+// ============================================================
+// DEBUG PANEL — Simulateur météo & conditions
+// ============================================================
+(function() {
+  if (document.getElementById('_debugPanel')) return;
+
+  const style = document.createElement('style');
+  style.textContent = `
+    #_debugPanel { position:fixed;right:16px;bottom:110px;z-index:2000;width:264px;
+      font-family:'Inter',sans-serif;font-size:11px;user-select:none; }
+    #_debugToggle { cursor:pointer;background:rgba(15,23,42,0.88);backdrop-filter:blur(10px);
+      -webkit-backdrop-filter:blur(10px);border:1px solid rgba(148,163,184,0.25);
+      border-radius:10px 10px 0 0;padding:6px 10px;display:flex;
+      justify-content:space-between;align-items:center;
+      color:#94a3b8;font-weight:700;letter-spacing:0.3px; }
+    #_debugBody { background:rgba(10,14,26,0.93);backdrop-filter:blur(14px);
+      -webkit-backdrop-filter:blur(14px);border:1px solid rgba(148,163,184,0.2);
+      border-top:none;border-radius:0 0 10px 10px;padding:10px;color:#cbd5e1; }
+    ._dbSection { border-top:1px solid rgba(148,163,184,0.12);padding-top:8px;margin-top:6px; }
+    ._dbLabel { color:#64748b;font-size:10px;margin-bottom:5px;
+      text-transform:uppercase;letter-spacing:0.5px; }
+    ._dbRow { display:flex;justify-content:space-between;align-items:center;margin-bottom:3px; }
+    ._dbRange { width:100%;accent-color:#06b6d4;margin-top:2px; }
+    ._dayBtn { background:rgba(30,41,59,0.7);border:1px solid rgba(148,163,184,0.2);
+      color:#64748b;border-radius:5px;padding:3px 0;font-size:10px;font-weight:600;
+      cursor:pointer;font-family:inherit;flex:1;transition:all 0.15s; }
+    ._dayBtn.active { background:rgba(59,130,246,0.25);color:#93c5fd;
+      border-color:rgba(59,130,246,0.4); }
+    ._timeBtn,._presetBtn { background:rgba(30,41,59,0.7);border:1px solid rgba(148,163,184,0.15);
+      color:#94a3b8;border-radius:5px;padding:2px 7px;font-size:10px;
+      cursor:pointer;font-family:inherit;transition:all 0.15s;white-space:nowrap; }
+    ._timeBtn:hover,._presetBtn:hover { background:rgba(59,130,246,0.2);color:#e2e8f0; }
+    ._dbBtns { display:flex;flex-wrap:wrap;gap:3px; }
+  `;
+  document.head.appendChild(style);
+
+  const panel = document.createElement('div');
+  panel.id = '_debugPanel';
+  panel.innerHTML = `
+    <div id="_debugToggle" onclick="_dbToggle()">
+      <span>🔧 Simulateur météo</span><span id="_dbArrow">▲</span>
+    </div>
+    <div id="_debugBody">
+
+      <div style="display:flex;gap:4px;margin-bottom:8px;">
+        <button class="_dayBtn active" data-d="0" onclick="_dbSetDay(0)">Auj</button>
+        <button class="_dayBtn"        data-d="1" onclick="_dbSetDay(1)">Dem</button>
+        <button class="_dayBtn"        data-d="2" onclick="_dbSetDay(2)">J+2</button>
+      </div>
+
+      <div>
+        <div class="_dbRow">
+          <span>🌡️ Tmax</span><span id="_dbTmaxVal" style="color:#f59e0b;font-weight:700"></span>
+        </div>
+        <input type="range" id="_dbTmax" class="_dbRange" min="-10" max="38" step="1"
+          style="accent-color:#f59e0b;" oninput="_dbUpdateWeather()">
+      </div>
+      <div style="margin-top:6px;">
+        <div class="_dbRow">
+          <span>❄️ Tmin</span><span id="_dbTminVal" style="color:#38bdf8;font-weight:700"></span>
+        </div>
+        <input type="range" id="_dbTmin" class="_dbRange" min="-15" max="28" step="1"
+          style="accent-color:#38bdf8;" oninput="_dbUpdateWeather()">
+      </div>
+      <div style="margin-top:6px;">
+        <div class="_dbRow">
+          <span>☁️ Nuages</span><span id="_dbCloudVal" style="color:#94a3b8;font-weight:700"></span>
+        </div>
+        <input type="range" id="_dbCloud" class="_dbRange" min="0" max="100" step="5"
+          style="accent-color:#64748b;" oninput="_dbUpdateWeather()">
+      </div>
+
+      <div class="_dbSection">
+        <div class="_dbLabel">⏱ Heure rapide</div>
+        <div class="_dbBtns">
+          <button class="_timeBtn" onclick="_dbJump(5.5)">🌅 5h30</button>
+          <button class="_timeBtn" onclick="_dbJump(7)">🌤 7h</button>
+          <button class="_timeBtn" onclick="_dbJump(9)">☀️ 9h</button>
+          <button class="_timeBtn" onclick="_dbJump(12)">🔆 Midi</button>
+          <button class="_timeBtn" onclick="_dbJump(15)">🌥 15h</button>
+          <button class="_timeBtn" onclick="_dbJump(17.5)">🌇 17h30</button>
+          <button class="_timeBtn" onclick="_dbJump(19)">🌆 19h</button>
+        </div>
+      </div>
+
+      <div class="_dbSection">
+        <div class="_dbLabel">🎨 Présets météo</div>
+        <div class="_dbBtns">
+          <button class="_presetBtn" onclick="_dbPreset('spring')">🌸 Printemps</button>
+          <button class="_presetBtn" onclick="_dbPreset('summer')">☀️ Été</button>
+          <button class="_presetBtn" onclick="_dbPreset('hot')">🔥 Canicule</button>
+          <button class="_presetBtn" onclick="_dbPreset('rain')">🌧 Couvert</button>
+          <button class="_presetBtn" onclick="_dbPreset('fall')">🍂 Automne</button>
+        </div>
+      </div>
+
+      <div class="_dbSection" style="background:rgba(0,0,0,0.25);border-radius:8px;padding:8px;border-top:none;margin-top:8px;">
+        <div class="_dbRow" style="margin-bottom:5px;">
+          <span style="color:#64748b;font-size:10px;">Eau surface (estimée)</span>
+          <span id="_dbWaterTemp" style="font-size:14px;font-weight:800;color:#06b6d4;">—</span>
+        </div>
+        <div style="height:8px;border-radius:4px;position:relative;overflow:visible;
+          background:linear-gradient(to right,#1e3a8a 0%,#3b82f6 18%,#06b6d4 30%,#10b981 43%,#fde047 57%,#f59e0b 70%,#ef4444 100%);">
+          <div id="_dbThermalPin" style="position:absolute;top:-4px;width:16px;height:16px;
+            border-radius:50%;background:#fff;border:2.5px solid #0f172a;
+            transform:translateX(-50%);transition:left 0.35s;left:50%;box-shadow:0 0 6px rgba(0,0,0,0.6);"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:2px;color:#475569;font-size:9px;">
+          <span>4°C</span><span>10°C</span><span>13°C</span><span>17°C</span><span>24°C</span>
+        </div>
+        <div id="_dbComfort" style="margin-top:5px;font-size:10px;font-weight:600;
+          text-align:center;padding:3px 6px;border-radius:5px;"></div>
+      </div>
+
+    </div>
+  `;
+  document.body.appendChild(panel);
+
+  // ── State ───────────────────────────────────────────────────
+  const PRESETS = {
+    spring: { max:15, min:5,  cloud:0.5, icon:'⛅', desc:'Printemps variable' },
+    summer: { max:26, min:14, cloud:0.2, icon:'☀️', desc:'Été ensoleillé' },
+    hot:    { max:32, min:19, cloud:0.1, icon:'🔥', desc:'Canicule juin' },
+    rain:   { max:13, min:7,  cloud:0.9, icon:'🌧', desc:'Couvert pluvieux' },
+    fall:   { max:9,  min:2,  cloud:0.6, icon:'🍂', desc:'Automne frais' },
+  };
+
+  var _dbOpen = true;
+
+  window._dbToggle = function() {
+    _dbOpen = !_dbOpen;
+    document.getElementById('_debugBody').style.display = _dbOpen ? '' : 'none';
+    document.getElementById('_dbArrow').textContent = _dbOpen ? '▲' : '▼';
+  };
+
+  window._dbSetDay = function(d) {
+    if (typeof currentDayIdx !== 'undefined') currentDayIdx = d;
+    panel.querySelectorAll('._dayBtn').forEach(function(b) {
+      b.classList.toggle('active', parseInt(b.dataset.d) === d);
+    });
+    _dbLoad(d);
+  };
+
+  function _dbLoad(d) {
+    if (typeof WEATHER === 'undefined' || !WEATHER[d]) return;
+    const w = WEATHER[d];
+    document.getElementById('_dbTmax').value  = w.max;
+    document.getElementById('_dbTmin').value  = w.min;
+    document.getElementById('_dbCloud').value = Math.round((w.cloud || 0) * 100);
+    _dbLabels(w);
+    _dbRefresh();
+  }
+
+  function _dbLabels(w) {
+    document.getElementById('_dbTmaxVal').textContent  = (w.max  >= 0 ? '+' : '') + w.max  + '°C';
+    document.getElementById('_dbTminVal').textContent  = (w.min  >= 0 ? '+' : '') + w.min  + '°C';
+    document.getElementById('_dbCloudVal').textContent = Math.round((w.cloud || 0) * 100)  + '%';
+  }
+
+  function _dbRefresh() {
+    if (typeof estimateWaterTemp !== 'function' || typeof WEATHER === 'undefined') return;
+    const d  = (typeof currentDayIdx !== 'undefined') ? currentDayIdx : 0;
+    const w  = WEATHER[d];
+    if (!w) return;
+    const t  = (typeof currentTime !== 'undefined') ? currentTime : 12;
+    const wt = estimateWaterTemp(w.max, w.min, t, w.cloud || 0.5);
+    const disp = (typeof tempDisp === 'function') ? tempDisp(wt) : wt.toFixed(1) + '°C';
+    document.getElementById('_dbWaterTemp').textContent = '~' + disp;
+
+    // Pin position on 4-24°C bar (capped)
+    const pct = Math.min(100, Math.max(0, (wt - 4) / 20 * 100));
+    document.getElementById('_dbThermalPin').style.left = pct + '%';
+
+    // Species comfort badge
+    const sp = (SPECIES_DATA && currentSpecies) ? SPECIES_DATA[currentSpecies] : null;
+    const el = document.getElementById('_dbComfort');
+    if (sp) {
+      const nm = sp.name || currentSpecies;
+      if (wt >= sp.tempOpt1 && wt <= sp.tempOpt2) {
+        el.textContent = '✅ Optimal — ' + nm;
+        el.style.cssText = 'margin-top:5px;font-size:10px;font-weight:600;text-align:center;padding:3px 6px;border-radius:5px;color:#10b981;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);';
+      } else if (wt >= sp.tempMin && wt <= sp.tempMax) {
+        el.textContent = '⚡ Acceptable — ' + nm;
+        el.style.cssText = 'margin-top:5px;font-size:10px;font-weight:600;text-align:center;padding:3px 6px;border-radius:5px;color:#f59e0b;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);';
+      } else {
+        el.textContent = '🥶 Hors confort — ' + nm;
+        el.style.cssText = 'margin-top:5px;font-size:10px;font-weight:600;text-align:center;padding:3px 6px;border-radius:5px;color:#ef4444;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);';
+      }
+    }
+
+    // Push live update to thermal layer
+    if (typeof window._updateThermalColors === 'function') {
+      const tCelsius = (typeof tempUnit !== 'undefined' && tempUnit === 'F')
+        ? (wt * 9 / 5 + 32) : wt;  // _updateThermalColors expects Celsius always
+      window._updateThermalColors(wt);
+    }
+  }
+
+  window._dbUpdateWeather = function() {
+    const d = (typeof currentDayIdx !== 'undefined') ? currentDayIdx : 0;
+    if (typeof WEATHER === 'undefined' || !WEATHER[d]) return;
+    const tmax  = parseInt(document.getElementById('_dbTmax').value);
+    const tmin  = parseInt(document.getElementById('_dbTmin').value);
+    const cloud = parseInt(document.getElementById('_dbCloud').value) / 100;
+    WEATHER[d].max   = tmax;
+    WEATHER[d].min   = Math.min(tmin, tmax - 2);
+    WEATHER[d].cloud = cloud;
+    _dbLabels(WEATHER[d]);
+    _dbRefresh();
+    if (typeof update === 'function') update();
+  };
+
+  window._dbJump = function(h) {
+    const s = document.getElementById('timeSlider');
+    if (!s) return;
+    s.value = String(h);
+    s.dispatchEvent(new Event('input'));
+    setTimeout(_dbRefresh, 80);
+  };
+
+  window._dbPreset = function(key) {
+    const p = PRESETS[key];
+    if (!p || typeof WEATHER === 'undefined') return;
+    const d = (typeof currentDayIdx !== 'undefined') ? currentDayIdx : 0;
+    Object.assign(WEATHER[d], p);
+    document.getElementById('_dbTmax').value  = p.max;
+    document.getElementById('_dbTmin').value  = p.min;
+    document.getElementById('_dbCloud').value = Math.round(p.cloud * 100);
+    _dbLabels(WEATHER[d]);
+    _dbRefresh();
+    if (typeof update === 'function') update();
+  };
+
+  // ── Boot: load initial state, hook update() ─────────────────
+  setTimeout(function() {
+    const d0 = (typeof currentDayIdx !== 'undefined') ? currentDayIdx : 0;
+    _dbLoad(d0);
+    // Wrap update() so panel refreshes whenever the map updates
+    if (typeof update === 'function') {
+      const _orig = update;
+      update = function() { _orig.apply(this, arguments); setTimeout(_dbRefresh, 60); };
+    }
+  }, 600);
+
+})();
+// END DEBUG PANEL
+
 </script>
 </body>
 </html>

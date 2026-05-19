@@ -254,10 +254,10 @@ def _layer_control_js_block() -> str:
 // LAYER CONTROLS — Carte (Satellite) · Thermique
 // ============================================================
 var currentMode = 'satellite';
-const layerBathy    = L.layerGroup().addTo(map);
-const layerThermal  = L.layerGroup();
-const layerSun      = L.layerGroup().addTo(map);
-const layerHotzones = L.layerGroup();
+if (typeof layerBathy    === 'undefined') var layerBathy    = L.layerGroup().addTo(map);
+if (typeof layerThermal  === 'undefined') var layerThermal  = L.layerGroup();
+if (typeof layerSun      === 'undefined') var layerSun      = L.layerGroup().addTo(map);
+if (typeof layerHotzones === 'undefined') var layerHotzones = L.layerGroup();
 
 // ── Unit toggles (m ↔ pi, °C ↔ °F) ─────────────────────────
 var currentUnit = 'm';
