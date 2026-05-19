@@ -865,6 +865,8 @@ body {
 }
 
 .dlabel-icon { background: transparent !important; border: none !important; }
+  #map.thermal-on .dlabel-txt { display: none; }
+  #map.thermal-on .dlabel-txt { display: none; }
 .dlabel-txt {
   background: rgba(0,0,0,0.58); color: rgba(255,255,255,0.92);
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 11px; font-weight: 700;
@@ -966,7 +968,7 @@ body {
   <span class="badge">Mastigouche</span>
   <div class="separator"></div>
   <div class="unit-toggle" onclick="toggleUnit()" style="cursor:pointer;background:rgba(255,255,255,0.1);padding:4px 10px;border-radius:15px;font-weight:bold;font-size:12px;display:inline-block;border:1px solid rgba(255,255,255,0.2);">
-    <span id="unitM" style="color:var(--accent);">M</span> | <span id="unitFt" style="color:#aaa;">Pi</span>
+    <span id="unitM" style="color:var(--accent);">M</span> | <span id="unitPi" style="color:#aaa;">Pi</span>
   </div>
   <div class="unit-toggle" onclick="toggleTempUnit()" style="cursor:pointer;background:rgba(255,255,255,0.1);padding:4px 10px;border-radius:15px;font-weight:bold;font-size:12px;margin-right:15px;display:inline-block;border:1px solid rgba(255,255,255,0.2);">
     <span id="unitC" style="color:var(--accent);">°C</span> | <span id="unitF" style="color:#aaa;">°F</span>
@@ -981,20 +983,8 @@ body {
   </select>
   <div class="separator"></div>
   <div class="map-mode-btns">
-  <button class="map-mode-btn active" onclick="setMapMode('satellite')" id="btnSat">🛰️ Carte</button>
-  <button class="map-mode-btn" onclick="setMapMode('thermal')" id="btnThermal">🌡️ Thermique</button>
+  <button class="map-mode-btn" onclick="toggleThermal()" id="btnThermal">🌡️ Thermique</button>
 </div>
-<div class="separator"></div>
-<span class="unit-toggle" onclick="toggleUnit()" title="Basculer m / pi"><span id="unitM" style="color:var(--accent)">M</span> | <span id="unitPi">Pi</span></span>
-<span class="unit-toggle" onclick="toggleTempUnit()" title="Basculer °C / °F" style="margin-left:4px"><span id="unitC" style="color:var(--accent)">°C</span> | <span id="unitF">°F</span></span>
-<div class="separator"></div>
-<select id="speciesSelect" class="species-select" onchange="setSpecies(this.value)">
-  <option value="omble">🐟 Omble de fontaine</option>
-  <option value="touladi">🐟 Touladi</option>
-  <option value="brochet">🐟 Grand Brochet</option>
-  <option value="dore">🐟 Doré jaune</option>
-  <option value="perchaude">🐟 Perchaude</option>
-</select>
   <div class="separator"></div>
   <span style="font-size:11px;color:var(--text-dim)">46.7290°N, 73.3601°W</span>
 </div>
@@ -1114,7 +1104,7 @@ let geoJsonLayer = null;
 function toggleUnit() {
   currentUnit = currentUnit === 'm' ? 'ft' : 'm';
   document.getElementById('unitM').style.color = currentUnit === 'm' ? 'var(--accent)' : '#aaa';
-  document.getElementById('unitFt').style.color = currentUnit === 'ft' ? 'var(--accent)' : '#aaa';
+  document.getElementById('unitPi').style.color = currentUnit === 'ft' ? 'var(--accent)' : '#aaa';
   updateDepthLabels();
   updateThermalDepthLabels();
   document.getElementById('statDepthMax').textContent = currentUnit === 'm' ? '10.3 m' : '34 pi';
@@ -1587,19 +1577,21 @@ function styleFunction(feature) {
   const d = feature.properties.depth_m;
   const hour = parseFloat(document.getElementById('timeSlider').value);
   let color, fillOpacity;
-  if (currentMode === 'bathy') {
-    color = depthColors[d] || '#0288d1';
-    fillOpacity = 0.6;
-  } else {
+  // thermalOn: show thermal colors (semi-transparent so depth labels show through)
+  // default: show bathy depth colors
+  if (typeof thermalOn !== 'undefined' && thermalOn) {
     const t = getPolygonTemp(d, hour);
     color = getThermalColor(t);
-    fillOpacity = 0.7;
+    fillOpacity = 0.62;
+  } else {
+    color = depthColors[d] || '#0288d1';
+    fillOpacity = 0.6;
   }
   let weight = 1, dashArray = '';
   if (showHotzones) {
     const t = getPolygonTemp(d, hour);
     if (t >= 10 && t <= 14) { weight = 3; color = '#34d399'; fillOpacity = 0.9; dashArray = '5, 5'; }
-    else if (currentMode === 'bathy') { fillOpacity = 0.2; }
+    else if (!(typeof thermalOn !== 'undefined' && thermalOn)) { fillOpacity = 0.2; }
   }
   return { fillColor: color, fillOpacity, color: showHotzones ? color : '#0288d1', weight, opacity: 0.8, dashArray };
 }
@@ -1804,9 +1796,10 @@ document.head.appendChild(style);
 window._updateThermalColors = function(wt) { updateThermalLabels(); };
 
 // ============================================================
-// LAYER CONTROLS — Carte (Satellite) · Thermique
+// LAYER CONTROLS — layerBathy always on · toggleThermal overlay
 // ============================================================
-var currentMode = 'satellite';
+var currentMode = 'satellite'; // kept for backward compat
+var thermalOn = false;
 if (typeof layerBathy    === 'undefined') var layerBathy    = L.layerGroup().addTo(map);
 if (typeof layerThermal  === 'undefined') var layerThermal  = L.layerGroup();
 if (typeof layerSun      === 'undefined') var layerSun      = L.layerGroup().addTo(map);
@@ -1824,7 +1817,8 @@ function tempDisp(t_c) {
 }
 function toggleUnit() {
   currentUnit = currentUnit === 'm' ? 'ft' : 'm';
-  const mEl = document.getElementById('unitM'), pEl = document.getElementById('unitPi');
+  const mEl = document.getElementById('unitM');
+  const pEl = document.getElementById('unitPi') || document.getElementById('unitFt');
   if (mEl) mEl.style.color = currentUnit === 'm' ? 'var(--accent)' : 'var(--text-dim)';
   if (pEl) pEl.style.color = currentUnit === 'ft' ? 'var(--accent)' : 'var(--text-dim)';
   if (typeof window._onUnitChange === 'function') window._onUnitChange();
@@ -1918,23 +1912,34 @@ function scoreSpot(spot, hour) {
   document.head.appendChild(s);
 })();
 
-// ── Map mode switch ───────────────────────────────────────────
-function setMapMode(mode) {
-  currentMode = mode;
-  if (typeof satTile !== 'undefined') satTile.setOpacity(1);
-  if (mode === 'thermal') {
+// ── Thermal toggle ────────────────────────────────────────────
+function toggleThermal() {
+  thermalOn = !thermalOn;
+  var btn = document.getElementById('btnThermal');
+  if (btn) btn.classList.toggle('active', thermalOn);
+  if (thermalOn) {
     if (!map.hasLayer(layerThermal)) layerThermal.addTo(map);
-    if (map.hasLayer(layerBathy))    map.removeLayer(layerBathy);
+    document.getElementById('map').classList.add('thermal-on');
   } else {
-    if (!map.hasLayer(layerBathy))   layerBathy.addTo(map);
-    if (map.hasLayer(layerThermal))  map.removeLayer(layerThermal);
+    if (map.hasLayer(layerThermal)) map.removeLayer(layerThermal);
+    document.getElementById('map').classList.remove('thermal-on');
   }
-  ['btnSat','btnThermal'].forEach(function(id) {
-    const el = document.getElementById(id); if (el) el.classList.remove('active');
-  });
-  const activeEl = document.getElementById(mode === 'thermal' ? 'btnThermal' : 'btnSat');
-  if (activeEl) activeEl.classList.add('active');
+  if (typeof window._updateThermalColors === 'function') {
+    var m = (document.getElementById('waterTempText') || {}).textContent;
+    var wt = m ? parseFloat(m.match(/[\d.]+/)) : 15;
+    window._updateThermalColors(wt);
+  }
+  // Re-render MFFP GeoJSON polygons with new style
+  if (typeof geoJsonLayer !== 'undefined' && geoJsonLayer) {
+    geoJsonLayer.setStyle(styleFunction);
+  }
 }
+
+// No-op alias for backward compatibility
+function setMapMode(m) {}
+
+// Ensure layerBathy is always on map
+if (!map.hasLayer(layerBathy)) layerBathy.addTo(map);
 
 // Observe waterTempText — update thermal colors live when time slider moves
 const _wtEl = document.getElementById('waterTempText');
@@ -1946,7 +1951,6 @@ if (_wtEl) {
   }).observe(_wtEl, { childList: true, characterData: true, subtree: true });
 }
 
-setMapMode('satellite');
 // END LAYER CONTROLS
 
 
@@ -1958,16 +1962,15 @@ setMapMode('satellite');
 
   const style = document.createElement('style');
   style.textContent = `
-    #_debugPanel { position:fixed;right:16px;bottom:110px;z-index:2000;width:264px;
-      font-family:'Inter',sans-serif;font-size:11px;user-select:none; }
+    #_debugPanel { margin-top:8px;font-family:'Inter',sans-serif;font-size:11px;user-select:none; }
     #_debugToggle { cursor:pointer;background:rgba(15,23,42,0.88);backdrop-filter:blur(10px);
       -webkit-backdrop-filter:blur(10px);border:1px solid rgba(148,163,184,0.25);
-      border-radius:10px 10px 0 0;padding:6px 10px;display:flex;
+      border-radius:8px;padding:6px 10px;display:flex;
       justify-content:space-between;align-items:center;
       color:#94a3b8;font-weight:700;letter-spacing:0.3px; }
     #_debugBody { background:rgba(10,14,26,0.93);backdrop-filter:blur(14px);
       -webkit-backdrop-filter:blur(14px);border:1px solid rgba(148,163,184,0.2);
-      border-top:none;border-radius:0 0 10px 10px;padding:10px;color:#cbd5e1; }
+      border-radius:0 0 8px 8px;padding:10px;color:#cbd5e1;margin-top:2px; }
     ._dbSection { border-top:1px solid rgba(148,163,184,0.12);padding-top:8px;margin-top:6px; }
     ._dbLabel { color:#64748b;font-size:10px;margin-bottom:5px;
       text-transform:uppercase;letter-spacing:0.5px; }
@@ -1990,9 +1993,9 @@ setMapMode('satellite');
   panel.id = '_debugPanel';
   panel.innerHTML = `
     <div id="_debugToggle" onclick="_dbToggle()">
-      <span>🔧 Simulateur météo</span><span id="_dbArrow">▲</span>
+      <span>🔧 Simulateur météo</span><span id="_dbArrow">▼</span>
     </div>
-    <div id="_debugBody">
+    <div id="_debugBody" style="display:none;">
 
       <div style="display:flex;gap:4px;margin-bottom:8px;">
         <button class="_dayBtn active" data-d="0" onclick="_dbSetDay(0)">Auj</button>
@@ -2066,7 +2069,20 @@ setMapMode('satellite');
 
     </div>
   `;
-  document.body.appendChild(panel);
+  // Insert into sunIndicator right after temp-bar-wrap div
+  (function() {
+    var sunEl = document.getElementById('sunIndicator');
+    if (sunEl) {
+      var tbw = sunEl.querySelector('.temp-bar-wrap');
+      if (tbw && tbw.parentNode) {
+        tbw.parentNode.insertBefore(panel, tbw.nextSibling);
+      } else {
+        sunEl.appendChild(panel);
+      }
+    } else {
+      document.body.appendChild(panel);
+    }
+  })();
 
   // ── State ───────────────────────────────────────────────────
   const PRESETS = {
@@ -2077,7 +2093,7 @@ setMapMode('satellite');
     fall:   { max:9,  min:2,  cloud:0.6, icon:'🍂', desc:'Automne frais' },
   };
 
-  var _dbOpen = true;
+  var _dbOpen = false;
 
   window._dbToggle = function() {
     _dbOpen = !_dbOpen;

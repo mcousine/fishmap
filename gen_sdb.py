@@ -248,12 +248,13 @@ def download_gblq_isobaths(gpkg_url: str, cache_dir: str = None) -> dict:
         return {}
 
 def _layer_control_js_block() -> str:
-    """Return JS block that sets up 2-mode map control (Carte/Thermique), unit toggles, species data + scoring."""
+    """Return JS block that sets up toggleThermal map control, unit toggles, species data + scoring."""
     return """
 // ============================================================
-// LAYER CONTROLS — Carte (Satellite) · Thermique
+// LAYER CONTROLS — layerBathy always on · toggleThermal overlay
 // ============================================================
-var currentMode = 'satellite';
+var currentMode = 'satellite'; // kept for backward compat
+var thermalOn = false;
 if (typeof layerBathy    === 'undefined') var layerBathy    = L.layerGroup().addTo(map);
 if (typeof layerThermal  === 'undefined') var layerThermal  = L.layerGroup();
 if (typeof layerSun      === 'undefined') var layerSun      = L.layerGroup().addTo(map);
@@ -271,7 +272,8 @@ function tempDisp(t_c) {
 }
 function toggleUnit() {
   currentUnit = currentUnit === 'm' ? 'ft' : 'm';
-  const mEl = document.getElementById('unitM'), pEl = document.getElementById('unitPi');
+  const mEl = document.getElementById('unitM');
+  const pEl = document.getElementById('unitPi') || document.getElementById('unitFt');
   if (mEl) mEl.style.color = currentUnit === 'm' ? 'var(--accent)' : 'var(--text-dim)';
   if (pEl) pEl.style.color = currentUnit === 'ft' ? 'var(--accent)' : 'var(--text-dim)';
   if (typeof window._onUnitChange === 'function') window._onUnitChange();
@@ -361,27 +363,36 @@ function scoreSpot(spot, hour) {
   s.textContent =
     '.dlabel-icon{background:transparent!important;border:none!important;box-shadow:none!important}' +
     '.dlabel-txt{font-size:11px;font-weight:700;color:rgba(255,255,255,0.92);background:rgba(0,0,0,0.58);padding:2px 5px;border-radius:4px;white-space:nowrap;pointer-events:none;display:inline-block;text-shadow:0 1px 3px rgba(0,0,0,0.9)}' +
-    '.tlabel-txt{font-size:11px;font-weight:800;color:#fff;padding:2px 6px;border-radius:5px;border:1.5px solid rgba(255,255,255,0.4);white-space:nowrap;pointer-events:none;display:inline-block;text-shadow:0 1px 3px rgba(0,0,0,0.9);box-shadow:0 1px 4px rgba(0,0,0,0.5)}';
+    '.tlabel-txt{font-size:11px;font-weight:800;color:#fff;padding:2px 6px;border-radius:5px;border:1.5px solid rgba(255,255,255,0.4);white-space:nowrap;pointer-events:none;display:inline-block;text-shadow:0 1px 3px rgba(0,0,0,0.9);box-shadow:0 1px 4px rgba(0,0,0,0.5)}' +
+    '#map.thermal-on .dlabel-txt{display:none}';
   document.head.appendChild(s);
 })();
 
-// ── Map mode switch ───────────────────────────────────────────
-function setMapMode(mode) {
-  currentMode = mode;
-  if (typeof satTile !== 'undefined') satTile.setOpacity(1);
-  if (mode === 'thermal') {
+// ── Thermal toggle ────────────────────────────────────────────
+function toggleThermal() {
+  thermalOn = !thermalOn;
+  var btn = document.getElementById('btnThermal');
+  if (btn) btn.classList.toggle('active', thermalOn);
+  if (thermalOn) {
     if (!map.hasLayer(layerThermal)) layerThermal.addTo(map);
-    if (map.hasLayer(layerBathy))    map.removeLayer(layerBathy);
+    // Hide depth-only labels when thermal overlay is ON
+    document.getElementById('map').classList.add('thermal-on');
   } else {
-    if (!map.hasLayer(layerBathy))   layerBathy.addTo(map);
-    if (map.hasLayer(layerThermal))  map.removeLayer(layerThermal);
+    if (map.hasLayer(layerThermal)) map.removeLayer(layerThermal);
+    document.getElementById('map').classList.remove('thermal-on');
   }
-  ['btnSat','btnThermal'].forEach(function(id) {
-    const el = document.getElementById(id); if (el) el.classList.remove('active');
-  });
-  const activeEl = document.getElementById(mode === 'thermal' ? 'btnThermal' : 'btnSat');
-  if (activeEl) activeEl.classList.add('active');
+  if (typeof window._updateThermalColors === 'function') {
+    var m = (document.getElementById('waterTempText') || {}).textContent;
+    var wt = m ? parseFloat(m.match(/[\\d.]+/)) : 15;
+    window._updateThermalColors(wt);
+  }
 }
+
+// No-op alias for curated-map backward compatibility
+function setMapMode(m) {}
+
+// Ensure layerBathy is always on map
+if (!map.hasLayer(layerBathy)) layerBathy.addTo(map);
 
 // Observe waterTempText — update thermal colors live when time slider moves
 const _wtEl = document.getElementById('waterTempText');
@@ -393,7 +404,6 @@ if (_wtEl) {
   }).observe(_wtEl, { childList: true, characterData: true, subtree: true });
 }
 
-setMapMode('satellite');
 // END LAYER CONTROLS
 """
 
@@ -505,7 +515,7 @@ def _gblq_js_block(gblq_data: dict, lac_name_sq: str) -> str:
     iso.coords.forEach(function(line) {{
       if (line.length < 3) return;
       const poly = L.polygon(line, {{
-        color: tCol, fillColor: tCol, fillOpacity: 0.55, weight: 1, opacity: 0.85, pane: 'overlayPane'
+        color: tCol, fillColor: tCol, fillOpacity: 0.62, weight: 1, opacity: 0.85, pane: 'overlayPane'
       }}).bindTooltip('~' + tTemp.toFixed(1) + '°C · ' + iso.depth_m + ' m', {{
         sticky: true, className: 'lake-tooltip'
       }});
@@ -694,7 +704,7 @@ def _mffp_js_block(mffp_isobaths: list, lac_name_sq: str) -> str:
     const line  = iso.coords;
     if (line.length < 3) return;
     const poly = L.polygon(line, {{
-      color: tCol, fillColor: tCol, fillOpacity: 0.55, weight: 1, opacity: 0.85, pane: 'overlayPane'
+      color: tCol, fillColor: tCol, fillOpacity: 0.62, weight: 1, opacity: 0.85, pane: 'overlayPane'
     }}).bindTooltip('~' + tTemp.toFixed(1) + '°C · ' + iso.depth_m + ' m (MFFP)', {{
       sticky: true, className: 'lake-tooltip'
     }});
@@ -2130,16 +2140,15 @@ def _debug_panel_js_block() -> str:
 
   const style = document.createElement('style');
   style.textContent = `
-    #_debugPanel { position:fixed;right:16px;bottom:110px;z-index:2000;width:264px;
-      font-family:'Inter',sans-serif;font-size:11px;user-select:none; }
+    #_debugPanel { margin-top:8px;font-family:'Inter',sans-serif;font-size:11px;user-select:none; }
     #_debugToggle { cursor:pointer;background:rgba(15,23,42,0.88);backdrop-filter:blur(10px);
       -webkit-backdrop-filter:blur(10px);border:1px solid rgba(148,163,184,0.25);
-      border-radius:10px 10px 0 0;padding:6px 10px;display:flex;
+      border-radius:8px;padding:6px 10px;display:flex;
       justify-content:space-between;align-items:center;
       color:#94a3b8;font-weight:700;letter-spacing:0.3px; }
     #_debugBody { background:rgba(10,14,26,0.93);backdrop-filter:blur(14px);
       -webkit-backdrop-filter:blur(14px);border:1px solid rgba(148,163,184,0.2);
-      border-top:none;border-radius:0 0 10px 10px;padding:10px;color:#cbd5e1; }
+      border-radius:0 0 8px 8px;padding:10px;color:#cbd5e1;margin-top:2px; }
     ._dbSection { border-top:1px solid rgba(148,163,184,0.12);padding-top:8px;margin-top:6px; }
     ._dbLabel { color:#64748b;font-size:10px;margin-bottom:5px;
       text-transform:uppercase;letter-spacing:0.5px; }
@@ -2162,9 +2171,9 @@ def _debug_panel_js_block() -> str:
   panel.id = '_debugPanel';
   panel.innerHTML = `
     <div id="_debugToggle" onclick="_dbToggle()">
-      <span>🔧 Simulateur météo</span><span id="_dbArrow">▲</span>
+      <span>🔧 Simulateur météo</span><span id="_dbArrow">▼</span>
     </div>
-    <div id="_debugBody">
+    <div id="_debugBody" style="display:none;">
 
       <div style="display:flex;gap:4px;margin-bottom:8px;">
         <button class="_dayBtn active" data-d="0" onclick="_dbSetDay(0)">Auj</button>
@@ -2238,7 +2247,20 @@ def _debug_panel_js_block() -> str:
 
     </div>
   `;
-  document.body.appendChild(panel);
+  // Insert into sunIndicator right after temp-bar-wrap div
+  (function() {
+    var sunEl = document.getElementById('sunIndicator');
+    if (sunEl) {
+      var tbw = sunEl.querySelector('.temp-bar-wrap');
+      if (tbw && tbw.parentNode) {
+        tbw.parentNode.insertBefore(panel, tbw.nextSibling);
+      } else {
+        sunEl.appendChild(panel);
+      }
+    } else {
+      document.body.appendChild(panel);
+    }
+  })();
 
   // ── State ───────────────────────────────────────────────────
   const PRESETS = {
@@ -2249,7 +2271,7 @@ def _debug_panel_js_block() -> str:
     fall:   { max:9,  min:2,  cloud:0.6, icon:'🍂', desc:'Automne frais' },
   };
 
-  var _dbOpen = true;
+  var _dbOpen = false;
 
   window._dbToggle = function() {
     _dbOpen = !_dbOpen;
@@ -2577,25 +2599,11 @@ def build_pdf_html(data: dict, lac_config: dict, template_path: str) -> str:
                         '  .map-mode-btns { display: none; }', 1)
     MAP_MODE_HTML = (
         '<div class="map-mode-btns">\n'
-        '  <button class="map-mode-btn active" onclick="setMapMode(\'satellite\')" id="btnSat">🛰️ Carte</button>\n'
-        '  <button class="map-mode-btn" onclick="setMapMode(\'thermal\')" id="btnThermal">🌡️ Thermique</button>\n'
-        '</div>\n'
-        '<div class="separator"></div>\n'
-        '<span class="unit-toggle" onclick="toggleUnit()" title="Basculer m / pi">'
-        '<span id="unitM" style="color:var(--accent)">M</span> | <span id="unitPi">Pi</span></span>\n'
-        '<span class="unit-toggle" onclick="toggleTempUnit()" title="Basculer °C / °F" style="margin-left:4px">'
-        '<span id="unitC" style="color:var(--accent)">°C</span> | <span id="unitF">°F</span></span>\n'
-        '<div class="separator"></div>\n'
-        '<select id="speciesSelect" class="species-select" onchange="setSpecies(this.value)">\n'
-        '  <option value="omble">🐟 Omble de fontaine</option>\n'
-        '  <option value="touladi">🐟 Touladi</option>\n'
-        '  <option value="brochet">🐟 Grand Brochet</option>\n'
-        '  <option value="dore">🐟 Doré jaune</option>\n'
-        '  <option value="perchaude">🐟 Perchaude</option>\n'
-        '</select>'
+        '  <button class="map-mode-btn" onclick="toggleThermal()" id="btnThermal">🌡️ Thermique</button>\n'
+        '</div>'
     )
     html = re.sub(
-        r'<div class="sat-topbar"[^>]*>[\s\S]*?</div>',
+        r'<div class="map-mode-btns">[\s\S]*?</div>',
         MAP_MODE_HTML, html, count=1
     )
 

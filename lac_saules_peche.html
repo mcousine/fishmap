@@ -865,6 +865,8 @@ body {
 }
 
 .dlabel-icon { background: transparent !important; border: none !important; }
+  #map.thermal-on .dlabel-txt { display: none; }
+  #map.thermal-on .dlabel-txt { display: none; }
 .dlabel-txt {
   background: rgba(0,0,0,0.58); color: rgba(255,255,255,0.92);
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 11px; font-weight: 700;
@@ -966,7 +968,7 @@ body {
   <span class="badge">Mastigouche</span>
   <div class="separator"></div>
   <div class="unit-toggle" onclick="toggleUnit()" style="cursor:pointer;background:rgba(255,255,255,0.1);padding:4px 10px;border-radius:15px;font-weight:bold;font-size:12px;display:inline-block;border:1px solid rgba(255,255,255,0.2);">
-    <span id="unitM" style="color:var(--accent);">M</span> | <span id="unitFt" style="color:#aaa;">Pi</span>
+    <span id="unitM" style="color:var(--accent);">M</span> | <span id="unitPi" style="color:#aaa;">Pi</span>
   </div>
   <div class="unit-toggle" onclick="toggleTempUnit()" style="cursor:pointer;background:rgba(255,255,255,0.1);padding:4px 10px;border-radius:15px;font-weight:bold;font-size:12px;margin-right:15px;display:inline-block;border:1px solid rgba(255,255,255,0.2);">
     <span id="unitC" style="color:var(--accent);">°C</span> | <span id="unitF" style="color:#aaa;">°F</span>
@@ -1114,7 +1116,7 @@ let geoJsonLayer = null;
 function toggleUnit() {
   currentUnit = currentUnit === 'm' ? 'ft' : 'm';
   document.getElementById('unitM').style.color = currentUnit === 'm' ? 'var(--accent)' : '#aaa';
-  document.getElementById('unitFt').style.color = currentUnit === 'ft' ? 'var(--accent)' : '#aaa';
+  document.getElementById('unitPi').style.color = currentUnit === 'ft' ? 'var(--accent)' : '#aaa';
   updateDepthLabels();
   updateThermalDepthLabels();
   document.getElementById('statDepthMax').textContent = currentUnit === 'm' ? '14.2 m' : '46 pi';
@@ -1827,7 +1829,8 @@ function tempDisp(t_c) {
 }
 function toggleUnit() {
   currentUnit = currentUnit === 'm' ? 'ft' : 'm';
-  const mEl = document.getElementById('unitM'), pEl = document.getElementById('unitPi');
+  const mEl = document.getElementById('unitM');
+  const pEl = document.getElementById('unitPi') || document.getElementById('unitFt');
   if (mEl) mEl.style.color = currentUnit === 'm' ? 'var(--accent)' : 'var(--text-dim)';
   if (pEl) pEl.style.color = currentUnit === 'ft' ? 'var(--accent)' : 'var(--text-dim)';
   if (typeof window._onUnitChange === 'function') window._onUnitChange();
