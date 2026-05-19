@@ -1012,7 +1012,7 @@ body {
   </div>
   <div id="spotsContainer"></div>
 
-                            <h3>📊 Stats Lac au Tremble</h3>
+                              <h3>📊 Stats Lac au Tremble</h3>
   <div class="stat-row"><span class="stat-label">Superficie</span><span class="stat-value">30.4 ha</span></div>
   <div class="stat-row"><span class="stat-label">Succès 2025</span><span class="stat-value">4.3 omble/j</span></div>
   <div class="stat-row"><span class="stat-label">Masse moy.</span><span class="stat-value">271 g</span></div>
@@ -1715,6 +1715,8 @@ fetchWeatherForecast().then(function(data) {
 
 
 
+
+
 // ============================================================
 // LAYER CONTROLS — layerBathy always on · toggleThermal overlay
 // ============================================================
@@ -1742,6 +1744,8 @@ function toggleUnit() {
   if (mEl) mEl.style.color = currentUnit === 'm' ? 'var(--accent)' : 'var(--text-dim)';
   if (pEl) pEl.style.color = currentUnit === 'ft' ? 'var(--accent)' : 'var(--text-dim)';
   if (typeof window._onUnitChange === 'function') window._onUnitChange();
+  if (typeof updateDepthLabels === 'function') updateDepthLabels();
+  if (typeof updateThermalDepthLabels === 'function') updateThermalDepthLabels();
 }
 function toggleTempUnit() {
   tempUnit = tempUnit === 'C' ? 'F' : 'C';
@@ -1749,6 +1753,7 @@ function toggleTempUnit() {
   if (cEl) cEl.style.color = tempUnit === 'C' ? 'var(--accent)' : 'var(--text-dim)';
   if (fEl) fEl.style.color = tempUnit === 'F' ? 'var(--accent)' : 'var(--text-dim)';
   if (typeof window._onTempUnitChange === 'function') window._onTempUnitChange();
+  if (typeof updateThermalLabels === 'function') updateThermalLabels();
 }
 
 // ── Species data ─────────────────────────────────────────────
