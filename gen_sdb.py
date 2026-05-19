@@ -248,49 +248,163 @@ def download_gblq_isobaths(gpkg_url: str, cache_dir: str = None) -> dict:
         return {}
 
 def _layer_control_js_block() -> str:
-    """Return JS block that sets up the 4-layer Leaflet control (bathy/thermal/sun/hotzones)."""
+    """Return JS block that sets up 2-mode map control (Carte/Thermique), unit toggles, species data + scoring."""
     return """
 // ============================================================
-// LAYER CONTROLS — Bathymétrie · Thermique · Soleil · Frappe
+// LAYER CONTROLS — Carte (Satellite) · Thermique
 // ============================================================
-let currentMode = 'bathy';
-let showSun = true, showHotzones = false;
+var currentMode = 'satellite';
 const layerBathy    = L.layerGroup().addTo(map);
 const layerThermal  = L.layerGroup();
 const layerSun      = L.layerGroup().addTo(map);
 const layerHotzones = L.layerGroup();
 
-const baseMaps    = { "🌊 Bathymétrie": layerBathy, "🌡️ Carte Thermique": layerThermal };
-const overlayMaps = { "☀️ Soleil / Ombre": layerSun, "🎯 Zones de Frappe": layerHotzones };
-L.control.layers(baseMaps, overlayMaps, { position: 'topright', collapsed: false }).addTo(map);
+// ── Unit toggles (m ↔ pi, °C ↔ °F) ─────────────────────────
+var currentUnit = 'm';
+var tempUnit    = 'C';
 
-map.on('baselayerchange', function(e) {
-  currentMode = (e.name === "🌡️ Carte Thermique") ? 'thermal' : 'bathy';
-});
-map.on('overlayadd', function(e) {
-  if (e.name === "☀️ Soleil / Ombre") {
-    showSun = true;
-    const el = document.getElementById('sunOverlay'); if (el) el.style.display = 'block';
+function depthVal(d) {
+  return currentUnit === 'ft' ? (d * 3.28084).toFixed(0) + ' pi' : d.toFixed(1) + ' m';
+}
+function tempDisp(t_c) {
+  return tempUnit === 'F' ? (t_c * 9 / 5 + 32).toFixed(1) + '°F' : t_c.toFixed(1) + '°C';
+}
+function toggleUnit() {
+  currentUnit = currentUnit === 'm' ? 'ft' : 'm';
+  const mEl = document.getElementById('unitM'), pEl = document.getElementById('unitPi');
+  if (mEl) mEl.style.color = currentUnit === 'm' ? 'var(--accent)' : 'var(--text-dim)';
+  if (pEl) pEl.style.color = currentUnit === 'ft' ? 'var(--accent)' : 'var(--text-dim)';
+  if (typeof window._onUnitChange === 'function') window._onUnitChange();
+}
+function toggleTempUnit() {
+  tempUnit = tempUnit === 'C' ? 'F' : 'C';
+  const cEl = document.getElementById('unitC'), fEl = document.getElementById('unitF');
+  if (cEl) cEl.style.color = tempUnit === 'C' ? 'var(--accent)' : 'var(--text-dim)';
+  if (fEl) fEl.style.color = tempUnit === 'F' ? 'var(--accent)' : 'var(--text-dim)';
+  if (typeof window._onTempUnitChange === 'function') window._onTempUnitChange();
+}
+
+// ── Species data ─────────────────────────────────────────────
+var SPECIES_DATA = {
+  omble: {
+    name: 'Omble de fontaine',
+    tempMin: 8, tempOpt1: 12, tempOpt2: 16, tempMax: 22, depthPref: [0, 4],
+    bonus: { 'embouchure':15, 'baie/herbier':10, 'pointe/étranglement':8, 'émissaire':12, 'escarpement/pente raide':5, 'connexion/passage':8 },
+    malus: { 'fosse profonde':-8 },
+  },
+  touladi: {
+    name: 'Touladi',
+    tempMin: 4, tempOpt1: 8, tempOpt2: 12, tempMax: 18, depthPref: [5, 12],
+    bonus: { 'fosse profonde':25, 'escarpement/pente raide':15 },
+    malus: { 'baie/herbier':-15, 'embouchure':-5, 'connexion/passage':-5 },
+  },
+  brochet: {
+    name: 'Grand Brochet',
+    tempMin: 10, tempOpt1: 16, tempOpt2: 22, tempMax: 28, depthPref: [0, 3],
+    bonus: { 'baie/herbier':25, 'embouchure':10, 'connexion/passage':12 },
+    malus: { 'fosse profonde':-25, 'escarpement/pente raide':-10 },
+  },
+  dore: {
+    name: 'Doré jaune',
+    tempMin: 10, tempOpt1: 16, tempOpt2: 22, tempMax: 26, depthPref: [3, 8],
+    bonus: { 'fosse profonde':12, 'escarpement/pente raide':20, 'pointe/étranglement':10 },
+    malus: { 'baie/herbier':-5 },
+  },
+  perchaude: {
+    name: 'Perchaude',
+    tempMin: 12, tempOpt1: 18, tempOpt2: 24, tempMax: 28, depthPref: [0, 5],
+    bonus: { 'baie/herbier':20, 'embouchure':8, 'pointe/étranglement':5, 'émissaire':6 },
+    malus: { 'fosse profonde':-15, 'escarpement/pente raide':-8 },
+  },
+};
+var currentSpecies = 'omble';
+
+function setSpecies(key) {
+  currentSpecies = key;
+  if (typeof update === 'function') update();
+}
+
+// Species-aware scoreSpot (overrides simpler template version)
+function scoreSpot(spot, hour) {
+  const weather = (typeof WEATHER !== 'undefined' && typeof currentDayIdx !== 'undefined')
+    ? WEATHER[currentDayIdx] : { max: 15, min: 5, cloud: 0.5 };
+  const sp = (SPECIES_DATA && (SPECIES_DATA[currentSpecies] || SPECIES_DATA.omble)) || null;
+  let score = spot.score_base;
+  if (sp) score += (sp.bonus[spot.type] || 0) + (sp.malus[spot.type] || 0);
+  const wt = (typeof estimateWaterTemp === 'function')
+    ? estimateWaterTemp(weather.max, weather.min, hour, weather.cloud || 0.5) : 12;
+  if (sp) {
+    if (wt >= sp.tempOpt1 && wt <= sp.tempOpt2) score += 15;
+    else if (wt >= sp.tempMin && wt <= sp.tempMax) score += 5;
+    else score -= 12;
+  } else {
+    if (wt >= 8 && wt <= 16) score += 10;
+    else if (wt < 5 || wt > 20) score -= 12;
   }
-  if (e.name === "🎯 Zones de Frappe") showHotzones = true;
-});
-map.on('overlayremove', function(e) {
-  if (e.name === "☀️ Soleil / Ombre") {
-    showSun = false;
-    const el = document.getElementById('sunOverlay'); if (el) el.style.display = 'none';
+  const h = Math.round(hour * 2) / 2;
+  if (spot.peakTime && spot.peakTime.includes(h)) score += 20;
+  else if (spot.bestTime && spot.bestTime.includes(Math.floor(h))) score += 10;
+  else score -= 15;
+  if ((hour >= 5 && hour <= 7.5) || (hour >= 17.5 && hour <= 20)) score += 10;
+  if (hour >= 11 && hour <= 14) {
+    if (sp && sp.depthPref[0] >= 4) score += 15;
+    else if (spot.type !== 'fosse profonde') score -= 10;
   }
-  if (e.name === "🎯 Zones de Frappe") showHotzones = false;
-});
+  if ((weather.cloud || 0) > 0.6) score += 5;
+  return Math.max(0, Math.min(100, score));
+}
+
+// ── Inject depth/thermal label CSS once ─────────────────────
+(function() {
+  if (document.getElementById('_dlCSS')) return;
+  const s = document.createElement('style'); s.id = '_dlCSS';
+  s.textContent =
+    '.dlabel-icon{background:transparent!important;border:none!important;box-shadow:none!important}' +
+    '.dlabel-txt{font-size:11px;font-weight:700;color:rgba(255,255,255,0.92);background:rgba(0,0,0,0.58);padding:2px 5px;border-radius:4px;white-space:nowrap;pointer-events:none;display:inline-block;text-shadow:0 1px 3px rgba(0,0,0,0.9)}' +
+    '.tlabel-txt{font-size:11px;font-weight:800;color:#fff;padding:2px 6px;border-radius:5px;border:1.5px solid rgba(255,255,255,0.4);white-space:nowrap;pointer-events:none;display:inline-block;text-shadow:0 1px 3px rgba(0,0,0,0.9);box-shadow:0 1px 4px rgba(0,0,0,0.5)}';
+  document.head.appendChild(s);
+})();
+
+// ── Map mode switch ───────────────────────────────────────────
+function setMapMode(mode) {
+  currentMode = mode;
+  if (typeof satTile !== 'undefined') satTile.setOpacity(1);
+  if (mode === 'thermal') {
+    if (!map.hasLayer(layerThermal)) layerThermal.addTo(map);
+    if (map.hasLayer(layerBathy))    map.removeLayer(layerBathy);
+  } else {
+    if (!map.hasLayer(layerBathy))   layerBathy.addTo(map);
+    if (map.hasLayer(layerThermal))  map.removeLayer(layerThermal);
+  }
+  ['btnSat','btnThermal'].forEach(function(id) {
+    const el = document.getElementById(id); if (el) el.classList.remove('active');
+  });
+  const activeEl = document.getElementById(mode === 'thermal' ? 'btnThermal' : 'btnSat');
+  if (activeEl) activeEl.classList.add('active');
+}
+
+// Observe waterTempText — update thermal colors live when time slider moves
+const _wtEl = document.getElementById('waterTempText');
+if (_wtEl) {
+  new MutationObserver(function() {
+    if (typeof window._updateThermalColors !== 'function') return;
+    const m = _wtEl.textContent.match(/[\\d.]+/);
+    if (m) window._updateThermalColors(parseFloat(m[0]));
+  }).observe(_wtEl, { childList: true, characterData: true, subtree: true });
+}
+
+setMapMode('satellite');
+// END LAYER CONTROLS
 """
 
 
 def _gblq_js_block(gblq_data: dict, lac_name_sq: str) -> str:
-    """Return JS code block to inject GBLQ isobaths into layerBathy + thermal zones into layerThermal."""
+    """Return JS code block to inject GBLQ isobaths (Osborn-style: depth labels, thermal labels, discrete colors)."""
     isobaths = gblq_data.get("isobaths", [])
     max_depth = gblq_data.get("max_depth", 10)
     deep_point = gblq_data.get("deep_point")
 
-    iso_json = json.dumps(isobaths, ensure_ascii=False)
+    iso_json  = json.dumps(isobaths, ensure_ascii=False)
     deep_json = json.dumps(deep_point)
 
     return f"""
@@ -302,53 +416,121 @@ def _gblq_js_block(gblq_data: dict, lac_name_sq: str) -> str:
   const maxDepth = {max_depth};
   const deepPt   = {deep_json};
 
-  // Bathymetry: shallow cyan → deep navy
+  // Bathymetry: shallow cyan → deep navy (polyline color)
   function depthColor(d) {{
     const t = Math.min(d / maxDepth, 1);
     return 'rgb(' + Math.round(147-117*t) + ',' + Math.round(197-133*t) + ',' + Math.round(253-78*t) + ')';
   }}
-  // Thermal: estimate water temp at depth (simplified stratification)
-  function thermalTemp(d, surf) {{ return Math.max(4, surf - d * (surf - 4) / Math.max(maxDepth, 8)); }}
-  function thermalColor(temp) {{
-    const t = Math.max(0, Math.min(1, (temp - 4) / 14));
-    if (t < 0.5) return 'rgb(' + Math.round(t*2*80) + ',' + Math.round(t*2*180) + ',255)';
-    const tt = (t - 0.5) * 2;
-    return 'rgb(' + Math.round(80+tt*170) + ',' + Math.round(180-tt*80) + ',' + Math.round(255*(1-tt*0.9)) + ')';
+  // Thermocline stratification: epilimnion (gentle) → thermocline (sharp) → hypolimnion (~4°C)
+  function thermalTemp(d, surf) {{
+    var epi   = Math.max(3, Math.min(6, maxDepth * 0.28));
+    var therm = Math.min(epi + 7, maxDepth * 0.68);
+    if (d <= epi) {{
+      return Math.max(4, surf - d * 0.6);
+    }} else if (d <= therm) {{
+      var tEpi = surf - epi * 0.6;
+      var frac = (d - epi) / (therm - epi);
+      return Math.max(4, tEpi * (1 - frac) + 5.5 * frac);
+    }} else {{
+      var frac2 = (d - therm) / Math.max(1, maxDepth - therm);
+      return Math.max(4, 5.5 - frac2 * 1.5);
+    }}
   }}
+  // Discrete color scale matching optimal trout temperatures (same as Osborn)
+  function thermalColor(t) {{
+    if (t < 6)  return '#1e3a8a';
+    if (t < 8)  return '#3b82f6';
+    if (t < 10) return '#06b6d4';
+    if (t < 13) return '#10b981';
+    if (t < 15) return '#fde047';
+    if (t < 17) return '#f59e0b';
+    return '#ef4444';
+  }}
+  // Cardinal extrema helpers — depth labels go at south+west, thermal at north
+  function southPt(ring) {{ return ring.reduce(function(b,p){{return p[0]<b[0]?p:b;}}, ring[0]); }}
+  function northPt(ring) {{ return ring.reduce(function(b,p){{return p[0]>b[0]?p:b;}}, ring[0]); }}
+  function westPt(ring)  {{ return ring.reduce(function(b,p){{return p[1]<b[1]?p:b;}}, ring[0]); }}
+  function eastPt(ring)  {{ return ring.reduce(function(b,p){{return p[1]>b[1]?p:b;}}, ring[0]); }}
 
   const bGroup = (typeof layerBathy   !== 'undefined') ? layerBathy   : L.layerGroup().addTo(map);
   const tGroup = (typeof layerThermal !== 'undefined') ? layerThermal : L.layerGroup();
 
-  // Draw deepest isobaths first (sorting) so shallower ones overlay correctly in thermal
-  const sortedAsc  = isobaths.slice().sort((a, b) => a.depth_m - b.depth_m);
-  const sortedDesc = isobaths.slice().sort((a, b) => b.depth_m - a.depth_m);
+  const sortedAsc  = isobaths.slice().sort(function(a,b){{return a.depth_m-b.depth_m;}});
+  const sortedDesc = isobaths.slice().sort(function(a,b){{return b.depth_m-a.depth_m;}});
+  const surfTemp   = (typeof waterTemp !== 'undefined') ? waterTemp : 8;
 
-  // Bathymétrie layer — isobath polylines
+  // ── Bathymétrie layer: polylines + label candidates (2-pass to prevent overlap) ──
+  const _lblCands = [];
   sortedAsc.forEach(function(iso) {{
-    const col = depthColor(iso.depth_m);
+    const col  = depthColor(iso.depth_m);
+    const dlbl = depthVal(iso.depth_m);
     iso.coords.forEach(function(line) {{
-      L.polyline(line, {{ color: col, weight: 1.8, opacity: 0.75, pane: 'overlayPane' }})
-       .bindTooltip(iso.depth_m + ' m', {{ sticky: true, className: 'lake-tooltip' }})
+      L.polyline(line, {{ color: col, weight: 2.0, opacity: 0.85, pane: 'overlayPane' }})
+       .bindTooltip(dlbl, {{ sticky: true, className: 'lake-tooltip' }})
        .addTo(bGroup);
+      // Collect candidates: S, W, N, E for maximum coverage
+      [southPt(line), westPt(line), northPt(line), eastPt(line)].forEach(function(pos) {{
+        _lblCands.push({{ depth_m: iso.depth_m, pos: pos }});
+      }});
     }});
   }});
+  // Place labels deepest-first with spatial deduplication (~80m minimum separation)
+  const _lblPlaced = [];
+  const _MIN_LD = 0.0008;
+  _lblCands.slice().sort(function(a,b){{return b.depth_m - a.depth_m;}}).forEach(function(c) {{
+    var ok = !_lblPlaced.some(function(p) {{
+      var dLat = p[0]-c.pos[0], dLon = p[1]-c.pos[1];
+      return Math.sqrt(dLat*dLat+dLon*dLon) < _MIN_LD;
+    }});
+    if (ok) {{
+      _lblPlaced.push(c.pos);
+      L.marker(c.pos, {{
+        icon: L.divIcon({{
+          className: 'dlabel-icon',
+          html: '<span class="dlabel-txt" data-d="' + c.depth_m + '">' + depthVal(c.depth_m) + '</span>',
+          iconSize: [62, 18], iconAnchor: [31, 9]
+        }}),
+        interactive: false, zIndexOffset: -100
+      }}).addTo(bGroup);
+    }}
+  }});
 
-  // Thermique layer — filled depth zones + temperature labels
-  const surfTemp = (typeof waterTemp !== 'undefined') ? waterTemp : 8;
-  sortedDesc.forEach(function(iso) {{
+  // ── Thermique layer: filled polygons (shallowest first = cold deep polygon renders on top) ──
+  const thermalPolys  = [];
+  const thermalLblEls = [];
+
+  sortedAsc.forEach(function(iso) {{
     const tTemp = thermalTemp(iso.depth_m, surfTemp);
     const tCol  = thermalColor(tTemp);
     iso.coords.forEach(function(line) {{
-      if (line.length >= 3) {{
-        L.polygon(line, {{ color: tCol, fillColor: tCol, fillOpacity: 0.35, weight: 1, opacity: 0.7, pane: 'overlayPane' }})
-         .bindTooltip('~' + tTemp.toFixed(1) + '°C · ' + iso.depth_m + ' m', {{ sticky: true, className: 'lake-tooltip' }})
-         .addTo(tGroup);
-      }}
+      if (line.length < 3) return;
+      const poly = L.polygon(line, {{
+        color: tCol, fillColor: tCol, fillOpacity: 0.55, weight: 1, opacity: 0.85, pane: 'overlayPane'
+      }}).bindTooltip('~' + tTemp.toFixed(1) + '°C · ' + iso.depth_m + ' m', {{
+        sticky: true, className: 'lake-tooltip'
+      }});
+      poly.addTo(tGroup);
+      thermalPolys.push({{ poly: poly, depth_m: iso.depth_m }});
+
+      // Thermal label at northernmost point (opposite side from depth labels)
+      const pos = northPt(line);
+      const lbl = tempDisp(tTemp) + ' · ' + depthVal(iso.depth_m);
+      const mLbl = L.marker(pos, {{
+        icon: L.divIcon({{
+          className: 'dlabel-icon',
+          html: '<span class="tlabel-txt" style="background:' + tCol + 'cc;" data-d="' + iso.depth_m + '">' + lbl + '</span>',
+          iconSize: [110, 20], iconAnchor: [55, 10]
+        }}),
+        interactive: false, zIndexOffset: -50
+      }});
+      mLbl.addTo(tGroup);
+      thermalLblEls.push({{ marker: mLbl, depth_m: iso.depth_m }});
     }});
   }});
 
+  // ── Deep point marker ──
   if (deepPt) {{
-    const surf = (typeof waterTemp !== 'undefined') ? waterTemp : 8;
+    const surf  = (typeof waterTemp !== 'undefined') ? waterTemp : 8;
     const dTemp = thermalTemp(maxDepth, surf);
     L.circleMarker(deepPt, {{
       radius: 6, color: '#1e40af', fillColor: '#3b82f6', fillOpacity: 0.9, weight: 2, pane: 'markerPane'
@@ -363,12 +545,59 @@ def _gblq_js_block(gblq_data: dict, lac_name_sq: str) -> str:
       '<div style="font-size:11px;color:#94a3b8">Profondeur max: ' + maxDepth + ' m</div>'
     ).addTo(tGroup);
   }}
+
+  // ── Live thermal update (time slider + temp/depth unit changes) ──
+  window._updateThermalColors = function(surfT) {{
+    thermalPolys.forEach(function(e) {{
+      const t = thermalTemp(e.depth_m, surfT);
+      const c = thermalColor(t);
+      e.poly.setStyle({{ color: c, fillColor: c }});
+      e.poly.setTooltipContent('~' + tempDisp(t) + ' · ' + depthVal(e.depth_m));
+    }});
+    thermalLblEls.forEach(function(e) {{
+      const t  = thermalTemp(e.depth_m, surfT);
+      const c  = thermalColor(t);
+      const el = e.marker.getElement();
+      if (!el) return;
+      const span = el.querySelector('.tlabel-txt');
+      if (span) {{
+        span.textContent = tempDisp(t) + ' · ' + depthVal(e.depth_m);
+        span.style.background = c + 'cc';
+      }}
+    }});
+  }};
+
+  // ── Unit-change hooks ──────────────────────────────────────────
+  window._onUnitChange = function() {{
+    // Rebuild depth label text using new unit
+    document.querySelectorAll('.dlabel-txt[data-d]').forEach(function(span) {{
+      const d = parseFloat(span.dataset.d);
+      if (!isNaN(d)) span.textContent = depthVal(d);
+    }});
+    // Also update thermal tooltip depth portion
+    const wtEl = document.getElementById('waterTempText');
+    if (wtEl && typeof window._updateThermalColors === 'function') {{
+      const m = wtEl.textContent.match(/[\\d.]+/);
+      if (m) window._updateThermalColors(parseFloat(m[0]));
+    }}
+  }};
+  window._onTempUnitChange = function() {{
+    const wtEl = document.getElementById('waterTempText');
+    if (wtEl && typeof window._updateThermalColors === 'function') {{
+      const m = wtEl.textContent.match(/[\\d.]+/);
+      if (m) window._updateThermalColors(parseFloat(m[0]));
+    }}
+  }};
+
+  // Expose isobaths for fish thermal stratum positioning
+  window._lakeIsobaths  = isobaths;
+  window._lakeMaxDepth  = maxDepth;
 }})();
 """
 
 
 def _mffp_js_block(mffp_isobaths: list, lac_name_sq: str) -> str:
-    """Return JS code block to inject MFFP PDF isobaths into layerBathy + thermal zones into layerThermal."""
+    """Return JS code block to inject MFFP PDF isobaths (Osborn-style: depth labels, thermal labels, discrete colors)."""
     max_depth = max((x["depth_m"] for x in mffp_isobaths), default=10)
     iso_json  = json.dumps(mffp_isobaths, ensure_ascii=False)
     return f"""
@@ -381,41 +610,149 @@ def _mffp_js_block(mffp_isobaths: list, lac_name_sq: str) -> str:
 
   function depthColor(d) {{
     const t = Math.min(d / maxDepth, 1);
-    return 'rgb(' + Math.round(t*38) + ',' + Math.round(56-18*t) + ',' + Math.round(101+13*t) + ')';
+    return 'rgb(' + Math.round(147-117*t) + ',' + Math.round(197-133*t) + ',' + Math.round(253-78*t) + ')';
   }}
-  function thermalTemp(d, surf) {{ return Math.max(4, surf - d * (surf - 4) / Math.max(maxDepth, 8)); }}
-  function thermalColor(temp) {{
-    const t = Math.max(0, Math.min(1, (temp - 4) / 14));
-    if (t < 0.5) return 'rgb(' + Math.round(t*2*80) + ',' + Math.round(t*2*180) + ',255)';
-    const tt = (t - 0.5) * 2;
-    return 'rgb(' + Math.round(80+tt*170) + ',' + Math.round(180-tt*80) + ',' + Math.round(255*(1-tt*0.9)) + ')';
+  function thermalTemp(d, surf) {{
+    var epi   = Math.max(3, Math.min(6, maxDepth * 0.28));
+    var therm = Math.min(epi + 7, maxDepth * 0.68);
+    if (d <= epi) {{
+      return Math.max(4, surf - d * 0.6);
+    }} else if (d <= therm) {{
+      var tEpi = surf - epi * 0.6;
+      var frac = (d - epi) / (therm - epi);
+      return Math.max(4, tEpi * (1 - frac) + 5.5 * frac);
+    }} else {{
+      var frac2 = (d - therm) / Math.max(1, maxDepth - therm);
+      return Math.max(4, 5.5 - frac2 * 1.5);
+    }}
   }}
+  function thermalColor(t) {{
+    if (t < 6)  return '#1e3a8a';
+    if (t < 8)  return '#3b82f6';
+    if (t < 10) return '#06b6d4';
+    if (t < 13) return '#10b981';
+    if (t < 15) return '#fde047';
+    if (t < 17) return '#f59e0b';
+    return '#ef4444';
+  }}
+  function southPt(ring) {{ return ring.reduce(function(b,p){{return p[0]<b[0]?p:b;}}, ring[0]); }}
+  function northPt(ring) {{ return ring.reduce(function(b,p){{return p[0]>b[0]?p:b;}}, ring[0]); }}
+  function westPt(ring)  {{ return ring.reduce(function(b,p){{return p[1]<b[1]?p:b;}}, ring[0]); }}
+  function eastPt(ring)  {{ return ring.reduce(function(b,p){{return p[1]>b[1]?p:b;}}, ring[0]); }}
 
   const bGroup = (typeof layerBathy   !== 'undefined') ? layerBathy   : L.layerGroup().addTo(map);
   const tGroup = (typeof layerThermal !== 'undefined') ? layerThermal : L.layerGroup();
 
-  const sortedDesc = isobaths.slice().sort((a, b) => b.depth_m - a.depth_m);
-  const surfTemp = (typeof waterTemp !== 'undefined') ? waterTemp : 8;
+  const sortedAsc  = isobaths.slice().sort(function(a,b){{return a.depth_m-b.depth_m;}});
+  const sortedDesc = isobaths.slice().sort(function(a,b){{return b.depth_m-a.depth_m;}});
+  const surfTemp   = (typeof waterTemp !== 'undefined') ? waterTemp : 8;
 
-  // Bathymétrie — polylines
-  isobaths.forEach(function(iso) {{
-    const col = depthColor(iso.depth_m);
-    L.polyline(iso.coords, {{ color: col, weight: 1.6, opacity: 0.80, pane: 'overlayPane' }})
-     .bindTooltip(iso.depth_m + ' m (' + iso.depth_ft + ' pi — MFFP)', {{ sticky: true, className: 'lake-tooltip' }})
+  // ── Bathymétrie — polylines + label candidates (2-pass spatial dedup) ──
+  const _mLblCands = [];
+  sortedAsc.forEach(function(iso) {{
+    const col  = depthColor(iso.depth_m);
+    const dlbl = depthVal(iso.depth_m);
+    L.polyline(iso.coords, {{ color: col, weight: 2.0, opacity: 0.85, pane: 'overlayPane' }})
+     .bindTooltip(dlbl + ' (MFFP)', {{ sticky: true, className: 'lake-tooltip' }})
      .addTo(bGroup);
+    [southPt(iso.coords), westPt(iso.coords), northPt(iso.coords), eastPt(iso.coords)].forEach(function(pos) {{
+      _mLblCands.push({{ depth_m: iso.depth_m, pos: pos }});
+    }});
   }});
+  const _mLblPlaced = [];
+  const _mMinLD = 0.0008;
+  _mLblCands.slice().sort(function(a,b){{return b.depth_m - a.depth_m;}}).forEach(function(c) {{
+    var ok = !_mLblPlaced.some(function(p) {{
+      var dLat = p[0]-c.pos[0], dLon = p[1]-c.pos[1];
+      return Math.sqrt(dLat*dLat+dLon*dLon) < _mMinLD;
+    }});
+    if (ok) {{
+      _mLblPlaced.push(c.pos);
+      L.marker(c.pos, {{
+        icon: L.divIcon({{
+          className: 'dlabel-icon',
+          html: '<span class="dlabel-txt" data-d="' + c.depth_m + '">' + depthVal(c.depth_m) + '</span>',
+          iconSize: [62, 18], iconAnchor: [31, 9]
+        }}),
+        interactive: false, zIndexOffset: -100
+      }}).addTo(bGroup);
+    }}
+  }});
+  // Only set isobaths if not already set by GBLQ block
+  if (!window._lakeIsobaths) {{
+    window._lakeIsobaths = isobaths;
+    window._lakeMaxDepth = maxDepth;
+  }}
 
-  // Thermique — filled depth zones (deepest first)
-  sortedDesc.forEach(function(iso) {{
+  // ── Thermique — filled polygons (shallowest first = cold deep polygon renders on top) ──
+  const thermalPolys  = [];
+  const thermalLblEls = [];
+
+  sortedAsc.forEach(function(iso) {{
     const tTemp = thermalTemp(iso.depth_m, surfTemp);
     const tCol  = thermalColor(tTemp);
     const line  = iso.coords;
-    if (line.length >= 3) {{
-      L.polygon(line, {{ color: tCol, fillColor: tCol, fillOpacity: 0.35, weight: 1, opacity: 0.7, pane: 'overlayPane' }})
-       .bindTooltip('~' + tTemp.toFixed(1) + '°C · ' + iso.depth_m + ' m (MFFP)', {{ sticky: true, className: 'lake-tooltip' }})
-       .addTo(tGroup);
-    }}
+    if (line.length < 3) return;
+    const poly = L.polygon(line, {{
+      color: tCol, fillColor: tCol, fillOpacity: 0.55, weight: 1, opacity: 0.85, pane: 'overlayPane'
+    }}).bindTooltip('~' + tTemp.toFixed(1) + '°C · ' + iso.depth_m + ' m (MFFP)', {{
+      sticky: true, className: 'lake-tooltip'
+    }});
+    poly.addTo(tGroup);
+    thermalPolys.push({{ poly: poly, depth_m: iso.depth_m }});
+
+    const pos  = northPt(line);
+    const lbl  = tempDisp(tTemp) + ' · ' + depthVal(iso.depth_m);
+    const mLbl = L.marker(pos, {{
+      icon: L.divIcon({{
+        className: 'dlabel-icon',
+        html: '<span class="tlabel-txt" style="background:' + tCol + 'cc;" data-d="' + iso.depth_m + '">' + lbl + '</span>',
+        iconSize: [110, 20], iconAnchor: [55, 10]
+      }}),
+      interactive: false, zIndexOffset: -50
+    }});
+    mLbl.addTo(tGroup);
+    thermalLblEls.push({{ marker: mLbl, depth_m: iso.depth_m }});
   }});
+
+  window._updateThermalColors = function(surfT) {{
+    thermalPolys.forEach(function(e) {{
+      const t = thermalTemp(e.depth_m, surfT);
+      const c = thermalColor(t);
+      e.poly.setStyle({{ color: c, fillColor: c }});
+      e.poly.setTooltipContent('~' + tempDisp(t) + ' · ' + depthVal(e.depth_m) + ' (MFFP)');
+    }});
+    thermalLblEls.forEach(function(e) {{
+      const t  = thermalTemp(e.depth_m, surfT);
+      const c  = thermalColor(t);
+      const el = e.marker.getElement();
+      if (!el) return;
+      const span = el.querySelector('.tlabel-txt');
+      if (span) {{
+        span.textContent = tempDisp(t) + ' · ' + depthVal(e.depth_m);
+        span.style.background = c + 'cc';
+      }}
+    }});
+  }};
+
+  window._onUnitChange = function() {{
+    document.querySelectorAll('.dlabel-txt[data-d]').forEach(function(span) {{
+      const d = parseFloat(span.dataset.d);
+      if (!isNaN(d)) span.textContent = depthVal(d);
+    }});
+    const wtEl = document.getElementById('waterTempText');
+    if (wtEl && typeof window._updateThermalColors === 'function') {{
+      const m = wtEl.textContent.match(/[\\d.]+/);
+      if (m) window._updateThermalColors(parseFloat(m[0]));
+    }}
+  }};
+  window._onTempUnitChange = function() {{
+    const wtEl = document.getElementById('waterTempText');
+    if (wtEl && typeof window._updateThermalColors === 'function') {{
+      const m = wtEl.textContent.match(/[\\d.]+/);
+      if (m) window._updateThermalColors(parseFloat(m[0]));
+    }}
+  }};
 }})();
 """
 
@@ -1684,12 +2021,14 @@ def _auto_fishing_spots(data: dict, species: str) -> list:
     clat = lake_center["lat"]
     clon = lake_center["lon"]
 
-    # Reuse official spots from PDF fishing_spots if any
+    # Reuse official spots from PDF fishing_spots if any (clamped inside lake bbox)
     for i, fs in enumerate(data.get("fishing_spots", [])):
+        clamp_lat = round(max(lake_bbox["S"] + 0.0002, min(lake_bbox["N"] - 0.0002, fs["lat"])), 5)
+        clamp_lon = round(max(lake_bbox["W"] + 0.0001, min(lake_bbox["E"] - 0.0001, fs["lon"])), 5)
         spots.append({
             "id": f"official_{i}",
-            "lat": round(fs["lat"], 5),
-            "lon": round(fs["lon"], 5),
+            "lat": clamp_lat,
+            "lon": clamp_lon,
             "name": "Site Sépaq — Pêche favorable",
             "icon": "⭐", "type": "official",
             "bestTime": [5,6,7,8,17,18,19,20],
@@ -1778,6 +2117,258 @@ def _auto_fishing_spots(data: dict, species: str) -> list:
         })
 
     return spots
+
+
+def _debug_panel_js_block() -> str:
+    """Return JS block that injects a collapsible weather/simulation debug panel."""
+    return """
+// ============================================================
+// DEBUG PANEL — Simulateur météo & conditions
+// ============================================================
+(function() {
+  if (document.getElementById('_debugPanel')) return;
+
+  const style = document.createElement('style');
+  style.textContent = `
+    #_debugPanel { position:fixed;right:16px;bottom:110px;z-index:2000;width:264px;
+      font-family:'Inter',sans-serif;font-size:11px;user-select:none; }
+    #_debugToggle { cursor:pointer;background:rgba(15,23,42,0.88);backdrop-filter:blur(10px);
+      -webkit-backdrop-filter:blur(10px);border:1px solid rgba(148,163,184,0.25);
+      border-radius:10px 10px 0 0;padding:6px 10px;display:flex;
+      justify-content:space-between;align-items:center;
+      color:#94a3b8;font-weight:700;letter-spacing:0.3px; }
+    #_debugBody { background:rgba(10,14,26,0.93);backdrop-filter:blur(14px);
+      -webkit-backdrop-filter:blur(14px);border:1px solid rgba(148,163,184,0.2);
+      border-top:none;border-radius:0 0 10px 10px;padding:10px;color:#cbd5e1; }
+    ._dbSection { border-top:1px solid rgba(148,163,184,0.12);padding-top:8px;margin-top:6px; }
+    ._dbLabel { color:#64748b;font-size:10px;margin-bottom:5px;
+      text-transform:uppercase;letter-spacing:0.5px; }
+    ._dbRow { display:flex;justify-content:space-between;align-items:center;margin-bottom:3px; }
+    ._dbRange { width:100%;accent-color:#06b6d4;margin-top:2px; }
+    ._dayBtn { background:rgba(30,41,59,0.7);border:1px solid rgba(148,163,184,0.2);
+      color:#64748b;border-radius:5px;padding:3px 0;font-size:10px;font-weight:600;
+      cursor:pointer;font-family:inherit;flex:1;transition:all 0.15s; }
+    ._dayBtn.active { background:rgba(59,130,246,0.25);color:#93c5fd;
+      border-color:rgba(59,130,246,0.4); }
+    ._timeBtn,._presetBtn { background:rgba(30,41,59,0.7);border:1px solid rgba(148,163,184,0.15);
+      color:#94a3b8;border-radius:5px;padding:2px 7px;font-size:10px;
+      cursor:pointer;font-family:inherit;transition:all 0.15s;white-space:nowrap; }
+    ._timeBtn:hover,._presetBtn:hover { background:rgba(59,130,246,0.2);color:#e2e8f0; }
+    ._dbBtns { display:flex;flex-wrap:wrap;gap:3px; }
+  `;
+  document.head.appendChild(style);
+
+  const panel = document.createElement('div');
+  panel.id = '_debugPanel';
+  panel.innerHTML = `
+    <div id="_debugToggle" onclick="_dbToggle()">
+      <span>🔧 Simulateur météo</span><span id="_dbArrow">▲</span>
+    </div>
+    <div id="_debugBody">
+
+      <div style="display:flex;gap:4px;margin-bottom:8px;">
+        <button class="_dayBtn active" data-d="0" onclick="_dbSetDay(0)">Auj</button>
+        <button class="_dayBtn"        data-d="1" onclick="_dbSetDay(1)">Dem</button>
+        <button class="_dayBtn"        data-d="2" onclick="_dbSetDay(2)">J+2</button>
+      </div>
+
+      <div>
+        <div class="_dbRow">
+          <span>🌡️ Tmax</span><span id="_dbTmaxVal" style="color:#f59e0b;font-weight:700"></span>
+        </div>
+        <input type="range" id="_dbTmax" class="_dbRange" min="-10" max="38" step="1"
+          style="accent-color:#f59e0b;" oninput="_dbUpdateWeather()">
+      </div>
+      <div style="margin-top:6px;">
+        <div class="_dbRow">
+          <span>❄️ Tmin</span><span id="_dbTminVal" style="color:#38bdf8;font-weight:700"></span>
+        </div>
+        <input type="range" id="_dbTmin" class="_dbRange" min="-15" max="28" step="1"
+          style="accent-color:#38bdf8;" oninput="_dbUpdateWeather()">
+      </div>
+      <div style="margin-top:6px;">
+        <div class="_dbRow">
+          <span>☁️ Nuages</span><span id="_dbCloudVal" style="color:#94a3b8;font-weight:700"></span>
+        </div>
+        <input type="range" id="_dbCloud" class="_dbRange" min="0" max="100" step="5"
+          style="accent-color:#64748b;" oninput="_dbUpdateWeather()">
+      </div>
+
+      <div class="_dbSection">
+        <div class="_dbLabel">⏱ Heure rapide</div>
+        <div class="_dbBtns">
+          <button class="_timeBtn" onclick="_dbJump(5.5)">🌅 5h30</button>
+          <button class="_timeBtn" onclick="_dbJump(7)">🌤 7h</button>
+          <button class="_timeBtn" onclick="_dbJump(9)">☀️ 9h</button>
+          <button class="_timeBtn" onclick="_dbJump(12)">🔆 Midi</button>
+          <button class="_timeBtn" onclick="_dbJump(15)">🌥 15h</button>
+          <button class="_timeBtn" onclick="_dbJump(17.5)">🌇 17h30</button>
+          <button class="_timeBtn" onclick="_dbJump(19)">🌆 19h</button>
+        </div>
+      </div>
+
+      <div class="_dbSection">
+        <div class="_dbLabel">🎨 Présets météo</div>
+        <div class="_dbBtns">
+          <button class="_presetBtn" onclick="_dbPreset('spring')">🌸 Printemps</button>
+          <button class="_presetBtn" onclick="_dbPreset('summer')">☀️ Été</button>
+          <button class="_presetBtn" onclick="_dbPreset('hot')">🔥 Canicule</button>
+          <button class="_presetBtn" onclick="_dbPreset('rain')">🌧 Couvert</button>
+          <button class="_presetBtn" onclick="_dbPreset('fall')">🍂 Automne</button>
+        </div>
+      </div>
+
+      <div class="_dbSection" style="background:rgba(0,0,0,0.25);border-radius:8px;padding:8px;border-top:none;margin-top:8px;">
+        <div class="_dbRow" style="margin-bottom:5px;">
+          <span style="color:#64748b;font-size:10px;">Eau surface (estimée)</span>
+          <span id="_dbWaterTemp" style="font-size:14px;font-weight:800;color:#06b6d4;">—</span>
+        </div>
+        <div style="height:8px;border-radius:4px;position:relative;overflow:visible;
+          background:linear-gradient(to right,#1e3a8a 0%,#3b82f6 18%,#06b6d4 30%,#10b981 43%,#fde047 57%,#f59e0b 70%,#ef4444 100%);">
+          <div id="_dbThermalPin" style="position:absolute;top:-4px;width:16px;height:16px;
+            border-radius:50%;background:#fff;border:2.5px solid #0f172a;
+            transform:translateX(-50%);transition:left 0.35s;left:50%;box-shadow:0 0 6px rgba(0,0,0,0.6);"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:2px;color:#475569;font-size:9px;">
+          <span>4°C</span><span>10°C</span><span>13°C</span><span>17°C</span><span>24°C</span>
+        </div>
+        <div id="_dbComfort" style="margin-top:5px;font-size:10px;font-weight:600;
+          text-align:center;padding:3px 6px;border-radius:5px;"></div>
+      </div>
+
+    </div>
+  `;
+  document.body.appendChild(panel);
+
+  // ── State ───────────────────────────────────────────────────
+  const PRESETS = {
+    spring: { max:15, min:5,  cloud:0.5, icon:'⛅', desc:'Printemps variable' },
+    summer: { max:26, min:14, cloud:0.2, icon:'☀️', desc:'Été ensoleillé' },
+    hot:    { max:32, min:19, cloud:0.1, icon:'🔥', desc:'Canicule juin' },
+    rain:   { max:13, min:7,  cloud:0.9, icon:'🌧', desc:'Couvert pluvieux' },
+    fall:   { max:9,  min:2,  cloud:0.6, icon:'🍂', desc:'Automne frais' },
+  };
+
+  var _dbOpen = true;
+
+  window._dbToggle = function() {
+    _dbOpen = !_dbOpen;
+    document.getElementById('_debugBody').style.display = _dbOpen ? '' : 'none';
+    document.getElementById('_dbArrow').textContent = _dbOpen ? '▲' : '▼';
+  };
+
+  window._dbSetDay = function(d) {
+    if (typeof currentDayIdx !== 'undefined') currentDayIdx = d;
+    panel.querySelectorAll('._dayBtn').forEach(function(b) {
+      b.classList.toggle('active', parseInt(b.dataset.d) === d);
+    });
+    _dbLoad(d);
+  };
+
+  function _dbLoad(d) {
+    if (typeof WEATHER === 'undefined' || !WEATHER[d]) return;
+    const w = WEATHER[d];
+    document.getElementById('_dbTmax').value  = w.max;
+    document.getElementById('_dbTmin').value  = w.min;
+    document.getElementById('_dbCloud').value = Math.round((w.cloud || 0) * 100);
+    _dbLabels(w);
+    _dbRefresh();
+  }
+
+  function _dbLabels(w) {
+    document.getElementById('_dbTmaxVal').textContent  = (w.max  >= 0 ? '+' : '') + w.max  + '°C';
+    document.getElementById('_dbTminVal').textContent  = (w.min  >= 0 ? '+' : '') + w.min  + '°C';
+    document.getElementById('_dbCloudVal').textContent = Math.round((w.cloud || 0) * 100)  + '%';
+  }
+
+  function _dbRefresh() {
+    if (typeof estimateWaterTemp !== 'function' || typeof WEATHER === 'undefined') return;
+    const d  = (typeof currentDayIdx !== 'undefined') ? currentDayIdx : 0;
+    const w  = WEATHER[d];
+    if (!w) return;
+    const t  = (typeof currentTime !== 'undefined') ? currentTime : 12;
+    const wt = estimateWaterTemp(w.max, w.min, t, w.cloud || 0.5);
+    const disp = (typeof tempDisp === 'function') ? tempDisp(wt) : wt.toFixed(1) + '°C';
+    document.getElementById('_dbWaterTemp').textContent = '~' + disp;
+
+    // Pin position on 4-24°C bar (capped)
+    const pct = Math.min(100, Math.max(0, (wt - 4) / 20 * 100));
+    document.getElementById('_dbThermalPin').style.left = pct + '%';
+
+    // Species comfort badge
+    const sp = (SPECIES_DATA && currentSpecies) ? SPECIES_DATA[currentSpecies] : null;
+    const el = document.getElementById('_dbComfort');
+    if (sp) {
+      const nm = sp.name || currentSpecies;
+      if (wt >= sp.tempOpt1 && wt <= sp.tempOpt2) {
+        el.textContent = '✅ Optimal — ' + nm;
+        el.style.cssText = 'margin-top:5px;font-size:10px;font-weight:600;text-align:center;padding:3px 6px;border-radius:5px;color:#10b981;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);';
+      } else if (wt >= sp.tempMin && wt <= sp.tempMax) {
+        el.textContent = '⚡ Acceptable — ' + nm;
+        el.style.cssText = 'margin-top:5px;font-size:10px;font-weight:600;text-align:center;padding:3px 6px;border-radius:5px;color:#f59e0b;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);';
+      } else {
+        el.textContent = '🥶 Hors confort — ' + nm;
+        el.style.cssText = 'margin-top:5px;font-size:10px;font-weight:600;text-align:center;padding:3px 6px;border-radius:5px;color:#ef4444;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);';
+      }
+    }
+
+    // Push live update to thermal layer
+    if (typeof window._updateThermalColors === 'function') {
+      const tCelsius = (typeof tempUnit !== 'undefined' && tempUnit === 'F')
+        ? (wt * 9 / 5 + 32) : wt;  // _updateThermalColors expects Celsius always
+      window._updateThermalColors(wt);
+    }
+  }
+
+  window._dbUpdateWeather = function() {
+    const d = (typeof currentDayIdx !== 'undefined') ? currentDayIdx : 0;
+    if (typeof WEATHER === 'undefined' || !WEATHER[d]) return;
+    const tmax  = parseInt(document.getElementById('_dbTmax').value);
+    const tmin  = parseInt(document.getElementById('_dbTmin').value);
+    const cloud = parseInt(document.getElementById('_dbCloud').value) / 100;
+    WEATHER[d].max   = tmax;
+    WEATHER[d].min   = Math.min(tmin, tmax - 2);
+    WEATHER[d].cloud = cloud;
+    _dbLabels(WEATHER[d]);
+    _dbRefresh();
+    if (typeof update === 'function') update();
+  };
+
+  window._dbJump = function(h) {
+    const s = document.getElementById('timeSlider');
+    if (!s) return;
+    s.value = String(h);
+    s.dispatchEvent(new Event('input'));
+    setTimeout(_dbRefresh, 80);
+  };
+
+  window._dbPreset = function(key) {
+    const p = PRESETS[key];
+    if (!p || typeof WEATHER === 'undefined') return;
+    const d = (typeof currentDayIdx !== 'undefined') ? currentDayIdx : 0;
+    Object.assign(WEATHER[d], p);
+    document.getElementById('_dbTmax').value  = p.max;
+    document.getElementById('_dbTmin').value  = p.min;
+    document.getElementById('_dbCloud').value = Math.round(p.cloud * 100);
+    _dbLabels(WEATHER[d]);
+    _dbRefresh();
+    if (typeof update === 'function') update();
+  };
+
+  // ── Boot: load initial state, hook update() ─────────────────
+  setTimeout(function() {
+    const d0 = (typeof currentDayIdx !== 'undefined') ? currentDayIdx : 0;
+    _dbLoad(d0);
+    // Wrap update() so panel refreshes whenever the map updates
+    if (typeof update === 'function') {
+      const _orig = update;
+      update = function() { _orig.apply(this, arguments); setTimeout(_dbRefresh, 60); };
+    }
+  }, 600);
+
+})();
+// END DEBUG PANEL
+"""
 
 
 def build_pdf_html(data: dict, lac_config: dict, template_path: str) -> str:
@@ -1966,14 +2557,60 @@ def build_pdf_html(data: dict, lac_config: dict, template_path: str) -> str:
     html = re.sub(r'const TRIP_DATES\s*=\s*\[[^\]]*\];',
                   f'const TRIP_DATES = {_js(trip_dates)};', html, count=1)
 
+    # ── Replace satellite slider CSS/HTML with 3-mode map buttons ─────────────
+    MAP_MODE_CSS = (
+        '.map-mode-btns { display: flex; align-items: center; gap: 4px; }\n'
+        '.map-mode-btn {\n'
+        '  background: rgba(30,41,59,0.7); border: 1px solid rgba(148,163,184,0.2);\n'
+        '  color: var(--text-dim); border-radius: 6px; padding: 3px 8px;\n'
+        '  font-size: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s;\n'
+        '  font-family: inherit; letter-spacing: 0.3px; white-space: nowrap;\n'
+        '}\n'
+        '.map-mode-btn:hover { background: rgba(59,130,246,0.2); color: var(--text-main); }\n'
+        '.map-mode-btn.active { background: rgba(59,130,246,0.3); color: #93c5fd; border-color: rgba(59,130,246,0.5); }'
+    )
+    html = re.sub(
+        r'\.sat-topbar \{[^}]+\}.*?#satSlider::-webkit-slider-thumb \{[^}]+\}',
+        MAP_MODE_CSS, html, flags=re.DOTALL, count=1
+    )
+    html = html.replace('  .sat-topbar { display: none; }',
+                        '  .map-mode-btns { display: none; }', 1)
+    MAP_MODE_HTML = (
+        '<div class="map-mode-btns">\n'
+        '  <button class="map-mode-btn active" onclick="setMapMode(\'satellite\')" id="btnSat">🛰️ Carte</button>\n'
+        '  <button class="map-mode-btn" onclick="setMapMode(\'thermal\')" id="btnThermal">🌡️ Thermique</button>\n'
+        '</div>\n'
+        '<div class="separator"></div>\n'
+        '<span class="unit-toggle" onclick="toggleUnit()" title="Basculer m / pi">'
+        '<span id="unitM" style="color:var(--accent)">M</span> | <span id="unitPi">Pi</span></span>\n'
+        '<span class="unit-toggle" onclick="toggleTempUnit()" title="Basculer °C / °F" style="margin-left:4px">'
+        '<span id="unitC" style="color:var(--accent)">°C</span> | <span id="unitF">°F</span></span>\n'
+        '<div class="separator"></div>\n'
+        '<select id="speciesSelect" class="species-select" onchange="setSpecies(this.value)">\n'
+        '  <option value="omble">🐟 Omble de fontaine</option>\n'
+        '  <option value="touladi">🐟 Touladi</option>\n'
+        '  <option value="brochet">🐟 Grand Brochet</option>\n'
+        '  <option value="dore">🐟 Doré jaune</option>\n'
+        '  <option value="perchaude">🐟 Perchaude</option>\n'
+        '</select>'
+    )
+    html = re.sub(
+        r'<div class="sat-topbar"[^>]*>[\s\S]*?</div>',
+        MAP_MODE_HTML, html, count=1
+    )
+
     # ── Strip any pre-existing layer-control / GBLQ / MFFP blocks ─────────────
     # Prevents template contamination when batch reuses lac_romeo_peche.html.
     html = re.sub(
-        r'\n?// =+\n// LAYER CONTROLS[^\n]*\n// =+\n[\s\S]*?map\.on\(\'overlayremove\'[\s\S]*?\}\);\n',
+        r'\n?// =+\n// LAYER CONTROLS[^\n]*\n// =+\n[\s\S]*?(?:map\.on\(\'overlayremove\'[\s\S]*?\}\);\n|// END LAYER CONTROLS\n)',
         '', html
     )
     html = re.sub(
         r'\n?// =+\n// (?:GBLQ|MFFP) BATH[^\n]*\n// =+\n\(function build(?:GBLQ|MFFP)Isobaths\(\)[^\n]*\n[\s\S]*?\}\)\(\);',
+        '', html
+    )
+    html = re.sub(
+        r'\n?// =+\n// DEBUG PANEL[^\n]*\n// =+\n\(function\(\)[\s\S]*?// END DEBUG PANEL\n',
         '', html
     )
 
@@ -2015,6 +2652,9 @@ def build_pdf_html(data: dict, lac_config: dict, template_path: str) -> str:
             r'(<span class="stat-label">Bathymétrie</span><span class="stat-value">)[^<]*(</span>)',
             lambda m, d=max_d_m: m.group(1) + f'MFFP PDF {d} m max' + m.group(2), html
         )
+
+    # ── Debug panel (weather sim, time presets) ───────────────────────────────
+    html = _inject_before_last_script(html, _debug_panel_js_block())
 
     return html
 

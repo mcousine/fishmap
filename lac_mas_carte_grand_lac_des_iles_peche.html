@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lac MAS_Carte_Grand lac des Îles — Pêche Mastigouche</title>
-<meta name="description" content="Application interactive de planification de pêche au Lac Roméo, Réserve faunique Mastigouche.">
+<title>Lac Mas Carte Grand Des Iles — Pêche Mastigouche</title>
+<meta name="description" content="Carte de pêche interactive — Lac Mas Carte Grand Des Iles, Réserve faunique Mastigouche.">
 <style>
 /* Leaflet CSS */
 /* required styles */
@@ -879,25 +879,46 @@ body {
 .thermal-opt  { background: rgba(16,185,129,0.18); color:#10b981; border:1px solid rgba(16,185,129,0.4); }
 .thermal-good { background: rgba(245,158,11,0.18); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); }
 .thermal-bad  { background: rgba(239,68,68,0.18);  color:#ef4444; border:1px solid rgba(239,68,68,0.4); }
-.sat-topbar { display: flex; align-items: center; gap: 5px; }
-.sat-icon { font-size: 13px; line-height: 1; }
-.sat-pct { font-size: 9px; font-weight: 700; color: var(--text-dim); min-width: 24px; }
-#satSlider {
-  -webkit-appearance: none; appearance: none; width: 64px; height: 3px;
-  border-radius: 2px; background: linear-gradient(90deg, var(--text-muted), #3b82f6);
-  outline: none; cursor: pointer;
+.temp-bar-wrap { margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--border); }
+.temp-bar-track {
+  position: relative; height: 7px; border-radius: 4px; overflow: visible;
+  background: linear-gradient(to right, #1e3a8a 0%, #3b82f6 20%, #06b6d4 35%, #10b981 50%, #fde047 65%, #f59e0b 80%, #ef4444 100%);
 }
-#satSlider::-webkit-slider-thumb {
-  -webkit-appearance: none; width: 11px; height: 11px; border-radius: 50%;
-  background: #fff; border: 2px solid #3b82f6; cursor: grab;
+.temp-bar-comfort {
+  position: absolute; top: 0; height: 100%; border-radius: 2px;
+  background: rgba(255,255,255,0.28); border: 1px solid rgba(255,255,255,0.5);
+  box-sizing: border-box; pointer-events: none; transition: left 0.5s, width 0.5s;
+}
+.temp-bar-needle {
+  position: absolute; top: -4px; width: 3px; height: 15px;
+  background: #fff; border-radius: 2px; box-shadow: 0 0 6px rgba(0,0,0,0.7);
+  transform: translateX(-50%); pointer-events: none; transition: left 0.4s ease;
+}
+.temp-bar-labels {
+  display: flex; justify-content: space-between;
+  font-size: 8px; color: var(--text-dim); margin-top: 3px;
+}
+.map-mode-btns { display: flex; align-items: center; gap: 4px; }
+.map-mode-btn {
+  background: rgba(30,41,59,0.7); border: 1px solid rgba(148,163,184,0.2);
+  color: var(--text-dim); border-radius: 6px; padding: 3px 8px;
+  font-size: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+  font-family: inherit; letter-spacing: 0.3px; white-space: nowrap;
+}
+.map-mode-btn:hover { background: rgba(59,130,246,0.2); color: var(--text-main); }
+.map-mode-btn.active { background: rgba(59,130,246,0.3); color: #93c5fd; border-color: rgba(59,130,246,0.5); }
+.unit-toggle {
+  font-size: 10px; font-weight: 700; color: var(--text-dim); cursor: pointer;
+  letter-spacing: 0.5px; user-select: none; white-space: nowrap;
+}
+.unit-toggle span { transition: color 0.2s; }
+.species-select {
+  font-size: 10px; font-weight: 600; background: rgba(15,23,42,0.75);
+  color: var(--text-dim); border: 1px solid rgba(148,163,184,0.2);
+  border-radius: 6px; padding: 3px 6px; cursor: pointer;
+  font-family: inherit; outline: none; max-width: 140px;
 }
 .fish-marker { pointer-events: none !important; }
-@keyframes fish-swim {
-  0%,100% { transform: translateY(0) rotate(0deg); }
-  30%      { transform: translateY(-3px) rotate(-6deg); }
-  70%      { transform: translateY(3px) rotate(6deg); }
-}
-.fish-animate { animation: fish-swim 2.4s ease-in-out infinite; }
 .map-legend {
   position: fixed; bottom: 90px; left: 16px; z-index: 1000; padding: 10px 14px;
   background: var(--bg-glass); backdrop-filter: blur(10px);
@@ -916,7 +937,9 @@ body {
   .control-panel { flex-wrap: wrap; padding: 10px 16px; gap: 10px; }
   #timeSlider { width: 140px; }
   .sun-indicator { display: none; }
-  .sat-topbar { display: none; }
+  .map-mode-btns { display: none; }
+  .unit-toggle { display: none; }
+  .species-select { max-width: 110px; }
   .map-legend { display: none; }
 }
 </style>
@@ -927,18 +950,27 @@ body {
 
 <!-- Top bar -->
 <div class="top-bar">
-  <h1>🎣 Lac Roméo</h1>
+  <h1>🎣 Lac Mas Carte Grand Des Iles</h1>
   <div class="separator"></div>
   <span class="badge">Mastigouche</span>
   <div class="separator"></div>
   <span class="badge-nosdb">SANS BATHYMÉTRIE</span>
   <div class="separator"></div>
-  <div class="sat-topbar" title="Opacité satellite">
-    <span class="sat-icon">🛰️</span>
-    <input type="range" id="satSlider" min="0" max="100" value="50"
-      oninput="setSatOpacity(this.value); document.getElementById('satPct').textContent=Math.round(this.value)+'%'">
-    <span class="sat-pct" id="satPct">50%</span>
-  </div>
+  <div class="map-mode-btns">
+  <button class="map-mode-btn active" onclick="setMapMode('satellite')" id="btnSat">🛰️ Carte</button>
+  <button class="map-mode-btn" onclick="setMapMode('thermal')" id="btnThermal">🌡️ Thermique</button>
+</div>
+<div class="separator"></div>
+<span class="unit-toggle" onclick="toggleUnit()" title="Basculer m / pi"><span id="unitM" style="color:var(--accent)">M</span> | <span id="unitPi">Pi</span></span>
+<span class="unit-toggle" onclick="toggleTempUnit()" title="Basculer °C / °F" style="margin-left:4px"><span id="unitC" style="color:var(--accent)">°C</span> | <span id="unitF">°F</span></span>
+<div class="separator"></div>
+<select id="speciesSelect" class="species-select" onchange="setSpecies(this.value)">
+  <option value="omble">🐟 Omble de fontaine</option>
+  <option value="touladi">🐟 Touladi</option>
+  <option value="brochet">🐟 Grand Brochet</option>
+  <option value="dore">🐟 Doré jaune</option>
+  <option value="perchaude">🐟 Perchaude</option>
+</select>
   <div class="separator"></div>
   <span style="font-size:11px;color:var(--text-dim)">46.708°N, 73.505°W</span>
 </div>
@@ -963,6 +995,13 @@ body {
     <div class="water-temp-val" id="waterTempText">~10°C</div>
     <div class="water-temp-label">Eau surface (est.)</div>
     <div id="thermalStatus" class="thermal-status thermal-opt">Optimal omble</div>
+    <div class="temp-bar-wrap">
+      <div class="temp-bar-track">
+        <div class="temp-bar-comfort" id="tempBarComfort" style="left:27%;width:27%"></div>
+        <div class="temp-bar-needle" id="tempBarNeedle" style="left:40%"></div>
+      </div>
+      <div class="temp-bar-labels"><span>0°</span><span>10°</span><span>20°</span><span>30°</span></div>
+    </div>
   </div>
 </div>
 
@@ -974,12 +1013,16 @@ body {
   </div>
   <div id="spotsContainer"></div>
 
-  <h3>📊 Stats Lac Roméo</h3>
-  <div class="stat-row"><span class="stat-label">Superficie</span><span class="stat-value">11.1 ha</span></div>
-  <div class="stat-row"><span class="stat-label">Profondeur max</span><span class="stat-value">N/D (sans SDB)</span></div>
+                        <h3>📊 Stats Lac Mas Carte Grand Des Iles</h3>
+  <div class="stat-row"><span class="stat-label">Superficie</span><span class="stat-value">144.3 ha</span></div>
+  <div class="stat-row"><span class="stat-label">Succès 2025</span><span class="stat-value">N/D</span></div>
+  <div class="stat-row"><span class="stat-label">Masse moy.</span><span class="stat-value">N/D</span></div>
+  <div class="stat-row"><span class="stat-label">Véhicule</span><span class="stat-value">Auto</span></div>
+  <div class="stat-row"><span class="stat-label">Portage</span><span class="stat-value">Aucun portage</span></div>
+  <div class="stat-row"><span class="stat-label">Bathymétrie</span><span class="stat-value">Non disponible</span></div>
   <div class="stat-row"><span class="stat-label">Espèce cible</span><span class="stat-value">Omble de fontaine</span></div>
   <div class="stat-row"><span class="stat-label">Zone pêche</span><span class="stat-value">Zone 9</span></div>
-  <div class="stat-row"><span class="stat-label">Profondeurs PDF</span><span class="stat-value">Exprimées en pieds</span></div>
+  <div class="stat-row"><span class="stat-label">Ensemencement</span><span class="stat-value">Espèce indigène</span></div>
   <div class="stat-row"><span class="stat-label">Source</span><span class="stat-value">Carte PDF Sépaq 2024</span></div>
 
   <h3>🗺️ Légende Spots</h3>
@@ -1021,7 +1064,7 @@ body {
 
 <!-- Map legend (bottom-left) -->
 <div class="map-legend">
-  <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,0.7);border:1px solid #3b82f6;"></div>Lac Roméo (contour PDF)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,0.7);border:1px solid #3b82f6;"></div>Lac Mas Carte Grand Des Iles (contour PDF)</div>
   <div class="legend-item"><div class="legend-line" style="background:#60a5fa;"></div>Entrée d'eau (nord)</div>
   <div class="legend-item"><div class="legend-line" style="background:#34d399;"></div>Sortie d'eau (sud)</div>
   <div class="legend-item"><div class="legend-dot" style="background:#d97706;border:2px solid #fbbf24;"></div>Site Sépaq officiel</div>
@@ -1058,11 +1101,11 @@ body {
 // ============================================================
 // DATA & CONFIG
 // ============================================================
-const LAC_NAME = "Roméo";
-const MAP_CENTER = [46.8058, -73.3584];
+const LAC_NAME = "Mas Carte Grand Des Iles";
+const MAP_CENTER = [46.7076, -73.5048];
 const MAP_ZOOM = 15;
-const LAC_AREA_HA = 11.1;
-const SOURCE_NOTE = "Carte PDF Sépaq 2024 — Lac MAS_Carte_Grand lac des Îles (sans bathymétrie)";
+const LAC_AREA_HA = 144.3;
+const SOURCE_NOTE = "Carte PDF Sépaq 2024 — Lac Mas Carte Grand Des Iles (sans bathymétrie)";
 const HAS_BATHY = false;
 const SPECIES = "Omble de fontaine";
 const LAT = 46.7076, LON = -73.5048;
@@ -1097,58 +1140,58 @@ const BOAT_ACCESS = [{"lat": 46.687505, "lon": -73.493766}, {"lat": 46.687505, "
 
 // Fishing spots — omble de fontaine (mix official + predicted)
 const FISHING_SPOTS = [
-  { id: 'official_0', lat: 46.71319, lon: -73.55067, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
+  { id: 'official_0', lat: 46.71319, lon: -73.52676, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
     bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
     why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
-  { id: 'official_1', lat: 46.71307, lon: -73.55103, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
+  { id: 'official_1', lat: 46.71307, lon: -73.52676, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
     bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
     why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
-  { id: 'official_2', lat: 46.71285, lon: -73.5513, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
+  { id: 'official_2', lat: 46.71285, lon: -73.52676, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
     bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
     why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
-  { id: 'official_3', lat: 46.71263, lon: -73.55155, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
+  { id: 'official_3', lat: 46.71263, lon: -73.52676, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
     bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
     why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
-  { id: 'official_4', lat: 46.71243, lon: -73.55186, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
+  { id: 'official_4', lat: 46.71243, lon: -73.52676, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
     bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
     why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
-  { id: 'official_5', lat: 46.71225, lon: -73.55218, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
+  { id: 'official_5', lat: 46.71225, lon: -73.52676, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
     bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
     why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
-  { id: 'official_6', lat: 46.7121, lon: -73.55254, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
+  { id: 'official_6', lat: 46.7121, lon: -73.52676, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
     bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
     why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
-  { id: 'official_7', lat: 46.71199, lon: -73.55291, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
+  { id: 'official_7', lat: 46.71199, lon: -73.52676, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
     bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
     why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
-  { id: 'official_8', lat: 46.71198, lon: -73.55332, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
+  { id: 'official_8', lat: 46.71198, lon: -73.52676, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
     bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
     why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
-  { id: 'official_9', lat: 46.71195, lon: -73.55373, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
+  { id: 'official_9', lat: 46.71195, lon: -73.52676, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
     bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
     why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
-  { id: 'official_10', lat: 46.71185, lon: -73.55411, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
+  { id: 'official_10', lat: 46.71185, lon: -73.52676, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
     bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
     why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
-  { id: 'official_11', lat: 46.71177, lon: -73.55451, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
+  { id: 'official_11', lat: 46.71177, lon: -73.52676, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
     bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
     why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
-  { id: 'official_12', lat: 46.71164, lon: -73.55487, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
+  { id: 'official_12', lat: 46.71164, lon: -73.52676, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
     bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
     why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
-  { id: 'official_13', lat: 46.71143, lon: -73.55506, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
+  { id: 'official_13', lat: 46.71143, lon: -73.52676, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
     bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
     why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
-  { id: 'official_14', lat: 46.70661, lon: -73.47501, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
+  { id: 'official_14', lat: 46.70661, lon: -73.48176, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
     bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
     why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
-  { id: 'official_15', lat: 46.70682, lon: -73.47512, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
+  { id: 'official_15', lat: 46.70682, lon: -73.48176, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
     bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
     why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
-  { id: 'official_16', lat: 46.70706, lon: -73.4753, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
+  { id: 'official_16', lat: 46.70706, lon: -73.48176, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
     bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
     why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
-  { id: 'official_17', lat: 46.70726, lon: -73.47553, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
+  { id: 'official_17', lat: 46.70726, lon: -73.48176, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
     bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
     why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
   { id: 'inlet', lat: 46.73115, lon: -73.50921, name: "Entrée nord — Eau fraîche", icon: "🎣", type: "inlet",
@@ -1166,7 +1209,7 @@ const FISHING_SPOTS = [
 ];
 
 // Trip dates
-const TRIP_DATES = ["2026-05-23", "2026-05-24", "2026-05-25"];
+const TRIP_DATES = ["2026-05-20", "2026-05-21", "2026-05-22"];
 let currentDate = TRIP_DATES[0];
 let currentDayIdx = 0;
 let currentTime = 6.0;
@@ -1312,7 +1355,7 @@ function buildLakeMask() {
     fillColor: '#1d4ed8',
     fillOpacity: 0.22,
   }).addTo(map);
-  lakePoly.bindTooltip('Lac Roméo — 11.1 ha<br>Source: PDF Sépaq 2024', {
+  lakePoly.bindTooltip('Lac Mas Carte Grand Des Iles — 144.3 ha<br>Source: PDF Sépaq 2024', {
     direction: 'center', permanent: false, className: 'lake-tooltip'
   });
   return lakePoly;
@@ -1461,7 +1504,7 @@ FISHING_SPOTS.forEach(spot => {
 });
 
 // ============================================================
-// ANIMATED FISH MARKER
+// FISH MARKER — positioned at thermally-optimal isobath centroid
 // ============================================================
 let fishMarker = null;
 let fishPrevLon = null;
@@ -1471,27 +1514,80 @@ function getFishSVG(w, h) {
   return '<svg viewBox="0 0 ' + w + ' ' + h + '" width="' + w + '" height="' + h + '" xmlns="http://www.w3.org/2000/svg">' +
     '<ellipse cx="' + (w*0.55) + '" cy="' + hw + '" rx="' + (w*0.38) + '" ry="' + (hw-1) + '" fill="' + c + '" opacity="0.95"/>' +
     '<path d="M' + (w*0.18) + ' ' + (h*0.2) + ' L2 0 L' + (w*0.1) + ' ' + hw + ' L2 ' + h + ' L' + (w*0.18) + ' ' + (h*0.8) + '" fill="' + c + '"/>' +
-    '<circle cx="' + (w*0.82) + '" cy="' + (hw*0.76) + '" r="3.5" fill="rgba(255,255,255,0.9)"/>' +
-    '<circle cx="' + (w*0.84) + '" cy="' + (hw*0.76) + '" r="1.8" fill="#222"/>' +
+    '<circle cx="' + (w*0.82) + '" cy="' + (hw*0.76) + '" r="2.8" fill="rgba(255,255,255,0.9)"/>' +
+    '<circle cx="' + (w*0.84) + '" cy="' + (hw*0.76) + '" r="1.4" fill="#222"/>' +
     '<ellipse cx="' + (w*0.5) + '" cy="' + (h*0.72) + '" rx="' + (w*0.16) + '" ry="' + (h*0.2) + '" fill="rgba(255,120,20,0.4)"/>' +
     '</svg>';
 }
 
-function updateFishMarker(topSpot) {
-  const facing = (fishPrevLon !== null && topSpot.lon < fishPrevLon) ? 'left' : 'right';
-  const W = 54, H = 26;
-  const icon = L.divIcon({
+function _makeFishIcon(facing) {
+  var W = 36, H = 18;
+  return L.divIcon({
     className: 'fish-marker',
-    html: '<div class="fish-animate" style="filter:drop-shadow(0 0 7px rgba(245,158,11,0.55));transform:scaleX(' + (facing==='left'?-1:1) + ');display:inline-block;">' + getFishSVG(W,H) + '</div>',
-    iconSize: [W, H], iconAnchor: [W/2, H/2],
+    html: '<div style="filter:drop-shadow(0 0 5px rgba(245,158,11,0.5));transform:scaleX(' + (facing === 'left' ? -1 : 1) + ');display:inline-block;">' + getFishSVG(W, H) + '</div>',
+    iconSize: [W, H], iconAnchor: [W / 2, H / 2],
   });
-  if (!fishMarker) {
-    fishMarker = L.marker([topSpot.lat, topSpot.lon], { icon, zIndexOffset: 500, interactive: false }).addTo(map);
-  } else {
-    fishMarker.setLatLng([topSpot.lat, topSpot.lon]);
-    fishMarker.setIcon(icon);
+}
+
+function _thermalTempAtDepth(d, surf, maxD) {
+  var epi = Math.max(3, Math.min(6, maxD * 0.28));
+  var therm = Math.min(epi + 7, maxD * 0.68);
+  if (d <= epi) return Math.max(4, surf - d * 0.6);
+  if (d <= therm) {
+    var tEpi = surf - epi * 0.6;
+    var frac = (d - epi) / (therm - epi);
+    return Math.max(4, tEpi * (1 - frac) + 5.5 * frac);
   }
-  fishPrevLon = topSpot.lon;
+  return Math.max(4, 5.5 - (d - therm) / Math.max(1, maxD - therm) * 1.5);
+}
+
+function _bestThermalIso(wt, sp) {
+  var isobaths = window._lakeIsobaths;
+  var maxD = window._lakeMaxDepth || 10;
+  if (!isobaths || !isobaths.length) return null;
+  var h = typeof currentTime !== 'undefined' ? currentTime : 12;
+  // Morning/evening: bias shallow (feeding); midday: bias deep (thermal refuge)
+  var shallowBias = (h < 9 || h > 17) ? 2.0 : (h > 11 && h < 16) ? -1.0 : 0.5;
+  var bestScore = -1e9, bestIso = null;
+  isobaths.forEach(function(iso) {
+    var t = _thermalTempAtDepth(iso.depth_m, wt, maxD);
+    var score = sp
+      ? ((t >= sp.tempOpt1 && t <= sp.tempOpt2) ? 20
+         : (t >= sp.tempMin && t <= sp.tempMax)  ?  8
+         : -Math.abs(t - (sp.tempOpt1 + sp.tempOpt2) * 0.5) * 2)
+      : ((t >= 8 && t <= 16) ? 20 : (t >= 5 && t <= 20) ? 8 : -5);
+    score += shallowBias / (1 + iso.depth_m * 0.4);
+    if (score > bestScore) { bestScore = score; bestIso = iso; }
+  });
+  return bestIso;
+}
+
+function updateFishMarker(topSpot, wt) {
+  var sp = (typeof SPECIES_DATA !== 'undefined' && SPECIES_DATA)
+           ? (SPECIES_DATA[currentSpecies] || SPECIES_DATA.omble) : null;
+  var waterT = wt || 12;
+  var lat = topSpot.lat, lon = topSpot.lon;
+
+  // Place fish at centroid of thermally-optimal isobath ring (stays in-lake)
+  var bestIso = _bestThermalIso(waterT, sp);
+  if (bestIso) {
+    var sLat = 0, sLon = 0, cnt = 0;
+    bestIso.coords.forEach(function(line) {
+      line.forEach(function(pt) { sLat += pt[0]; sLon += pt[1]; cnt++; });
+    });
+    if (cnt > 0) { lat = sLat / cnt; lon = sLon / cnt; }
+  }
+
+  var facing = (fishPrevLon !== null && lon < fishPrevLon) ? 'left' : 'right';
+  if (!fishMarker) {
+    fishMarker = L.marker([lat, lon], {
+      icon: _makeFishIcon(facing), zIndexOffset: 500, interactive: false
+    }).addTo(map);
+  } else {
+    fishMarker.setLatLng([lat, lon]);
+    fishMarker.setIcon(_makeFishIcon(facing));
+  }
+  fishPrevLon = lon;
 }
 
 // ============================================================
@@ -1540,13 +1636,38 @@ function update() {
   }
 
   const wt = waterTemp;
-  let tClass, tMsg;
-  if (wt >= 8 && wt <= 16) { tClass = 'thermal-opt'; tMsg = '✅ Optimal — Omble de fontaine'; }
-  else if (wt >= 5 && wt <= 20) { tClass = 'thermal-good'; tMsg = '⚠️ Acceptable — Omble'; }
-  else { tClass = 'thermal-bad'; tMsg = '🔴 Hors confort — Omble'; }
+  const _sp = (typeof SPECIES_DATA !== 'undefined' && SPECIES_DATA)
+              ? (SPECIES_DATA[currentSpecies] || SPECIES_DATA.omble) : null;
+  let tClass, tMsg, tSub;
+  if (_sp) {
+    if (wt >= _sp.tempOpt1 && wt <= _sp.tempOpt2) {
+      tClass = 'thermal-opt'; tMsg = '✅ Optimal — ' + _sp.name;
+      tSub = 'Opt: ' + _sp.tempOpt1 + '–' + _sp.tempOpt2 + '°C · Max: ' + _sp.tempMax + '°C · Actif: ' + _sp.depthPref[0] + '–' + _sp.depthPref[1] + 'm';
+    } else if (wt >= _sp.tempMin && wt <= _sp.tempMax) {
+      tClass = 'thermal-good'; tMsg = '⚠️ Acceptable — ' + _sp.name;
+      tSub = 'Confort: ' + _sp.tempMin + '–' + _sp.tempMax + '°C · Opt: ' + _sp.tempOpt1 + '–' + _sp.tempOpt2 + '°C';
+    } else {
+      tClass = 'thermal-bad'; tMsg = '🔴 Hors confort — ' + _sp.name;
+      tSub = 'Confort: ' + _sp.tempMin + '–' + _sp.tempMax + '°C';
+    }
+  } else {
+    if (wt >= 8 && wt <= 16) { tClass = 'thermal-opt'; tMsg = '✅ Optimal'; tSub = 'Opt: 8–16°C'; }
+    else if (wt >= 5 && wt <= 20) { tClass = 'thermal-good'; tMsg = '⚠️ Acceptable'; tSub = 'Max: 20°C'; }
+    else { tClass = 'thermal-bad'; tMsg = '🔴 Hors confort'; tSub = ''; }
+  }
   const ts = document.getElementById('thermalStatus');
   ts.className = 'thermal-status ' + tClass;
-  ts.innerHTML = tMsg + '<br><span style="font-size:9px;opacity:0.7;font-weight:500;">Opt: 8–16°C · Max: 20°C · Actif: 0–4m</span>';
+  ts.innerHTML = tMsg + '<br><span style="font-size:9px;opacity:0.7;font-weight:500;">' + tSub + '</span>';
+
+  // Thermometer bar — needle position + species comfort zone
+  const _tempMax = 30;
+  const _nb = document.getElementById('tempBarNeedle');
+  if (_nb) _nb.style.left = Math.min(100, Math.max(0, wt / _tempMax * 100)).toFixed(1) + '%';
+  const _cb = document.getElementById('tempBarComfort');
+  if (_cb && _sp) {
+    _cb.style.left  = Math.max(0, _sp.tempOpt1 / _tempMax * 100).toFixed(1) + '%';
+    _cb.style.width = Math.min(100 - _sp.tempOpt1 / _tempMax * 100, (_sp.tempOpt2 - _sp.tempOpt1) / _tempMax * 100).toFixed(1) + '%';
+  }
 
   const scored = FISHING_SPOTS.map(s => Object.assign({}, s, { score: scoreSpot(s, currentTime) }))
     .sort((a, b) => b.score - a.score);
@@ -1575,7 +1696,9 @@ function update() {
       '</div>';
   }).join('');
 
-  updateFishMarker(scored[0]);
+  window._lastScored = scored;
+  window._lastWaterTemp = wt;
+  updateFishMarker(scored[0], wt);
 }
 
 // ============================================================
@@ -1638,6 +1761,402 @@ document.head.appendChild(popupStyle);
 fetchWeatherForecast().then(function(data) {
   buildForecastPanel(data);
 });
+
+
+// ============================================================
+// LAYER CONTROLS — Carte (Satellite) · Thermique
+// ============================================================
+var currentMode = 'satellite';
+const layerBathy    = L.layerGroup().addTo(map);
+const layerThermal  = L.layerGroup();
+const layerSun      = L.layerGroup().addTo(map);
+const layerHotzones = L.layerGroup();
+
+// ── Unit toggles (m ↔ pi, °C ↔ °F) ─────────────────────────
+var currentUnit = 'm';
+var tempUnit    = 'C';
+
+function depthVal(d) {
+  return currentUnit === 'ft' ? (d * 3.28084).toFixed(0) + ' pi' : d.toFixed(1) + ' m';
+}
+function tempDisp(t_c) {
+  return tempUnit === 'F' ? (t_c * 9 / 5 + 32).toFixed(1) + '°F' : t_c.toFixed(1) + '°C';
+}
+function toggleUnit() {
+  currentUnit = currentUnit === 'm' ? 'ft' : 'm';
+  const mEl = document.getElementById('unitM'), pEl = document.getElementById('unitPi');
+  if (mEl) mEl.style.color = currentUnit === 'm' ? 'var(--accent)' : 'var(--text-dim)';
+  if (pEl) pEl.style.color = currentUnit === 'ft' ? 'var(--accent)' : 'var(--text-dim)';
+  if (typeof window._onUnitChange === 'function') window._onUnitChange();
+}
+function toggleTempUnit() {
+  tempUnit = tempUnit === 'C' ? 'F' : 'C';
+  const cEl = document.getElementById('unitC'), fEl = document.getElementById('unitF');
+  if (cEl) cEl.style.color = tempUnit === 'C' ? 'var(--accent)' : 'var(--text-dim)';
+  if (fEl) fEl.style.color = tempUnit === 'F' ? 'var(--accent)' : 'var(--text-dim)';
+  if (typeof window._onTempUnitChange === 'function') window._onTempUnitChange();
+}
+
+// ── Species data ─────────────────────────────────────────────
+var SPECIES_DATA = {
+  omble: {
+    name: 'Omble de fontaine',
+    tempMin: 8, tempOpt1: 12, tempOpt2: 16, tempMax: 22, depthPref: [0, 4],
+    bonus: { 'embouchure':15, 'baie/herbier':10, 'pointe/étranglement':8, 'émissaire':12, 'escarpement/pente raide':5, 'connexion/passage':8 },
+    malus: { 'fosse profonde':-8 },
+  },
+  touladi: {
+    name: 'Touladi',
+    tempMin: 4, tempOpt1: 8, tempOpt2: 12, tempMax: 18, depthPref: [5, 12],
+    bonus: { 'fosse profonde':25, 'escarpement/pente raide':15 },
+    malus: { 'baie/herbier':-15, 'embouchure':-5, 'connexion/passage':-5 },
+  },
+  brochet: {
+    name: 'Grand Brochet',
+    tempMin: 10, tempOpt1: 16, tempOpt2: 22, tempMax: 28, depthPref: [0, 3],
+    bonus: { 'baie/herbier':25, 'embouchure':10, 'connexion/passage':12 },
+    malus: { 'fosse profonde':-25, 'escarpement/pente raide':-10 },
+  },
+  dore: {
+    name: 'Doré jaune',
+    tempMin: 10, tempOpt1: 16, tempOpt2: 22, tempMax: 26, depthPref: [3, 8],
+    bonus: { 'fosse profonde':12, 'escarpement/pente raide':20, 'pointe/étranglement':10 },
+    malus: { 'baie/herbier':-5 },
+  },
+  perchaude: {
+    name: 'Perchaude',
+    tempMin: 12, tempOpt1: 18, tempOpt2: 24, tempMax: 28, depthPref: [0, 5],
+    bonus: { 'baie/herbier':20, 'embouchure':8, 'pointe/étranglement':5, 'émissaire':6 },
+    malus: { 'fosse profonde':-15, 'escarpement/pente raide':-8 },
+  },
+};
+var currentSpecies = 'omble';
+
+function setSpecies(key) {
+  currentSpecies = key;
+  if (typeof update === 'function') update();
+}
+
+// Species-aware scoreSpot (overrides simpler template version)
+function scoreSpot(spot, hour) {
+  const weather = (typeof WEATHER !== 'undefined' && typeof currentDayIdx !== 'undefined')
+    ? WEATHER[currentDayIdx] : { max: 15, min: 5, cloud: 0.5 };
+  const sp = (SPECIES_DATA && (SPECIES_DATA[currentSpecies] || SPECIES_DATA.omble)) || null;
+  let score = spot.score_base;
+  if (sp) score += (sp.bonus[spot.type] || 0) + (sp.malus[spot.type] || 0);
+  const wt = (typeof estimateWaterTemp === 'function')
+    ? estimateWaterTemp(weather.max, weather.min, hour, weather.cloud || 0.5) : 12;
+  if (sp) {
+    if (wt >= sp.tempOpt1 && wt <= sp.tempOpt2) score += 15;
+    else if (wt >= sp.tempMin && wt <= sp.tempMax) score += 5;
+    else score -= 12;
+  } else {
+    if (wt >= 8 && wt <= 16) score += 10;
+    else if (wt < 5 || wt > 20) score -= 12;
+  }
+  const h = Math.round(hour * 2) / 2;
+  if (spot.peakTime && spot.peakTime.includes(h)) score += 20;
+  else if (spot.bestTime && spot.bestTime.includes(Math.floor(h))) score += 10;
+  else score -= 15;
+  if ((hour >= 5 && hour <= 7.5) || (hour >= 17.5 && hour <= 20)) score += 10;
+  if (hour >= 11 && hour <= 14) {
+    if (sp && sp.depthPref[0] >= 4) score += 15;
+    else if (spot.type !== 'fosse profonde') score -= 10;
+  }
+  if ((weather.cloud || 0) > 0.6) score += 5;
+  return Math.max(0, Math.min(100, score));
+}
+
+// ── Inject depth/thermal label CSS once ─────────────────────
+(function() {
+  if (document.getElementById('_dlCSS')) return;
+  const s = document.createElement('style'); s.id = '_dlCSS';
+  s.textContent =
+    '.dlabel-icon{background:transparent!important;border:none!important;box-shadow:none!important}' +
+    '.dlabel-txt{font-size:11px;font-weight:700;color:rgba(255,255,255,0.92);background:rgba(0,0,0,0.58);padding:2px 5px;border-radius:4px;white-space:nowrap;pointer-events:none;display:inline-block;text-shadow:0 1px 3px rgba(0,0,0,0.9)}' +
+    '.tlabel-txt{font-size:11px;font-weight:800;color:#fff;padding:2px 6px;border-radius:5px;border:1.5px solid rgba(255,255,255,0.4);white-space:nowrap;pointer-events:none;display:inline-block;text-shadow:0 1px 3px rgba(0,0,0,0.9);box-shadow:0 1px 4px rgba(0,0,0,0.5)}';
+  document.head.appendChild(s);
+})();
+
+// ── Map mode switch ───────────────────────────────────────────
+function setMapMode(mode) {
+  currentMode = mode;
+  if (typeof satTile !== 'undefined') satTile.setOpacity(1);
+  if (mode === 'thermal') {
+    if (!map.hasLayer(layerThermal)) layerThermal.addTo(map);
+    if (map.hasLayer(layerBathy))    map.removeLayer(layerBathy);
+  } else {
+    if (!map.hasLayer(layerBathy))   layerBathy.addTo(map);
+    if (map.hasLayer(layerThermal))  map.removeLayer(layerThermal);
+  }
+  ['btnSat','btnThermal'].forEach(function(id) {
+    const el = document.getElementById(id); if (el) el.classList.remove('active');
+  });
+  const activeEl = document.getElementById(mode === 'thermal' ? 'btnThermal' : 'btnSat');
+  if (activeEl) activeEl.classList.add('active');
+}
+
+// Observe waterTempText — update thermal colors live when time slider moves
+const _wtEl = document.getElementById('waterTempText');
+if (_wtEl) {
+  new MutationObserver(function() {
+    if (typeof window._updateThermalColors !== 'function') return;
+    const m = _wtEl.textContent.match(/[\d.]+/);
+    if (m) window._updateThermalColors(parseFloat(m[0]));
+  }).observe(_wtEl, { childList: true, characterData: true, subtree: true });
+}
+
+setMapMode('satellite');
+// END LAYER CONTROLS
+
+
+// ============================================================
+// DEBUG PANEL — Simulateur météo & conditions
+// ============================================================
+(function() {
+  if (document.getElementById('_debugPanel')) return;
+
+  const style = document.createElement('style');
+  style.textContent = `
+    #_debugPanel { position:fixed;right:16px;bottom:110px;z-index:2000;width:264px;
+      font-family:'Inter',sans-serif;font-size:11px;user-select:none; }
+    #_debugToggle { cursor:pointer;background:rgba(15,23,42,0.88);backdrop-filter:blur(10px);
+      -webkit-backdrop-filter:blur(10px);border:1px solid rgba(148,163,184,0.25);
+      border-radius:10px 10px 0 0;padding:6px 10px;display:flex;
+      justify-content:space-between;align-items:center;
+      color:#94a3b8;font-weight:700;letter-spacing:0.3px; }
+    #_debugBody { background:rgba(10,14,26,0.93);backdrop-filter:blur(14px);
+      -webkit-backdrop-filter:blur(14px);border:1px solid rgba(148,163,184,0.2);
+      border-top:none;border-radius:0 0 10px 10px;padding:10px;color:#cbd5e1; }
+    ._dbSection { border-top:1px solid rgba(148,163,184,0.12);padding-top:8px;margin-top:6px; }
+    ._dbLabel { color:#64748b;font-size:10px;margin-bottom:5px;
+      text-transform:uppercase;letter-spacing:0.5px; }
+    ._dbRow { display:flex;justify-content:space-between;align-items:center;margin-bottom:3px; }
+    ._dbRange { width:100%;accent-color:#06b6d4;margin-top:2px; }
+    ._dayBtn { background:rgba(30,41,59,0.7);border:1px solid rgba(148,163,184,0.2);
+      color:#64748b;border-radius:5px;padding:3px 0;font-size:10px;font-weight:600;
+      cursor:pointer;font-family:inherit;flex:1;transition:all 0.15s; }
+    ._dayBtn.active { background:rgba(59,130,246,0.25);color:#93c5fd;
+      border-color:rgba(59,130,246,0.4); }
+    ._timeBtn,._presetBtn { background:rgba(30,41,59,0.7);border:1px solid rgba(148,163,184,0.15);
+      color:#94a3b8;border-radius:5px;padding:2px 7px;font-size:10px;
+      cursor:pointer;font-family:inherit;transition:all 0.15s;white-space:nowrap; }
+    ._timeBtn:hover,._presetBtn:hover { background:rgba(59,130,246,0.2);color:#e2e8f0; }
+    ._dbBtns { display:flex;flex-wrap:wrap;gap:3px; }
+  `;
+  document.head.appendChild(style);
+
+  const panel = document.createElement('div');
+  panel.id = '_debugPanel';
+  panel.innerHTML = `
+    <div id="_debugToggle" onclick="_dbToggle()">
+      <span>🔧 Simulateur météo</span><span id="_dbArrow">▲</span>
+    </div>
+    <div id="_debugBody">
+
+      <div style="display:flex;gap:4px;margin-bottom:8px;">
+        <button class="_dayBtn active" data-d="0" onclick="_dbSetDay(0)">Auj</button>
+        <button class="_dayBtn"        data-d="1" onclick="_dbSetDay(1)">Dem</button>
+        <button class="_dayBtn"        data-d="2" onclick="_dbSetDay(2)">J+2</button>
+      </div>
+
+      <div>
+        <div class="_dbRow">
+          <span>🌡️ Tmax</span><span id="_dbTmaxVal" style="color:#f59e0b;font-weight:700"></span>
+        </div>
+        <input type="range" id="_dbTmax" class="_dbRange" min="-10" max="38" step="1"
+          style="accent-color:#f59e0b;" oninput="_dbUpdateWeather()">
+      </div>
+      <div style="margin-top:6px;">
+        <div class="_dbRow">
+          <span>❄️ Tmin</span><span id="_dbTminVal" style="color:#38bdf8;font-weight:700"></span>
+        </div>
+        <input type="range" id="_dbTmin" class="_dbRange" min="-15" max="28" step="1"
+          style="accent-color:#38bdf8;" oninput="_dbUpdateWeather()">
+      </div>
+      <div style="margin-top:6px;">
+        <div class="_dbRow">
+          <span>☁️ Nuages</span><span id="_dbCloudVal" style="color:#94a3b8;font-weight:700"></span>
+        </div>
+        <input type="range" id="_dbCloud" class="_dbRange" min="0" max="100" step="5"
+          style="accent-color:#64748b;" oninput="_dbUpdateWeather()">
+      </div>
+
+      <div class="_dbSection">
+        <div class="_dbLabel">⏱ Heure rapide</div>
+        <div class="_dbBtns">
+          <button class="_timeBtn" onclick="_dbJump(5.5)">🌅 5h30</button>
+          <button class="_timeBtn" onclick="_dbJump(7)">🌤 7h</button>
+          <button class="_timeBtn" onclick="_dbJump(9)">☀️ 9h</button>
+          <button class="_timeBtn" onclick="_dbJump(12)">🔆 Midi</button>
+          <button class="_timeBtn" onclick="_dbJump(15)">🌥 15h</button>
+          <button class="_timeBtn" onclick="_dbJump(17.5)">🌇 17h30</button>
+          <button class="_timeBtn" onclick="_dbJump(19)">🌆 19h</button>
+        </div>
+      </div>
+
+      <div class="_dbSection">
+        <div class="_dbLabel">🎨 Présets météo</div>
+        <div class="_dbBtns">
+          <button class="_presetBtn" onclick="_dbPreset('spring')">🌸 Printemps</button>
+          <button class="_presetBtn" onclick="_dbPreset('summer')">☀️ Été</button>
+          <button class="_presetBtn" onclick="_dbPreset('hot')">🔥 Canicule</button>
+          <button class="_presetBtn" onclick="_dbPreset('rain')">🌧 Couvert</button>
+          <button class="_presetBtn" onclick="_dbPreset('fall')">🍂 Automne</button>
+        </div>
+      </div>
+
+      <div class="_dbSection" style="background:rgba(0,0,0,0.25);border-radius:8px;padding:8px;border-top:none;margin-top:8px;">
+        <div class="_dbRow" style="margin-bottom:5px;">
+          <span style="color:#64748b;font-size:10px;">Eau surface (estimée)</span>
+          <span id="_dbWaterTemp" style="font-size:14px;font-weight:800;color:#06b6d4;">—</span>
+        </div>
+        <div style="height:8px;border-radius:4px;position:relative;overflow:visible;
+          background:linear-gradient(to right,#1e3a8a 0%,#3b82f6 18%,#06b6d4 30%,#10b981 43%,#fde047 57%,#f59e0b 70%,#ef4444 100%);">
+          <div id="_dbThermalPin" style="position:absolute;top:-4px;width:16px;height:16px;
+            border-radius:50%;background:#fff;border:2.5px solid #0f172a;
+            transform:translateX(-50%);transition:left 0.35s;left:50%;box-shadow:0 0 6px rgba(0,0,0,0.6);"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:2px;color:#475569;font-size:9px;">
+          <span>4°C</span><span>10°C</span><span>13°C</span><span>17°C</span><span>24°C</span>
+        </div>
+        <div id="_dbComfort" style="margin-top:5px;font-size:10px;font-weight:600;
+          text-align:center;padding:3px 6px;border-radius:5px;"></div>
+      </div>
+
+    </div>
+  `;
+  document.body.appendChild(panel);
+
+  // ── State ───────────────────────────────────────────────────
+  const PRESETS = {
+    spring: { max:15, min:5,  cloud:0.5, icon:'⛅', desc:'Printemps variable' },
+    summer: { max:26, min:14, cloud:0.2, icon:'☀️', desc:'Été ensoleillé' },
+    hot:    { max:32, min:19, cloud:0.1, icon:'🔥', desc:'Canicule juin' },
+    rain:   { max:13, min:7,  cloud:0.9, icon:'🌧', desc:'Couvert pluvieux' },
+    fall:   { max:9,  min:2,  cloud:0.6, icon:'🍂', desc:'Automne frais' },
+  };
+
+  var _dbOpen = true;
+
+  window._dbToggle = function() {
+    _dbOpen = !_dbOpen;
+    document.getElementById('_debugBody').style.display = _dbOpen ? '' : 'none';
+    document.getElementById('_dbArrow').textContent = _dbOpen ? '▲' : '▼';
+  };
+
+  window._dbSetDay = function(d) {
+    if (typeof currentDayIdx !== 'undefined') currentDayIdx = d;
+    panel.querySelectorAll('._dayBtn').forEach(function(b) {
+      b.classList.toggle('active', parseInt(b.dataset.d) === d);
+    });
+    _dbLoad(d);
+  };
+
+  function _dbLoad(d) {
+    if (typeof WEATHER === 'undefined' || !WEATHER[d]) return;
+    const w = WEATHER[d];
+    document.getElementById('_dbTmax').value  = w.max;
+    document.getElementById('_dbTmin').value  = w.min;
+    document.getElementById('_dbCloud').value = Math.round((w.cloud || 0) * 100);
+    _dbLabels(w);
+    _dbRefresh();
+  }
+
+  function _dbLabels(w) {
+    document.getElementById('_dbTmaxVal').textContent  = (w.max  >= 0 ? '+' : '') + w.max  + '°C';
+    document.getElementById('_dbTminVal').textContent  = (w.min  >= 0 ? '+' : '') + w.min  + '°C';
+    document.getElementById('_dbCloudVal').textContent = Math.round((w.cloud || 0) * 100)  + '%';
+  }
+
+  function _dbRefresh() {
+    if (typeof estimateWaterTemp !== 'function' || typeof WEATHER === 'undefined') return;
+    const d  = (typeof currentDayIdx !== 'undefined') ? currentDayIdx : 0;
+    const w  = WEATHER[d];
+    if (!w) return;
+    const t  = (typeof currentTime !== 'undefined') ? currentTime : 12;
+    const wt = estimateWaterTemp(w.max, w.min, t, w.cloud || 0.5);
+    const disp = (typeof tempDisp === 'function') ? tempDisp(wt) : wt.toFixed(1) + '°C';
+    document.getElementById('_dbWaterTemp').textContent = '~' + disp;
+
+    // Pin position on 4-24°C bar (capped)
+    const pct = Math.min(100, Math.max(0, (wt - 4) / 20 * 100));
+    document.getElementById('_dbThermalPin').style.left = pct + '%';
+
+    // Species comfort badge
+    const sp = (SPECIES_DATA && currentSpecies) ? SPECIES_DATA[currentSpecies] : null;
+    const el = document.getElementById('_dbComfort');
+    if (sp) {
+      const nm = sp.name || currentSpecies;
+      if (wt >= sp.tempOpt1 && wt <= sp.tempOpt2) {
+        el.textContent = '✅ Optimal — ' + nm;
+        el.style.cssText = 'margin-top:5px;font-size:10px;font-weight:600;text-align:center;padding:3px 6px;border-radius:5px;color:#10b981;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);';
+      } else if (wt >= sp.tempMin && wt <= sp.tempMax) {
+        el.textContent = '⚡ Acceptable — ' + nm;
+        el.style.cssText = 'margin-top:5px;font-size:10px;font-weight:600;text-align:center;padding:3px 6px;border-radius:5px;color:#f59e0b;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);';
+      } else {
+        el.textContent = '🥶 Hors confort — ' + nm;
+        el.style.cssText = 'margin-top:5px;font-size:10px;font-weight:600;text-align:center;padding:3px 6px;border-radius:5px;color:#ef4444;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);';
+      }
+    }
+
+    // Push live update to thermal layer
+    if (typeof window._updateThermalColors === 'function') {
+      const tCelsius = (typeof tempUnit !== 'undefined' && tempUnit === 'F')
+        ? (wt * 9 / 5 + 32) : wt;  // _updateThermalColors expects Celsius always
+      window._updateThermalColors(wt);
+    }
+  }
+
+  window._dbUpdateWeather = function() {
+    const d = (typeof currentDayIdx !== 'undefined') ? currentDayIdx : 0;
+    if (typeof WEATHER === 'undefined' || !WEATHER[d]) return;
+    const tmax  = parseInt(document.getElementById('_dbTmax').value);
+    const tmin  = parseInt(document.getElementById('_dbTmin').value);
+    const cloud = parseInt(document.getElementById('_dbCloud').value) / 100;
+    WEATHER[d].max   = tmax;
+    WEATHER[d].min   = Math.min(tmin, tmax - 2);
+    WEATHER[d].cloud = cloud;
+    _dbLabels(WEATHER[d]);
+    _dbRefresh();
+    if (typeof update === 'function') update();
+  };
+
+  window._dbJump = function(h) {
+    const s = document.getElementById('timeSlider');
+    if (!s) return;
+    s.value = String(h);
+    s.dispatchEvent(new Event('input'));
+    setTimeout(_dbRefresh, 80);
+  };
+
+  window._dbPreset = function(key) {
+    const p = PRESETS[key];
+    if (!p || typeof WEATHER === 'undefined') return;
+    const d = (typeof currentDayIdx !== 'undefined') ? currentDayIdx : 0;
+    Object.assign(WEATHER[d], p);
+    document.getElementById('_dbTmax').value  = p.max;
+    document.getElementById('_dbTmin').value  = p.min;
+    document.getElementById('_dbCloud').value = Math.round(p.cloud * 100);
+    _dbLabels(WEATHER[d]);
+    _dbRefresh();
+    if (typeof update === 'function') update();
+  };
+
+  // ── Boot: load initial state, hook update() ─────────────────
+  setTimeout(function() {
+    const d0 = (typeof currentDayIdx !== 'undefined') ? currentDayIdx : 0;
+    _dbLoad(d0);
+    // Wrap update() so panel refreshes whenever the map updates
+    if (typeof update === 'function') {
+      const _orig = update;
+      update = function() { _orig.apply(this, arguments); setTimeout(_dbRefresh, 60); };
+    }
+  }, 600);
+
+})();
+// END DEBUG PANEL
+
 </script>
 </body>
 </html>
