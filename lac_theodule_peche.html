@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lac Theodule — Pêche Mastigouche</title>
-<meta name="description" content="Carte de pêche interactive — Lac Theodule, Réserve faunique Mastigouche.">
+<title>Lac Théodule — Pêche Mastigouche</title>
+<meta name="description" content="Carte de pêche interactive — Lac Théodule, Réserve faunique Mastigouche.">
 <style>
 /* Leaflet CSS */
 /* required styles */
@@ -1013,7 +1013,7 @@ body {
   </div>
   <div id="spotsContainer"></div>
 
-                          <h3>📊 Stats Lac Theodule</h3>
+                            <h3>📊 Stats Lac Théodule</h3>
   <div class="stat-row"><span class="stat-label">Superficie</span><span class="stat-value">23.8 ha</span></div>
   <div class="stat-row"><span class="stat-label">Succès 2025</span><span class="stat-value">N/D</span></div>
   <div class="stat-row"><span class="stat-label">Masse moy.</span><span class="stat-value">N/D</span></div>
@@ -1101,11 +1101,11 @@ body {
 // ============================================================
 // DATA & CONFIG
 // ============================================================
-const LAC_NAME = "Theodule";
+const LAC_NAME = "Théodule";
 const MAP_CENTER = [46.6691, -73.4759];
 const MAP_ZOOM = 15;
 const LAC_AREA_HA = 23.8;
-const SOURCE_NOTE = "Carte PDF Sépaq 2024 — Lac Theodule (sans bathymétrie)";
+const SOURCE_NOTE = "Carte PDF Sépaq 2024 — Lac Théodule (sans bathymétrie)";
 const HAS_BATHY = false;
 const SPECIES = "Omble de fontaine";
 const LAT = 46.6691, LON = -73.4759;
@@ -1299,7 +1299,7 @@ function buildLakeMask() {
     fillColor: '#1d4ed8',
     fillOpacity: 0.22,
   }).addTo(map);
-  lakePoly.bindTooltip('Lac Theodule — 23.8 ha<br>Source: PDF Sépaq 2024', {
+  lakePoly.bindTooltip('Lac Théodule — 23.8 ha<br>Source: PDF Sépaq 2024', {
     direction: 'center', permanent: false, className: 'lake-tooltip'
   });
   return lakePoly;
@@ -1709,14 +1709,16 @@ fetchWeatherForecast().then(function(data) {
 
 
 
+
+
 // ============================================================
 // LAYER CONTROLS — Carte (Satellite) · Thermique
 // ============================================================
 var currentMode = 'satellite';
-const layerBathy    = L.layerGroup().addTo(map);
-const layerThermal  = L.layerGroup();
-const layerSun      = L.layerGroup().addTo(map);
-const layerHotzones = L.layerGroup();
+if (typeof layerBathy    === 'undefined') var layerBathy    = L.layerGroup().addTo(map);
+if (typeof layerThermal  === 'undefined') var layerThermal  = L.layerGroup();
+if (typeof layerSun      === 'undefined') var layerSun      = L.layerGroup().addTo(map);
+if (typeof layerHotzones === 'undefined') var layerHotzones = L.layerGroup();
 
 // ── Unit toggles (m ↔ pi, °C ↔ °F) ─────────────────────────
 var currentUnit = 'm';

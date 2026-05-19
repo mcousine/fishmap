@@ -1013,7 +1013,7 @@ body {
   </div>
   <div id="spotsContainer"></div>
 
-                          <h3>📊 Stats Lac Siffleux</h3>
+                            <h3>📊 Stats Lac Siffleux</h3>
   <div class="stat-row"><span class="stat-label">Superficie</span><span class="stat-value">22.7 ha</span></div>
   <div class="stat-row"><span class="stat-label">Succès 2025</span><span class="stat-value">3.3 omble/j</span></div>
   <div class="stat-row"><span class="stat-label">Masse moy.</span><span class="stat-value">407 g</span></div>
@@ -1700,14 +1700,16 @@ fetchWeatherForecast().then(function(data) {
 
 
 
+
+
 // ============================================================
 // LAYER CONTROLS — Carte (Satellite) · Thermique
 // ============================================================
 var currentMode = 'satellite';
-const layerBathy    = L.layerGroup().addTo(map);
-const layerThermal  = L.layerGroup();
-const layerSun      = L.layerGroup().addTo(map);
-const layerHotzones = L.layerGroup();
+if (typeof layerBathy    === 'undefined') var layerBathy    = L.layerGroup().addTo(map);
+if (typeof layerThermal  === 'undefined') var layerThermal  = L.layerGroup();
+if (typeof layerSun      === 'undefined') var layerSun      = L.layerGroup().addTo(map);
+if (typeof layerHotzones === 'undefined') var layerHotzones = L.layerGroup();
 
 // ── Unit toggles (m ↔ pi, °C ↔ °F) ─────────────────────────
 var currentUnit = 'm';

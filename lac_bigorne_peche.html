@@ -950,7 +950,7 @@ body {
 
 <!-- Top bar -->
 <div class="top-bar">
-  <h1>🎣 Lac Bigorne</h1>
+  <h1>🎣 Lac Romeo</h1>
   <div class="separator"></div>
   <span class="badge">Mastigouche</span>
   <div class="separator"></div>
@@ -1013,7 +1013,7 @@ body {
   </div>
   <div id="spotsContainer"></div>
 
-                        <h3>📊 Stats Lac Bigorne</h3>
+                          <h3>📊 Stats Lac Bigorne</h3>
   <div class="stat-row"><span class="stat-label">Superficie</span><span class="stat-value">104.0 ha</span></div>
   <div class="stat-row"><span class="stat-label">Succès 2025</span><span class="stat-value">3.9 omble/j</span></div>
   <div class="stat-row"><span class="stat-label">Masse moy.</span><span class="stat-value">317 g</span></div>
@@ -1064,7 +1064,7 @@ body {
 
 <!-- Map legend (bottom-left) -->
 <div class="map-legend">
-  <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,0.7);border:1px solid #3b82f6;"></div>Lac Bigorne (contour PDF)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,0.7);border:1px solid #3b82f6;"></div>Lac Romeo (contour PDF)</div>
   <div class="legend-item"><div class="legend-line" style="background:#60a5fa;"></div>Entrée d'eau (nord)</div>
   <div class="legend-item"><div class="legend-line" style="background:#34d399;"></div>Sortie d'eau (sud)</div>
   <div class="legend-item"><div class="legend-dot" style="background:#d97706;border:2px solid #fbbf24;"></div>Site Sépaq officiel</div>
@@ -1709,14 +1709,16 @@ fetchWeatherForecast().then(function(data) {
 });
 
 
+
+
 // ============================================================
 // LAYER CONTROLS — Carte (Satellite) · Thermique
 // ============================================================
 var currentMode = 'satellite';
-const layerBathy    = L.layerGroup().addTo(map);
-const layerThermal  = L.layerGroup();
-const layerSun      = L.layerGroup().addTo(map);
-const layerHotzones = L.layerGroup();
+if (typeof layerBathy    === 'undefined') var layerBathy    = L.layerGroup().addTo(map);
+if (typeof layerThermal  === 'undefined') var layerThermal  = L.layerGroup();
+if (typeof layerSun      === 'undefined') var layerSun      = L.layerGroup().addTo(map);
+if (typeof layerHotzones === 'undefined') var layerHotzones = L.layerGroup();
 
 // ── Unit toggles (m ↔ pi, °C ↔ °F) ─────────────────────────
 var currentUnit = 'm';
