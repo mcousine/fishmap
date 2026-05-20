@@ -2397,10 +2397,10 @@ def _debug_panel_js_block() -> str:
 
 
 def _inject_pwa(html: str) -> str:
-    """PWA v2: manifest, GPS, offline button, recenter, GPS sim, adaptive mobile."""
+    """PWA v3: manifest, GPS, offline button, recenter, GPS sim, adaptive mobile."""
     import re as _re
 
-    if 'GPS PWA v2' in html:
+    if 'GPS PWA v3' in html:
         return html  # already latest version
 
     PWA_HEAD = (
@@ -2412,7 +2412,7 @@ def _inject_pwa(html: str) -> str:
         '  <link rel="apple-touch-icon" href="./icon-192.png">'
     )
     GPS_BLOCK = '''<style>
-/* GPS PWA v2 */
+/* GPS PWA v3 */
 .gps-ctrl-btn{width:36px;height:36px;background:rgba(10,14,26,.92);border:1.5px solid rgba(148,163,184,.25);border-radius:8px;color:#f1f5f9;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);box-shadow:0 2px 8px rgba(0,0,0,.45);transition:border-color .2s,color .2s}
 .gps-ctrl-btn.gps-on{border-color:#06b6d4;color:#06b6d4}
 .gps-ctrl-btn.gps-err{border-color:#ef4444;color:#ef4444}
@@ -2421,6 +2421,11 @@ def _inject_pwa(html: str) -> str:
 @keyframes gpsRing{0%{box-shadow:0 0 0 0 rgba(6,182,212,.7)}70%{box-shadow:0 0 0 10px rgba(6,182,212,0)}100%{box-shadow:0 0 0 0 rgba(6,182,212,0)}}
 .top-bar h1{cursor:pointer;user-select:none}
 .top-bar h1:active{opacity:.75}
+@media(max-width:768px){
+  #_debugPanel{width:auto!important;left:8px!important;right:8px!important;bottom:80px!important}
+  #_debugBody{max-height:50vh;overflow-y:auto}
+  #mapWaterTemp{display:none!important}
+}
 </style>
 <script>
 (function(){
@@ -2502,7 +2507,7 @@ def _inject_pwa(html: str) -> str:
   var sunEl=document.getElementById('sunIndicator');
   if(sunEl&&window.matchMedia('(max-width:768px)').matches){
     var sunBtn=document.createElement('button');
-    sunBtn.id='btnSunToggle';sunBtn.title='Simulateur météo';sunBtn.textContent='🌤️';
+    sunBtn.id='btnSunToggle';sunBtn.title='Soleil & température';sunBtn.textContent='🌤️';
     sunBtn.style.cssText='position:fixed;bottom:104px;left:8px;z-index:1001;width:36px;height:36px;background:rgba(10,14,26,.92);border:1.5px solid rgba(148,163,184,.25);border-radius:8px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);box-shadow:0 2px 8px rgba(0,0,0,.45)';
     sunBtn.addEventListener('click',function(){
       var v=sunEl.style.display==='block';sunEl.style.display=v?'none':'block';
@@ -2510,15 +2515,37 @@ def _inject_pwa(html: str) -> str:
     });
     document.body.appendChild(sunBtn);
   }
+  (function _mobileSetup(){
+    if(!window.matchMedia('(max-width:768px)').matches)return;
+    setTimeout(function(){
+      var body=document.getElementById('_debugBody');
+      if(body&&body.style.display!=='none'&&typeof window._dbToggle==='function'){
+        window._dbToggle();
+      }
+      if(!document.getElementById('btnSimToggle')){
+        var sb=document.createElement('button');
+        sb.id='btnSimToggle';sb.title='Simulateur météo';sb.textContent='🔧';
+        sb.style.cssText='position:fixed;bottom:144px;left:8px;z-index:1001;width:36px;height:36px;background:rgba(10,14,26,.92);border:1.5px solid rgba(148,163,184,.25);border-radius:8px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);box-shadow:0 2px 8px rgba(0,0,0,.45)';
+        sb.addEventListener('click',function(){
+          var b=document.getElementById('_debugBody');
+          if(!b)return;
+          var wasOpen=b.style.display!=='none';
+          if(typeof window._dbToggle==='function')window._dbToggle();
+          sb.style.borderColor=wasOpen?'rgba(148,163,184,.25)':'#f59e0b';
+        });
+        document.body.appendChild(sb);
+      }
+    },750);
+  })();
 })();
 </script>
 <script>
 if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(function(){});}
 </script>'''
 
-    # Strip old GPS block if present (v1 upgrade path)
+    # Strip old GPS block if present (v1 or v2 upgrade path)
     old_re = _re.compile(
-        r'<style>\s*\n/\* GPS PWA \*/.*?navigator\.serviceWorker\.register[^\n]*\n[^\n]*\}</script>',
+        r'<style>\s*\n/\* GPS PWA v?2? \*/.*?navigator\.serviceWorker\.register[^\n]*\n[^\n]*\}</script>',
         _re.DOTALL
     )
     html = old_re.sub('', html, count=1)

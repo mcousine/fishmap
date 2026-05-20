@@ -1732,7 +1732,7 @@ fetchWeatherForecast().then(function(data) {
 
 </script>
 <style>
-/* GPS PWA v2 */
+/* GPS PWA v3 */
 .gps-ctrl-btn{width:36px;height:36px;background:rgba(10,14,26,.92);border:1.5px solid rgba(148,163,184,.25);border-radius:8px;color:#f1f5f9;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);box-shadow:0 2px 8px rgba(0,0,0,.45);transition:border-color .2s,color .2s}
 .gps-ctrl-btn.gps-on{border-color:#06b6d4;color:#06b6d4}
 .gps-ctrl-btn.gps-err{border-color:#ef4444;color:#ef4444}
@@ -1741,6 +1741,11 @@ fetchWeatherForecast().then(function(data) {
 @keyframes gpsRing{0%{box-shadow:0 0 0 0 rgba(6,182,212,.7)}70%{box-shadow:0 0 0 10px rgba(6,182,212,0)}100%{box-shadow:0 0 0 0 rgba(6,182,212,0)}}
 .top-bar h1{cursor:pointer;user-select:none}
 .top-bar h1:active{opacity:.75}
+@media(max-width:768px){
+  #_debugPanel{width:auto!important;left:8px!important;right:8px!important;bottom:80px!important}
+  #_debugBody{max-height:50vh;overflow-y:auto}
+  #mapWaterTemp{display:none!important}
+}
 </style>
 <script>
 (function(){
@@ -1752,7 +1757,6 @@ fetchWeatherForecast().then(function(data) {
   ctrl.onAdd=function(){
     var wrap=L.DomUtil.create('div');
     wrap.style.cssText='display:flex;flex-direction:column;gap:6px;margin-bottom:8px';
-    /* Offline button */
     var off=document.createElement('button');
     off.id='btnOffline';off.className='gps-ctrl-btn';off.title='Rendre disponible hors-ligne';off.textContent='📥';
     L.DomEvent.disableClickPropagation(off);
@@ -1766,7 +1770,6 @@ fetchWeatherForecast().then(function(data) {
         setTimeout(function(){off.textContent='📥';off.className='gps-ctrl-btn';},2500);
       }).catch(function(){off.textContent='❌';setTimeout(function(){off.textContent='📥';},2500);});
     });
-    /* GPS button */
     var gps=document.createElement('button');
     gps.id='btnGps';gps.className='gps-ctrl-btn';gps.title='Ma position GPS';gps.textContent='📍';
     L.DomEvent.disableClickPropagation(gps);
@@ -1843,7 +1846,7 @@ fetchWeatherForecast().then(function(data) {
   var sunEl=document.getElementById('sunIndicator');
   if(sunEl&&window.matchMedia('(max-width:768px)').matches){
     var sunBtn=document.createElement('button');
-    sunBtn.id='btnSunToggle';sunBtn.title='Simulateur météo';sunBtn.textContent='🌤️';
+    sunBtn.id='btnSunToggle';sunBtn.title='Soleil & température';sunBtn.textContent='🌤️';
     sunBtn.style.cssText='position:fixed;bottom:104px;left:8px;z-index:1001;width:36px;height:36px;'
       +'background:rgba(10,14,26,.92);border:1.5px solid rgba(148,163,184,.25);border-radius:8px;'
       +'font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;'
@@ -1856,619 +1859,39 @@ fetchWeatherForecast().then(function(data) {
     document.body.appendChild(sunBtn);
   }
 
+  /* ── Mobile: auto-collapse sim + 🔧 toggle button ────────────── */
+  (function _mobileSetup(){
+    if(!window.matchMedia('(max-width:768px)').matches)return;
+    setTimeout(function(){
+      /* Auto-collapse the debug panel if it started open */
+      var body=document.getElementById('_debugBody');
+      if(body&&body.style.display!=='none'&&typeof window._dbToggle==='function'){
+        window._dbToggle();
+      }
+      /* Add 🔧 simulator toggle button */
+      if(!document.getElementById('btnSimToggle')){
+        var sb=document.createElement('button');
+        sb.id='btnSimToggle';sb.title='Simulateur météo';sb.textContent='🔧';
+        sb.style.cssText='position:fixed;bottom:144px;left:8px;z-index:1001;width:36px;height:36px;'
+          +'background:rgba(10,14,26,.92);border:1.5px solid rgba(148,163,184,.25);border-radius:8px;'
+          +'font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;'
+          +'backdrop-filter:blur(6px);box-shadow:0 2px 8px rgba(0,0,0,.45)';
+        sb.addEventListener('click',function(){
+          var b=document.getElementById('_debugBody');
+          if(!b)return;
+          var wasOpen=b.style.display!=='none';
+          if(typeof window._dbToggle==='function')window._dbToggle();
+          sb.style.borderColor=wasOpen?'rgba(148,163,184,.25)':'#f59e0b';
+        });
+        document.body.appendChild(sb);
+      }
+    },750);
+  })();
+
 })();
 </script>
 <script>
 if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(function(){});}
-
-
-
-// ============================================================
-// LAYER CONTROLS — layerBathy always on · toggleThermal overlay
-// ============================================================
-var currentMode = 'satellite'; // kept for backward compat
-var thermalOn = false;
-if (typeof layerBathy    === 'undefined') var layerBathy    = L.layerGroup().addTo(map);
-if (typeof layerThermal  === 'undefined') var layerThermal  = L.layerGroup();
-if (typeof layerSun      === 'undefined') var layerSun      = L.layerGroup().addTo(map);
-if (typeof layerHotzones === 'undefined') var layerHotzones = L.layerGroup();
-
-// ── Unit toggles (m ↔ pi, °C ↔ °F) ─────────────────────────
-var currentUnit = 'm';
-var tempUnit    = 'C';
-
-function depthVal(d) {
-  return currentUnit === 'ft' ? (d * 3.28084).toFixed(0) + ' pi' : d.toFixed(1) + ' m';
-}
-function tempDisp(t_c) {
-  return tempUnit === 'F' ? (t_c * 9 / 5 + 32).toFixed(1) + '°F' : t_c.toFixed(1) + '°C';
-}
-function toggleUnit() {
-  currentUnit = currentUnit === 'm' ? 'ft' : 'm';
-  const mEl = document.getElementById('unitM');
-  const pEl = document.getElementById('unitPi') || document.getElementById('unitFt');
-  if (mEl) mEl.style.color = currentUnit === 'm' ? 'var(--accent)' : 'var(--text-dim)';
-  if (pEl) pEl.style.color = currentUnit === 'ft' ? 'var(--accent)' : 'var(--text-dim)';
-  if (typeof window._onUnitChange === 'function') window._onUnitChange();
-  if (typeof updateDepthLabels === 'function') updateDepthLabels();
-  if (typeof updateThermalDepthLabels === 'function') updateThermalDepthLabels();
-}
-function toggleTempUnit() {
-  tempUnit = tempUnit === 'C' ? 'F' : 'C';
-  const cEl = document.getElementById('unitC'), fEl = document.getElementById('unitF');
-  if (cEl) cEl.style.color = tempUnit === 'C' ? 'var(--accent)' : 'var(--text-dim)';
-  if (fEl) fEl.style.color = tempUnit === 'F' ? 'var(--accent)' : 'var(--text-dim)';
-  if (typeof window._onTempUnitChange === 'function') window._onTempUnitChange();
-  if (typeof updateThermalLabels === 'function') updateThermalLabels();
-}
-
-// ── Species data ─────────────────────────────────────────────
-var SPECIES_DATA = {
-  omble: {
-    name: 'Omble de fontaine',
-    tempMin: 8, tempOpt1: 12, tempOpt2: 16, tempMax: 22, depthPref: [0, 4],
-    bonus: { 'embouchure':15, 'baie/herbier':10, 'pointe/étranglement':8, 'émissaire':12, 'escarpement/pente raide':5, 'connexion/passage':8 },
-    malus: { 'fosse profonde':-8 },
-  },
-  touladi: {
-    name: 'Touladi',
-    tempMin: 4, tempOpt1: 8, tempOpt2: 12, tempMax: 18, depthPref: [5, 12],
-    bonus: { 'fosse profonde':25, 'escarpement/pente raide':15 },
-    malus: { 'baie/herbier':-15, 'embouchure':-5, 'connexion/passage':-5 },
-  },
-  brochet: {
-    name: 'Grand Brochet',
-    tempMin: 10, tempOpt1: 16, tempOpt2: 22, tempMax: 28, depthPref: [0, 3],
-    bonus: { 'baie/herbier':25, 'embouchure':10, 'connexion/passage':12 },
-    malus: { 'fosse profonde':-25, 'escarpement/pente raide':-10 },
-  },
-  dore: {
-    name: 'Doré jaune',
-    tempMin: 10, tempOpt1: 16, tempOpt2: 22, tempMax: 26, depthPref: [3, 8],
-    bonus: { 'fosse profonde':12, 'escarpement/pente raide':20, 'pointe/étranglement':10 },
-    malus: { 'baie/herbier':-5 },
-  },
-  perchaude: {
-    name: 'Perchaude',
-    tempMin: 12, tempOpt1: 18, tempOpt2: 24, tempMax: 28, depthPref: [0, 5],
-    bonus: { 'baie/herbier':20, 'embouchure':8, 'pointe/étranglement':5, 'émissaire':6 },
-    malus: { 'fosse profonde':-15, 'escarpement/pente raide':-8 },
-  },
-};
-var currentSpecies = 'omble';
-
-function setSpecies(key) {
-  currentSpecies = key;
-  if (typeof update === 'function') update();
-}
-
-// Species-aware scoreSpot (overrides simpler template version)
-function scoreSpot(spot, hour) {
-  const weather = (typeof WEATHER !== 'undefined' && typeof currentDayIdx !== 'undefined')
-    ? WEATHER[currentDayIdx] : { max: 15, min: 5, cloud: 0.5 };
-  const sp = (SPECIES_DATA && (SPECIES_DATA[currentSpecies] || SPECIES_DATA.omble)) || null;
-  let score = spot.score_base;
-  if (sp) score += (sp.bonus[spot.type] || 0) + (sp.malus[spot.type] || 0);
-  const wt = (typeof estimateWaterTemp === 'function')
-    ? estimateWaterTemp(weather.max, weather.min, hour, weather.cloud || 0.5) : 12;
-  if (sp) {
-    if (wt >= sp.tempOpt1 && wt <= sp.tempOpt2) score += 15;
-    else if (wt >= sp.tempMin && wt <= sp.tempMax) score += 5;
-    else score -= 12;
-  } else {
-    if (wt >= 8 && wt <= 16) score += 10;
-    else if (wt < 5 || wt > 20) score -= 12;
-  }
-  const h = Math.round(hour * 2) / 2;
-  if (spot.peakTime && spot.peakTime.includes(h)) score += 20;
-  else if (spot.bestTime && spot.bestTime.includes(Math.floor(h))) score += 10;
-  else score -= 15;
-  if ((hour >= 5 && hour <= 7.5) || (hour >= 17.5 && hour <= 20)) score += 10;
-  if (hour >= 11 && hour <= 14) {
-    if (sp && sp.depthPref[0] >= 4) score += 15;
-    else if (spot.type !== 'fosse profonde') score -= 10;
-  }
-  if ((weather.cloud || 0) > 0.6) score += 5;
-  return Math.max(0, Math.min(100, score));
-}
-
-// ── Inject depth/thermal label CSS once ─────────────────────
-(function() {
-  if (document.getElementById('_dlCSS')) return;
-  const s = document.createElement('style'); s.id = '_dlCSS';
-  s.textContent =
-    '.dlabel-icon{background:transparent!important;border:none!important;box-shadow:none!important}' +
-    '.dlabel-txt{font-size:11px;font-weight:700;color:rgba(255,255,255,0.92);background:rgba(0,0,0,0.58);padding:2px 5px;border-radius:4px;white-space:nowrap;pointer-events:none;display:inline-block;text-shadow:0 1px 3px rgba(0,0,0,0.9)}' +
-    '.tlabel-txt{font-size:11px;font-weight:800;color:#fff;padding:2px 6px;border-radius:5px;border:1.5px solid rgba(255,255,255,0.4);white-space:nowrap;pointer-events:none;display:inline-block;text-shadow:0 1px 3px rgba(0,0,0,0.9);box-shadow:0 1px 4px rgba(0,0,0,0.5)}' +
-    '#map.thermal-on .dlabel-txt{display:none}';
-  document.head.appendChild(s);
-})();
-
-// ── Thermal toggle ────────────────────────────────────────────
-function toggleThermal() {
-  thermalOn = !thermalOn;
-  var btn = document.getElementById('btnThermal');
-  if (btn) btn.classList.toggle('active', thermalOn);
-  if (thermalOn) {
-    if (!map.hasLayer(layerThermal)) layerThermal.addTo(map);
-    // Hide depth-only labels when thermal overlay is ON
-    document.getElementById('map').classList.add('thermal-on');
-  } else {
-    if (map.hasLayer(layerThermal)) map.removeLayer(layerThermal);
-    document.getElementById('map').classList.remove('thermal-on');
-  }
-  if (typeof window._updateThermalColors === 'function') {
-    var m = (document.getElementById('waterTempText') || {}).textContent;
-    var wt = m ? parseFloat(m.match(/[\d.]+/)) : 15;
-    window._updateThermalColors(wt);
-  }
-}
-
-// No-op alias for curated-map backward compatibility
-function setMapMode(m) {}
-
-// Ensure layerBathy is always on map
-if (!map.hasLayer(layerBathy)) layerBathy.addTo(map);
-
-// Observe waterTempText — update thermal colors live when time slider moves
-const _wtEl = document.getElementById('waterTempText');
-if (_wtEl) {
-  new MutationObserver(function() {
-    if (typeof window._updateThermalColors !== 'function') return;
-    const m = _wtEl.textContent.match(/[\d.]+/);
-    if (m) window._updateThermalColors(parseFloat(m[0]));
-  }).observe(_wtEl, { childList: true, characterData: true, subtree: true });
-}
-
-// END LAYER CONTROLS
-
-
-// ============================================================
-// GBLQ BATHYMÉTRIE — isobathes MELCCFP Québec
-// ============================================================
-(function buildGBLQIsobaths() {
-  const isobaths = [{"depth_m": 3.05, "coords": [[[46.798303, -73.353244], [46.798261, -73.353293], [46.798197, -73.353337], [46.798142, -73.353376], [46.798062, -73.353443], [46.797988, -73.353509], [46.797921, -73.353571], [46.797843, -73.353676], [46.797776, -73.353773], [46.797647, -73.353987], [46.797473, -73.354213], [46.797166, -73.354678], [46.797025, -73.354908], [46.796973, -73.355031], [46.796941, -73.355134], [46.796941, -73.355281], [46.796963, -73.355499], [46.796988, -73.355681], [46.797021, -73.355808], [46.797037, -73.355982], [46.79704, -73.356137], [46.797076, -73.356359], [46.797152, -73.356604], [46.797248, -73.356846], [46.797338, -73.356988], [46.797373, -73.357131], [46.79742, -73.357285], [46.797455, -73.357393], [46.79747, -73.357518], [46.797486, -73.357645], [46.797514, -73.357761], [46.797534, -73.35789], [46.797536, -73.357963], [46.797559, -73.357989], [46.797595, -73.357986], [46.797651, -73.357897], [46.797728, -73.357736], [46.797869, -73.357401], [46.797977, -73.357051], [46.798052, -73.356771], [46.798137, -73.356487], [46.79821, -73.356219], [46.79824, -73.356097], [46.798352, -73.355843], [46.798524, -73.355488], [46.798615, -73.35522], [46.798658, -73.355009], [46.798668, -73.354826], [46.798638, -73.354533], [46.798635, -73.354265], [46.798677, -73.354018], [46.798748, -73.353599], [46.798757, -73.353453], [46.79874, -73.353335], [46.798705, -73.353217], [46.798688, -73.35312], [46.798698, -73.352991], [46.798747, -73.352802], [46.798795, -73.352634], [46.798935, -73.352323], [46.79908, -73.352039], [46.799297, -73.351615], [46.79937, -73.351476], [46.799433, -73.351185], [46.799519, -73.350953], [46.799773, -73.350496], [46.79994, -73.350185], [46.800022, -73.350006], [46.800149, -73.349722], [46.800284, -73.349351], [46.800488, -73.348927], [46.800773, -73.348345], [46.800977, -73.347987], [46.801136, -73.34763], [46.801208, -73.347371], [46.801208, -73.347127], [46.801139, -73.346982], [46.801039, -73.346889], [46.800912, -73.346903], [46.800672, -73.347003], [46.80049, -73.347122], [46.800331, -73.347209], [46.80023, -73.347251], [46.800145, -73.347334], [46.800016, -73.347459], [46.799919, -73.34755], [46.799821, -73.347626], [46.799748, -73.34771], [46.799665, -73.347894], [46.799582, -73.348085], [46.799446, -73.348303], [46.799316, -73.348522], [46.799195, -73.348741], [46.799121, -73.348932], [46.799095, -73.349115], [46.799065, -73.349398], [46.799028, -73.34975], [46.799009, -73.349965], [46.798958, -73.350292], [46.798907, -73.350516], [46.798834, -73.350797], [46.798754, -73.351013], [46.798664, -73.351249], [46.798593, -73.351419], [46.798537, -73.351688], [46.798458, -73.352114], [46.798396, -73.352528], [46.798353, -73.352867], [46.798339, -73.353079], [46.798331, -73.353186], [46.798303, -73.353244]]]}, {"depth_m": 3.05, "coords": [[[46.800136, -73.344628], [46.800209, -73.344736], [46.800302, -73.344912], [46.800365, -73.34509], [46.800408, -73.345239], [46.800429, -73.345299], [46.800518, -73.345596], [46.800582, -73.34584], [46.800647, -73.346026], [46.8008, -73.346184], [46.800959, -73.346334], [46.801054, -73.34633], [46.801143, -73.346321], [46.801302, -73.346272], [46.801438, -73.346182], [46.801522, -73.346093], [46.801589, -73.345946], [46.801611, -73.345817], [46.80161, -73.345642], [46.801579, -73.345386], [46.801479, -73.344944], [46.801436, -73.344766], [46.801352, -73.344433], [46.801232, -73.344133], [46.801151, -73.343987], [46.801051, -73.343862], [46.800939, -73.343761], [46.800822, -73.343708], [46.800429, -73.343575], [46.800248, -73.34356], [46.800069, -73.343544], [46.799949, -73.343544], [46.799871, -73.343561], [46.799782, -73.343622], [46.79965, -73.343791], [46.79945, -73.344092], [46.799118, -73.344498], [46.79887, -73.344773], [46.798756, -73.344889], [46.798704, -73.344939], [46.798675, -73.345057], [46.79868, -73.345145], [46.798698, -73.345237], [46.798729, -73.345346], [46.798789, -73.345445], [46.798868, -73.345563], [46.798923, -73.345618], [46.799005, -73.345654], [46.799142, -73.345674], [46.799249, -73.345682], [46.799326, -73.345658], [46.799408, -73.345591], [46.799468, -73.345487], [46.7995, -73.345305], [46.799523, -73.345122], [46.799528, -73.344971], [46.799539, -73.344847], [46.799555, -73.344749], [46.799596, -73.344665], [46.799674, -73.344542], [46.799776, -73.344425], [46.799855, -73.34435], [46.799908, -73.344328], [46.799959, -73.344336], [46.800003, -73.34438], [46.800045, -73.344463], [46.800099, -73.344569], [46.800136, -73.344628]]]}, {"depth_m": 6.1, "coords": [[[46.798256, -73.35351], [46.798206, -73.353574], [46.79813, -73.353649], [46.798052, -73.353716], [46.798008, -73.353741], [46.797955, -73.353789], [46.797895, -73.353858], [46.797812, -73.353977], [46.797611, -73.354202], [46.797538, -73.354266], [46.797471, -73.354373], [46.79739, -73.354504], [46.797305, -73.354662], [46.797233, -73.354829], [46.797181, -73.35496], [46.79717, -73.355114], [46.797173, -73.355422], [46.797197, -73.355623], [46.797209, -73.355729], [46.797265, -73.356111], [46.797328, -73.356418], [46.797428, -73.356695], [46.797489, -73.356827], [46.797599, -73.356931], [46.797709, -73.356989], [46.797788, -73.356989], [46.797847, -73.356918], [46.797912, -73.356755], [46.798045, -73.356358], [46.798101, -73.356158], [46.798249, -73.355797], [46.798405, -73.355415], [46.798487, -73.355188], [46.798537, -73.355003], [46.798558, -73.354846], [46.798566, -73.354624], [46.79855, -73.354342], [46.798568, -73.354116], [46.798616, -73.35389], [46.798649, -73.353656], [46.79867, -73.353523], [46.798686, -73.353438], [46.798684, -73.35338], [46.798665, -73.353284], [46.798648, -73.353174], [46.798647, -73.353103], [46.798658, -73.352997], [46.79871, -73.352774], [46.798797, -73.352504], [46.79885, -73.352346], [46.798918, -73.352169], [46.799001, -73.352031], [46.79909, -73.351827], [46.799205, -73.351555], [46.799302, -73.351299], [46.799412, -73.351041], [46.799544, -73.350712], [46.799628, -73.350494], [46.799718, -73.35029], [46.799823, -73.350104], [46.799946, -73.349915], [46.800057, -73.349731], [46.800156, -73.3495], [46.800232, -73.34925], [46.8003, -73.349065], [46.800498, -73.348717], [46.800645, -73.348425], [46.800765, -73.348225], [46.800894, -73.34799], [46.800964, -73.347846], [46.801025, -73.347686], [46.801053, -73.347595], [46.801054, -73.34753], [46.801027, -73.347454], [46.800981, -73.347387], [46.80089, -73.347296], [46.800818, -73.347275], [46.800734, -73.347276], [46.800524, -73.347336], [46.800445, -73.347383], [46.800311, -73.347477], [46.800179, -73.347594], [46.800037, -73.347744], [46.799941, -73.347837], [46.799833, -73.347966], [46.799748, -73.348037], [46.799654, -73.348095], [46.799588, -73.348163], [46.799488, -73.348347], [46.799416, -73.348534], [46.799332, -73.348759], [46.799284, -73.348902], [46.799253, -73.349066], [46.799233, -73.349238], [46.799191, -73.349495], [46.799111, -73.350035], [46.799058, -73.350334], [46.798976, -73.350669], [46.798877, -73.351017], [46.798798, -73.351266], [46.798761, -73.351398], [46.798704, -73.351627], [46.798602, -73.351923], [46.798563, -73.352091], [46.798519, -73.352307], [46.79849, -73.352503], [46.798444, -73.35283], [46.79841, -73.353061], [46.798398, -73.353197], [46.798362, -73.353325], [46.798314, -73.35344], [46.798256, -73.35351]]]}, {"depth_m": 6.1, "coords": [[[46.800191, -73.344233], [46.800252, -73.344273], [46.800364, -73.344348], [46.800476, -73.344428], [46.800512, -73.344484], [46.800561, -73.344623], [46.800596, -73.344798], [46.800618, -73.344955], [46.800671, -73.345219], [46.800717, -73.345342], [46.800758, -73.345463], [46.800782, -73.345576], [46.80084, -73.345685], [46.80093, -73.345825], [46.801034, -73.345942], [46.801121, -73.346021], [46.801198, -73.346053], [46.801274, -73.346033], [46.801378, -73.345928], [46.801432, -73.345829], [46.801471, -73.345712], [46.801476, -73.345586], [46.80145, -73.345326], [46.801415, -73.345168], [46.801363, -73.344964], [46.801279, -73.344709], [46.801227, -73.344525], [46.801152, -73.34436], [46.80105, -73.344164], [46.800981, -73.34404], [46.800904, -73.343947], [46.80081, -73.343883], [46.800712, -73.343835], [46.800617, -73.343793], [46.80049, -73.343748], [46.8004, -73.343733], [46.800327, -73.343706], [46.800221, -73.3437], [46.800124, -73.343704], [46.800028, -73.34371], [46.799906, -73.343765], [46.799816, -73.343829], [46.799746, -73.343883], [46.799625, -73.344011], [46.799471, -73.344209], [46.799232, -73.344493], [46.799019, -73.344735], [46.798925, -73.344831], [46.798864, -73.344913], [46.798825, -73.344978], [46.798805, -73.345072], [46.798807, -73.345242], [46.798831, -73.345352], [46.798876, -73.345431], [46.798926, -73.345486], [46.798966, -73.345504], [46.799075, -73.345533], [46.799142, -73.345543], [46.799222, -73.345538], [46.799272, -73.345491], [46.799372, -73.345383], [46.799429, -73.345311], [46.799442, -73.345256], [46.79945, -73.345183], [46.799468, -73.345093], [46.799482, -73.345019], [46.799499, -73.34497], [46.799492, -73.344889], [46.79948, -73.344827], [46.79949, -73.344764], [46.799533, -73.344674], [46.799643, -73.344513], [46.799761, -73.344337], [46.799843, -73.344243], [46.799925, -73.344174], [46.799997, -73.344156], [46.80006, -73.344154], [46.800115, -73.344168], [46.800191, -73.344233]]]}, {"depth_m": 9.14, "coords": [[[46.797348, -73.355205], [46.797381, -73.355383], [46.797423, -73.355632], [46.797446, -73.355802], [46.797452, -73.355924], [46.797475, -73.356097], [46.797513, -73.356263], [46.797575, -73.356471], [46.797617, -73.35658], [46.797661, -73.356649], [46.797721, -73.356697], [46.797786, -73.356715], [46.79782, -73.356699], [46.797878, -73.356593], [46.797942, -73.356442], [46.798014, -73.356225], [46.798095, -73.356008], [46.798192, -73.355745], [46.798232, -73.355611], [46.798308, -73.355438], [46.798369, -73.355242], [46.798406, -73.35512], [46.798428, -73.35499], [46.798449, -73.354797], [46.798451, -73.354659], [46.79845, -73.354504], [46.798469, -73.354375], [46.798544, -73.353873], [46.798591, -73.353619], [46.798629, -73.353461], [46.798632, -73.353416], [46.798618, -73.353362], [46.798608, -73.353309], [46.798602, -73.353199], [46.798609, -73.353077], [46.798618, -73.352993], [46.79866, -73.352836], [46.7987, -73.352656], [46.798763, -73.352471], [46.798868, -73.352178], [46.798979, -73.351939], [46.799087, -73.351712], [46.799224, -73.351388], [46.799279, -73.351219], [46.799348, -73.350968], [46.799442, -73.350745], [46.799587, -73.350414], [46.799711, -73.350109], [46.799825, -73.349909], [46.79993, -73.349704], [46.800072, -73.349385], [46.800163, -73.349183], [46.80032, -73.34886], [46.800488, -73.348546], [46.800679, -73.348177], [46.800806, -73.347994], [46.80086, -73.34789], [46.800892, -73.347817], [46.800907, -73.347732], [46.800907, -73.347675], [46.800893, -73.347617], [46.800862, -73.34759], [46.800779, -73.347541], [46.800727, -73.347514], [46.80067, -73.347517], [46.80061, -73.347539], [46.800558, -73.347566], [46.800496, -73.34761], [46.800427, -73.347632], [46.800386, -73.347643], [46.800331, -73.347687], [46.800244, -73.347764], [46.800169, -73.347851], [46.800086, -73.347955], [46.799989, -73.348095], [46.799916, -73.348185], [46.799853, -73.348305], [46.799795, -73.348423], [46.799718, -73.348568], [46.79968, -73.348654], [46.799649, -73.348704], [46.799609, -73.348728], [46.799546, -73.348737], [46.79947, -73.348755], [46.799414, -73.34882], [46.799381, -73.348894], [46.799357, -73.348995], [46.799353, -73.349066], [46.799355, -73.349196], [46.799315, -73.349457], [46.79925, -73.349842], [46.799181, -73.350091], [46.799107, -73.350408], [46.799022, -73.350754], [46.798929, -73.351128], [46.798838, -73.35144], [46.798747, -73.351698], [46.798664, -73.351952], [46.798606, -73.352214], [46.798524, -73.352729], [46.798491, -73.352947], [46.798441, -73.353308], [46.798421, -73.353396], [46.798355, -73.353591], [46.79831, -73.353735], [46.798254, -73.353805], [46.798166, -73.353846], [46.798055, -73.353876], [46.797984, -73.353931], [46.797918, -73.353994], [46.797832, -73.354068], [46.797749, -73.354182], [46.797633, -73.354337], [46.797456, -73.354547], [46.797403, -73.354633], [46.797362, -73.354735], [46.797332, -73.354935], [46.797337, -73.355101], [46.797348, -73.355205]]]}, {"depth_m": 9.14, "coords": [[[46.800582, -73.344432], [46.800627, -73.344536], [46.800665, -73.344636], [46.800687, -73.344708], [46.800707, -73.344819], [46.800722, -73.344923], [46.800748, -73.345024], [46.800798, -73.345208], [46.800827, -73.345322], [46.800844, -73.345443], [46.800853, -73.345522], [46.800878, -73.345588], [46.800912, -73.345626], [46.800956, -73.345668], [46.800993, -73.345697], [46.801045, -73.345712], [46.801093, -73.345711], [46.801135, -73.345705], [46.801176, -73.34567], [46.80124, -73.345569], [46.801283, -73.345477], [46.801317, -73.345371], [46.801323, -73.345282], [46.801318, -73.345185], [46.801289, -73.345093], [46.801272, -73.345004], [46.801256, -73.344929], [46.801226, -73.344853], [46.801099, -73.344595], [46.801018, -73.344431], [46.800961, -73.344324], [46.800904, -73.344215], [46.800852, -73.344144], [46.800812, -73.344088], [46.800776, -73.344035], [46.800715, -73.343969], [46.800657, -73.343923], [46.800577, -73.343883], [46.800505, -73.343862], [46.80043, -73.343849], [46.800365, -73.343847], [46.800306, -73.343847], [46.800215, -73.343861], [46.800124, -73.343886], [46.800063, -73.343906], [46.79998, -73.343931], [46.799904, -73.343968], [46.799811, -73.344013], [46.799721, -73.344076], [46.799638, -73.344172], [46.79954, -73.344273], [46.79947, -73.344349], [46.799376, -73.344457], [46.799161, -73.344678], [46.799091, -73.344769], [46.799066, -73.344843], [46.799052, -73.344931], [46.799078, -73.345004], [46.79915, -73.345097], [46.799252, -73.345172], [46.799323, -73.345179], [46.799366, -73.34514], [46.799408, -73.345068], [46.799436, -73.344956], [46.799458, -73.344824], [46.799459, -73.344738], [46.799486, -73.344658], [46.79957, -73.344513], [46.799702, -73.344331], [46.799793, -73.344221], [46.799891, -73.344126], [46.799961, -73.344091], [46.80003, -73.344071], [46.800081, -73.344071], [46.80013, -73.344079], [46.800227, -73.344112], [46.800318, -73.344148], [46.800393, -73.344182], [46.80046, -73.344236], [46.800536, -73.344348], [46.800582, -73.344432]]]}, {"depth_m": 12.19, "coords": [[[46.797629, -73.355849], [46.79766, -73.355993], [46.797681, -73.356054], [46.797719, -73.356093], [46.797753, -73.356131], [46.797782, -73.356212], [46.797841, -73.356261], [46.797883, -73.356261], [46.797921, -73.356231], [46.797974, -73.356147], [46.798025, -73.35602], [46.798063, -73.355898], [46.798126, -73.355734], [46.798206, -73.355509], [46.79827, -73.355281], [46.798323, -73.355098], [46.798352, -73.35494], [46.798372, -73.354607], [46.798391, -73.354349], [46.798423, -73.354136], [46.798483, -73.353861], [46.798521, -73.353692], [46.798551, -73.35355], [46.798555, -73.353484], [46.798542, -73.353441], [46.798506, -73.353427], [46.798479, -73.353446], [46.798438, -73.353534], [46.798387, -73.353714], [46.798289, -73.354088], [46.798258, -73.354182], [46.798217, -73.354256], [46.798151, -73.354283], [46.798065, -73.354305], [46.797969, -73.354312], [46.79791, -73.354318], [46.797819, -73.354339], [46.797751, -73.354358], [46.797678, -73.354417], [46.797611, -73.354483], [46.797564, -73.354547], [46.797538, -73.354606], [46.797518, -73.354683], [46.797508, -73.354756], [46.797501, -73.354866], [46.797501, -73.354995], [46.797509, -73.355095], [46.79755, -73.35523], [46.797578, -73.35539], [46.7976, -73.355571], [46.797602, -73.355706], [46.797629, -73.355849]]]}, {"depth_m": 12.19, "coords": [[[46.799279, -73.350216], [46.799255, -73.350339], [46.799214, -73.350547], [46.799165, -73.350732], [46.799114, -73.350882], [46.799077, -73.350955], [46.799047, -73.351073], [46.799013, -73.351231], [46.798971, -73.351358], [46.798952, -73.351463], [46.798968, -73.351554], [46.798995, -73.351612], [46.799032, -73.351627], [46.799069, -73.351612], [46.799108, -73.351543], [46.799136, -73.351431], [46.799192, -73.351271], [46.799235, -73.351119], [46.799283, -73.350917], [46.79937, -73.35069], [46.799472, -73.350421], [46.799622, -73.350128], [46.799855, -73.349612], [46.800022, -73.349254], [46.800094, -73.349072], [46.800184, -73.348865], [46.800387, -73.348532], [46.800624, -73.348154], [46.800776, -73.347886], [46.800797, -73.347807], [46.800783, -73.347751], [46.800718, -73.347721], [46.80066, -73.347715], [46.80058, -73.347752], [46.800275, -73.347965], [46.800204, -73.34801], [46.800112, -73.348091], [46.800047, -73.348203], [46.799995, -73.348318], [46.79994, -73.348391], [46.799892, -73.348455], [46.799865, -73.348547], [46.799833, -73.348637], [46.799766, -73.34874], [46.799681, -73.348805], [46.79961, -73.348853], [46.799547, -73.348895], [46.799474, -73.348976], [46.799434, -73.349077], [46.799418, -73.349308], [46.799375, -73.349607], [46.799341, -73.349883], [46.799323, -73.350051], [46.799279, -73.350216]]]}, {"depth_m": 12.19, "coords": [[[46.800749, -73.344524], [46.800779, -73.344605], [46.800799, -73.344675], [46.800829, -73.34478], [46.80084, -73.344876], [46.80084, -73.344967], [46.800837, -73.345051], [46.800837, -73.345103], [46.80085, -73.345187], [46.800878, -73.345288], [46.800909, -73.345376], [46.800948, -73.345437], [46.800992, -73.345457], [46.801048, -73.34545], [46.801092, -73.345417], [46.801129, -73.345351], [46.801153, -73.345275], [46.801158, -73.345192], [46.801157, -73.345119], [46.801124, -73.344996], [46.801095, -73.344892], [46.80105, -73.344735], [46.801017, -73.344624], [46.800995, -73.344579], [46.800948, -73.344513], [46.800907, -73.344444], [46.800811, -73.344297], [46.800741, -73.344188], [46.80065, -73.344073], [46.800632, -73.344068], [46.800615, -73.344093], [46.800627, -73.344153], [46.800645, -73.344214], [46.800695, -73.344367], [46.800749, -73.344524]]]}, {"depth_m": 12.19, "coords": [[[46.799186, -73.34488], [46.799204, -73.344919], [46.799234, -73.34493], [46.799302, -73.34493], [46.799363, -73.344906], [46.799387, -73.34488], [46.799391, -73.344849], [46.799388, -73.344809], [46.799371, -73.344787], [46.799347, -73.344774], [46.799315, -73.344769], [46.79928, -73.344769], [46.799246, -73.344776], [46.799215, -73.344795], [46.799195, -73.344823], [46.799183, -73.344855], [46.799186, -73.34488]]]}, {"depth_m": 15.24, "coords": [[[46.797775, -73.355566], [46.797783, -73.355677], [46.797797, -73.355793], [46.797837, -73.355895], [46.797871, -73.355929], [46.797911, -73.355931], [46.797959, -73.355884], [46.798065, -73.355676], [46.798173, -73.355404], [46.798226, -73.355223], [46.798236, -73.355104], [46.798226, -73.354963], [46.798205, -73.354905], [46.798178, -73.354877], [46.798111, -73.354858], [46.798068, -73.354858], [46.798024, -73.354863], [46.797959, -73.354933], [46.7979, -73.355002], [46.797859, -73.355091], [46.797826, -73.355197], [46.797811, -73.355274], [46.797811, -73.355335], [46.7978, -73.355421], [46.797789, -73.355474], [46.797775, -73.355566]]]}, {"depth_m": 15.24, "coords": [[[46.80029, -73.348072], [46.800263, -73.348126], [46.800244, -73.348172], [46.800241, -73.348218], [46.800246, -73.348252], [46.800266, -73.348272], [46.800291, -73.348281], [46.800326, -73.348278], [46.800351, -73.348265], [46.800406, -73.348228], [46.800427, -73.348193], [46.800447, -73.348129], [46.800454, -73.348093], [46.800452, -73.348048], [46.800442, -73.348023], [46.800427, -73.348008], [46.800402, -73.348], [46.800383, -73.348], [46.800348, -73.348009], [46.800323, -73.348024], [46.80029, -73.348072]]]}];
-  const maxDepth = 16.01;
-  const deepPt   = [46.798051, -73.35536];
-
-  // Bathymetry: shallow cyan → deep navy (polyline color)
-  function depthColor(d) {
-    const t = Math.min(d / maxDepth, 1);
-    return 'rgb(' + Math.round(147-117*t) + ',' + Math.round(197-133*t) + ',' + Math.round(253-78*t) + ')';
-  }
-  // Thermocline stratification: epilimnion (gentle) → thermocline (sharp) → hypolimnion (~4°C)
-  function thermalTemp(d, surf) {
-    var epi   = Math.max(3, Math.min(6, maxDepth * 0.28));
-    var therm = Math.min(epi + 7, maxDepth * 0.68);
-    if (d <= epi) {
-      return Math.max(4, surf - d * 0.6);
-    } else if (d <= therm) {
-      var tEpi = surf - epi * 0.6;
-      var frac = (d - epi) / (therm - epi);
-      return Math.max(4, tEpi * (1 - frac) + 5.5 * frac);
-    } else {
-      var frac2 = (d - therm) / Math.max(1, maxDepth - therm);
-      return Math.max(4, 5.5 - frac2 * 1.5);
-    }
-  }
-  // Discrete color scale matching optimal trout temperatures (same as Osborn)
-  function thermalColor(t) {
-    if (t < 6)  return '#1e3a8a';
-    if (t < 8)  return '#3b82f6';
-    if (t < 10) return '#06b6d4';
-    if (t < 13) return '#10b981';
-    if (t < 15) return '#fde047';
-    if (t < 17) return '#f59e0b';
-    return '#ef4444';
-  }
-  // Cardinal extrema helpers — depth labels go at south+west, thermal at north
-  function southPt(ring) { return ring.reduce(function(b,p){return p[0]<b[0]?p:b;}, ring[0]); }
-  function northPt(ring) { return ring.reduce(function(b,p){return p[0]>b[0]?p:b;}, ring[0]); }
-  function westPt(ring)  { return ring.reduce(function(b,p){return p[1]<b[1]?p:b;}, ring[0]); }
-  function eastPt(ring)  { return ring.reduce(function(b,p){return p[1]>b[1]?p:b;}, ring[0]); }
-
-  const bGroup = (typeof layerBathy   !== 'undefined') ? layerBathy   : L.layerGroup().addTo(map);
-  const tGroup = (typeof layerThermal !== 'undefined') ? layerThermal : L.layerGroup();
-
-  const sortedAsc  = isobaths.slice().sort(function(a,b){return a.depth_m-b.depth_m;});
-  const sortedDesc = isobaths.slice().sort(function(a,b){return b.depth_m-a.depth_m;});
-  const surfTemp   = (typeof waterTemp !== 'undefined') ? waterTemp : 8;
-
-  // ── Bathymétrie layer: polylines + label candidates (2-pass to prevent overlap) ──
-  const _lblCands = [];
-  sortedAsc.forEach(function(iso) {
-    const col  = depthColor(iso.depth_m);
-    const dlbl = depthVal(iso.depth_m);
-    iso.coords.forEach(function(line) {
-      L.polyline(line, { color: col, weight: 2.0, opacity: 0.85, pane: 'overlayPane' })
-       .bindTooltip(dlbl, { sticky: true, className: 'lake-tooltip' })
-       .addTo(bGroup);
-      // Collect candidates: S, W, N, E for maximum coverage
-      [southPt(line), westPt(line), northPt(line), eastPt(line)].forEach(function(pos) {
-        _lblCands.push({ depth_m: iso.depth_m, pos: pos });
-      });
-    });
-  });
-  // Place labels deepest-first with spatial deduplication (~80m minimum separation)
-  const _lblPlaced = [];
-  const _MIN_LD = 0.0008;
-  _lblCands.slice().sort(function(a,b){return b.depth_m - a.depth_m;}).forEach(function(c) {
-    var ok = !_lblPlaced.some(function(p) {
-      var dLat = p[0]-c.pos[0], dLon = p[1]-c.pos[1];
-      return Math.sqrt(dLat*dLat+dLon*dLon) < _MIN_LD;
-    });
-    if (ok) {
-      _lblPlaced.push(c.pos);
-      L.marker(c.pos, {
-        icon: L.divIcon({
-          className: 'dlabel-icon',
-          html: '<span class="dlabel-txt" data-d="' + c.depth_m + '">' + depthVal(c.depth_m) + '</span>',
-          iconSize: [62, 18], iconAnchor: [31, 9]
-        }),
-        interactive: false, zIndexOffset: -100
-      }).addTo(bGroup);
-    }
-  });
-
-  // ── Thermique layer: filled polygons (shallowest first = cold deep polygon renders on top) ──
-  const thermalPolys  = [];
-  const thermalLblEls = [];
-
-  sortedAsc.forEach(function(iso) {
-    const tTemp = thermalTemp(iso.depth_m, surfTemp);
-    const tCol  = thermalColor(tTemp);
-    iso.coords.forEach(function(line) {
-      if (line.length < 3) return;
-      const poly = L.polygon(line, {
-        color: tCol, fillColor: tCol, fillOpacity: 0.62, weight: 1, opacity: 0.85, pane: 'overlayPane'
-      }).bindTooltip('~' + tTemp.toFixed(1) + '°C · ' + iso.depth_m + ' m', {
-        sticky: true, className: 'lake-tooltip'
-      });
-      poly.addTo(tGroup);
-      thermalPolys.push({ poly: poly, depth_m: iso.depth_m });
-
-      // Thermal label at northernmost point (opposite side from depth labels)
-      const pos = northPt(line);
-      const lbl = tempDisp(tTemp) + ' · ' + depthVal(iso.depth_m);
-      const mLbl = L.marker(pos, {
-        icon: L.divIcon({
-          className: 'dlabel-icon',
-          html: '<span class="tlabel-txt" style="background:' + tCol + 'cc;" data-d="' + iso.depth_m + '">' + lbl + '</span>',
-          iconSize: [110, 20], iconAnchor: [55, 10]
-        }),
-        interactive: false, zIndexOffset: -50
-      });
-      mLbl.addTo(tGroup);
-      thermalLblEls.push({ marker: mLbl, depth_m: iso.depth_m });
-    });
-  });
-
-  // ── Deep point marker ──
-  if (deepPt) {
-    const surf  = (typeof waterTemp !== 'undefined') ? waterTemp : 8;
-    const dTemp = thermalTemp(maxDepth, surf);
-    L.circleMarker(deepPt, {
-      radius: 6, color: '#1e40af', fillColor: '#3b82f6', fillOpacity: 0.9, weight: 2, pane: 'markerPane'
-    }).bindPopup(
-      '<div style="font-weight:700;color:#93c5fd">🔵 Fosse — ' + maxDepth + ' m</div>' +
-      '<div style="font-size:11px;color:#94a3b8">~' + dTemp.toFixed(1) + '°C · Lac Traverse<br>Source: GBLQ MELCCFP Québec</div>'
-    ).addTo(bGroup);
-    L.circleMarker(deepPt, {
-      radius: 6, color: '#1e3a8a', fillColor: '#1e40af', fillOpacity: 0.9, weight: 2, pane: 'markerPane'
-    }).bindPopup(
-      '<div style="font-weight:700;color:#93c5fd">❄️ Zone froide — ~' + dTemp.toFixed(1) + '°C</div>' +
-      '<div style="font-size:11px;color:#94a3b8">Profondeur max: ' + maxDepth + ' m</div>'
-    ).addTo(tGroup);
-  }
-
-  // ── Live thermal update (time slider + temp/depth unit changes) ──
-  window._updateThermalColors = function(surfT) {
-    thermalPolys.forEach(function(e) {
-      const t = thermalTemp(e.depth_m, surfT);
-      const c = thermalColor(t);
-      e.poly.setStyle({ color: c, fillColor: c });
-      e.poly.setTooltipContent('~' + tempDisp(t) + ' · ' + depthVal(e.depth_m));
-    });
-    thermalLblEls.forEach(function(e) {
-      const t  = thermalTemp(e.depth_m, surfT);
-      const c  = thermalColor(t);
-      const el = e.marker.getElement();
-      if (!el) return;
-      const span = el.querySelector('.tlabel-txt');
-      if (span) {
-        span.textContent = tempDisp(t) + ' · ' + depthVal(e.depth_m);
-        span.style.background = c + 'cc';
-      }
-    });
-  };
-
-  // ── Unit-change hooks ──────────────────────────────────────────
-  window._onUnitChange = function() {
-    // Rebuild depth label text using new unit
-    document.querySelectorAll('.dlabel-txt[data-d]').forEach(function(span) {
-      const d = parseFloat(span.dataset.d);
-      if (!isNaN(d)) span.textContent = depthVal(d);
-    });
-    // Also update thermal tooltip depth portion
-    const wtEl = document.getElementById('waterTempText');
-    if (wtEl && typeof window._updateThermalColors === 'function') {
-      const m = wtEl.textContent.match(/[\d.]+/);
-      if (m) window._updateThermalColors(parseFloat(m[0]));
-    }
-  };
-  window._onTempUnitChange = function() {
-    const wtEl = document.getElementById('waterTempText');
-    if (wtEl && typeof window._updateThermalColors === 'function') {
-      const m = wtEl.textContent.match(/[\d.]+/);
-      if (m) window._updateThermalColors(parseFloat(m[0]));
-    }
-  };
-
-  // Expose isobaths for fish thermal stratum positioning
-  window._lakeIsobaths  = isobaths;
-  window._lakeMaxDepth  = maxDepth;
-})();
-
-
-// ============================================================
-// DEBUG PANEL — Simulateur météo & conditions
-// ============================================================
-(function() {
-  if (document.getElementById('_debugPanel')) return;
-
-  const style = document.createElement('style');
-  style.textContent = `
-    #_debugPanel { margin-top:8px;font-family:'Inter',sans-serif;font-size:11px;user-select:none; }
-    #_debugToggle { cursor:pointer;background:rgba(15,23,42,0.88);backdrop-filter:blur(10px);
-      -webkit-backdrop-filter:blur(10px);border:1px solid rgba(148,163,184,0.25);
-      border-radius:8px;padding:6px 10px;display:flex;
-      justify-content:space-between;align-items:center;
-      color:#94a3b8;font-weight:700;letter-spacing:0.3px; }
-    #_debugBody { background:rgba(10,14,26,0.93);backdrop-filter:blur(14px);
-      -webkit-backdrop-filter:blur(14px);border:1px solid rgba(148,163,184,0.2);
-      border-radius:0 0 8px 8px;padding:10px;color:#cbd5e1;margin-top:2px; }
-    ._dbSection { border-top:1px solid rgba(148,163,184,0.12);padding-top:8px;margin-top:6px; }
-    ._dbLabel { color:#64748b;font-size:10px;margin-bottom:5px;
-      text-transform:uppercase;letter-spacing:0.5px; }
-    ._dbRow { display:flex;justify-content:space-between;align-items:center;margin-bottom:3px; }
-    ._dbRange { width:100%;accent-color:#06b6d4;margin-top:2px; }
-    ._dayBtn { background:rgba(30,41,59,0.7);border:1px solid rgba(148,163,184,0.2);
-      color:#64748b;border-radius:5px;padding:3px 0;font-size:10px;font-weight:600;
-      cursor:pointer;font-family:inherit;flex:1;transition:all 0.15s; }
-    ._dayBtn.active { background:rgba(59,130,246,0.25);color:#93c5fd;
-      border-color:rgba(59,130,246,0.4); }
-    ._timeBtn,._presetBtn { background:rgba(30,41,59,0.7);border:1px solid rgba(148,163,184,0.15);
-      color:#94a3b8;border-radius:5px;padding:2px 7px;font-size:10px;
-      cursor:pointer;font-family:inherit;transition:all 0.15s;white-space:nowrap; }
-    ._timeBtn:hover,._presetBtn:hover { background:rgba(59,130,246,0.2);color:#e2e8f0; }
-    ._dbBtns { display:flex;flex-wrap:wrap;gap:3px; }
-  `;
-  document.head.appendChild(style);
-
-  const panel = document.createElement('div');
-  panel.id = '_debugPanel';
-  panel.innerHTML = `
-    <div id="_debugToggle" onclick="_dbToggle()">
-      <span>🔧 Simulateur météo</span><span id="_dbArrow">▼</span>
-    </div>
-    <div id="_debugBody" style="display:none;">
-
-      <div style="display:flex;gap:4px;margin-bottom:8px;">
-        <button class="_dayBtn active" data-d="0" onclick="_dbSetDay(0)">Auj</button>
-        <button class="_dayBtn"        data-d="1" onclick="_dbSetDay(1)">Dem</button>
-        <button class="_dayBtn"        data-d="2" onclick="_dbSetDay(2)">J+2</button>
-      </div>
-
-      <div>
-        <div class="_dbRow">
-          <span>🌡️ Tmax</span><span id="_dbTmaxVal" style="color:#f59e0b;font-weight:700"></span>
-        </div>
-        <input type="range" id="_dbTmax" class="_dbRange" min="-10" max="38" step="1"
-          style="accent-color:#f59e0b;" oninput="_dbUpdateWeather()">
-      </div>
-      <div style="margin-top:6px;">
-        <div class="_dbRow">
-          <span>❄️ Tmin</span><span id="_dbTminVal" style="color:#38bdf8;font-weight:700"></span>
-        </div>
-        <input type="range" id="_dbTmin" class="_dbRange" min="-15" max="28" step="1"
-          style="accent-color:#38bdf8;" oninput="_dbUpdateWeather()">
-      </div>
-      <div style="margin-top:6px;">
-        <div class="_dbRow">
-          <span>☁️ Nuages</span><span id="_dbCloudVal" style="color:#94a3b8;font-weight:700"></span>
-        </div>
-        <input type="range" id="_dbCloud" class="_dbRange" min="0" max="100" step="5"
-          style="accent-color:#64748b;" oninput="_dbUpdateWeather()">
-      </div>
-
-      <div class="_dbSection">
-        <div class="_dbLabel">⏱ Heure rapide</div>
-        <div class="_dbBtns">
-          <button class="_timeBtn" onclick="_dbJump(5.5)">🌅 5h30</button>
-          <button class="_timeBtn" onclick="_dbJump(7)">🌤 7h</button>
-          <button class="_timeBtn" onclick="_dbJump(9)">☀️ 9h</button>
-          <button class="_timeBtn" onclick="_dbJump(12)">🔆 Midi</button>
-          <button class="_timeBtn" onclick="_dbJump(15)">🌥 15h</button>
-          <button class="_timeBtn" onclick="_dbJump(17.5)">🌇 17h30</button>
-          <button class="_timeBtn" onclick="_dbJump(19)">🌆 19h</button>
-        </div>
-      </div>
-
-      <div class="_dbSection">
-        <div class="_dbLabel">🎨 Présets météo</div>
-        <div class="_dbBtns">
-          <button class="_presetBtn" onclick="_dbPreset('spring')">🌸 Printemps</button>
-          <button class="_presetBtn" onclick="_dbPreset('summer')">☀️ Été</button>
-          <button class="_presetBtn" onclick="_dbPreset('hot')">🔥 Canicule</button>
-          <button class="_presetBtn" onclick="_dbPreset('rain')">🌧 Couvert</button>
-          <button class="_presetBtn" onclick="_dbPreset('fall')">🍂 Automne</button>
-        </div>
-      </div>
-
-      <div class="_dbSection" style="background:rgba(0,0,0,0.25);border-radius:8px;padding:8px;border-top:none;margin-top:8px;">
-        <div class="_dbRow" style="margin-bottom:5px;">
-          <span style="color:#64748b;font-size:10px;">Eau surface (estimée)</span>
-          <span id="_dbWaterTemp" style="font-size:14px;font-weight:800;color:#06b6d4;">—</span>
-        </div>
-        <div style="height:8px;border-radius:4px;position:relative;overflow:visible;
-          background:linear-gradient(to right,#1e3a8a 0%,#3b82f6 18%,#06b6d4 30%,#10b981 43%,#fde047 57%,#f59e0b 70%,#ef4444 100%);">
-          <div id="_dbThermalPin" style="position:absolute;top:-4px;width:16px;height:16px;
-            border-radius:50%;background:#fff;border:2.5px solid #0f172a;
-            transform:translateX(-50%);transition:left 0.35s;left:50%;box-shadow:0 0 6px rgba(0,0,0,0.6);"></div>
-        </div>
-        <div style="display:flex;justify-content:space-between;margin-top:2px;color:#475569;font-size:9px;">
-          <span>4°C</span><span>10°C</span><span>13°C</span><span>17°C</span><span>24°C</span>
-        </div>
-        <div id="_dbComfort" style="margin-top:5px;font-size:10px;font-weight:600;
-          text-align:center;padding:3px 6px;border-radius:5px;"></div>
-      </div>
-
-    </div>
-  `;
-  // Insert into sunIndicator right after temp-bar-wrap div
-  (function() {
-    var sunEl = document.getElementById('sunIndicator');
-    if (sunEl) {
-      var tbw = sunEl.querySelector('.temp-bar-wrap');
-      if (tbw && tbw.parentNode) {
-        tbw.parentNode.insertBefore(panel, tbw.nextSibling);
-      } else {
-        sunEl.appendChild(panel);
-      }
-    } else {
-      document.body.appendChild(panel);
-    }
-  })();
-
-  // ── State ───────────────────────────────────────────────────
-  const PRESETS = {
-    spring: { max:15, min:5,  cloud:0.5, icon:'⛅', desc:'Printemps variable' },
-    summer: { max:26, min:14, cloud:0.2, icon:'☀️', desc:'Été ensoleillé' },
-    hot:    { max:32, min:19, cloud:0.1, icon:'🔥', desc:'Canicule juin' },
-    rain:   { max:13, min:7,  cloud:0.9, icon:'🌧', desc:'Couvert pluvieux' },
-    fall:   { max:9,  min:2,  cloud:0.6, icon:'🍂', desc:'Automne frais' },
-  };
-
-  var _dbOpen = false;
-
-  window._dbToggle = function() {
-    _dbOpen = !_dbOpen;
-    document.getElementById('_debugBody').style.display = _dbOpen ? '' : 'none';
-    document.getElementById('_dbArrow').textContent = _dbOpen ? '▲' : '▼';
-  };
-
-  window._dbSetDay = function(d) {
-    if (typeof currentDayIdx !== 'undefined') currentDayIdx = d;
-    panel.querySelectorAll('._dayBtn').forEach(function(b) {
-      b.classList.toggle('active', parseInt(b.dataset.d) === d);
-    });
-    _dbLoad(d);
-  };
-
-  function _dbLoad(d) {
-    if (typeof WEATHER === 'undefined' || !WEATHER[d]) return;
-    const w = WEATHER[d];
-    document.getElementById('_dbTmax').value  = w.max;
-    document.getElementById('_dbTmin').value  = w.min;
-    document.getElementById('_dbCloud').value = Math.round((w.cloud || 0) * 100);
-    _dbLabels(w);
-    _dbRefresh();
-  }
-
-  function _dbLabels(w) {
-    document.getElementById('_dbTmaxVal').textContent  = (w.max  >= 0 ? '+' : '') + w.max  + '°C';
-    document.getElementById('_dbTminVal').textContent  = (w.min  >= 0 ? '+' : '') + w.min  + '°C';
-    document.getElementById('_dbCloudVal').textContent = Math.round((w.cloud || 0) * 100)  + '%';
-  }
-
-  function _dbRefresh() {
-    if (typeof estimateWaterTemp !== 'function' || typeof WEATHER === 'undefined') return;
-    const d  = (typeof currentDayIdx !== 'undefined') ? currentDayIdx : 0;
-    const w  = WEATHER[d];
-    if (!w) return;
-    const t  = (typeof currentTime !== 'undefined') ? currentTime : 12;
-    const wt = estimateWaterTemp(w.max, w.min, t, w.cloud || 0.5);
-    const disp = (typeof tempDisp === 'function') ? tempDisp(wt) : wt.toFixed(1) + '°C';
-    document.getElementById('_dbWaterTemp').textContent = '~' + disp;
-
-    // Pin position on 4-24°C bar (capped)
-    const pct = Math.min(100, Math.max(0, (wt - 4) / 20 * 100));
-    document.getElementById('_dbThermalPin').style.left = pct + '%';
-
-    // Species comfort badge
-    const sp = (SPECIES_DATA && currentSpecies) ? SPECIES_DATA[currentSpecies] : null;
-    const el = document.getElementById('_dbComfort');
-    if (sp) {
-      const nm = sp.name || currentSpecies;
-      if (wt >= sp.tempOpt1 && wt <= sp.tempOpt2) {
-        el.textContent = '✅ Optimal — ' + nm;
-        el.style.cssText = 'margin-top:5px;font-size:10px;font-weight:600;text-align:center;padding:3px 6px;border-radius:5px;color:#10b981;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);';
-      } else if (wt >= sp.tempMin && wt <= sp.tempMax) {
-        el.textContent = '⚡ Acceptable — ' + nm;
-        el.style.cssText = 'margin-top:5px;font-size:10px;font-weight:600;text-align:center;padding:3px 6px;border-radius:5px;color:#f59e0b;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);';
-      } else {
-        el.textContent = '🥶 Hors confort — ' + nm;
-        el.style.cssText = 'margin-top:5px;font-size:10px;font-weight:600;text-align:center;padding:3px 6px;border-radius:5px;color:#ef4444;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);';
-      }
-    }
-
-    // Push live update to thermal layer
-    if (typeof window._updateThermalColors === 'function') {
-      const tCelsius = (typeof tempUnit !== 'undefined' && tempUnit === 'F')
-        ? (wt * 9 / 5 + 32) : wt;  // _updateThermalColors expects Celsius always
-      window._updateThermalColors(wt);
-    }
-  }
-
-  window._dbUpdateWeather = function() {
-    const d = (typeof currentDayIdx !== 'undefined') ? currentDayIdx : 0;
-    if (typeof WEATHER === 'undefined' || !WEATHER[d]) return;
-    const tmax  = parseInt(document.getElementById('_dbTmax').value);
-    const tmin  = parseInt(document.getElementById('_dbTmin').value);
-    const cloud = parseInt(document.getElementById('_dbCloud').value) / 100;
-    WEATHER[d].max   = tmax;
-    WEATHER[d].min   = Math.min(tmin, tmax - 2);
-    WEATHER[d].cloud = cloud;
-    _dbLabels(WEATHER[d]);
-    _dbRefresh();
-    if (typeof update === 'function') update();
-  };
-
-  window._dbJump = function(h) {
-    const s = document.getElementById('timeSlider');
-    if (!s) return;
-    s.value = String(h);
-    s.dispatchEvent(new Event('input'));
-    setTimeout(_dbRefresh, 80);
-  };
-
-  window._dbPreset = function(key) {
-    const p = PRESETS[key];
-    if (!p || typeof WEATHER === 'undefined') return;
-    const d = (typeof currentDayIdx !== 'undefined') ? currentDayIdx : 0;
-    Object.assign(WEATHER[d], p);
-    document.getElementById('_dbTmax').value  = p.max;
-    document.getElementById('_dbTmin').value  = p.min;
-    document.getElementById('_dbCloud').value = Math.round(p.cloud * 100);
-    _dbLabels(WEATHER[d]);
-    _dbRefresh();
-    if (typeof update === 'function') update();
-  };
-
-  // ── Boot: load initial state, hook update() ─────────────────
-  setTimeout(function() {
-    const d0 = (typeof currentDayIdx !== 'undefined') ? currentDayIdx : 0;
-    _dbLoad(d0);
-    // Wrap update() so panel refreshes whenever the map updates
-    if (typeof update === 'function') {
-      const _orig = update;
-      update = function() { _orig.apply(this, arguments); setTimeout(_dbRefresh, 60); };
-    }
-  }, 600);
-
-})();
-// END DEBUG PANEL
-
 </script>
 </body>
 </html>
