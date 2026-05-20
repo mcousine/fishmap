@@ -528,6 +528,33 @@ body {
   font-size: 8px; color: var(--text-dim); margin-top: 3px;
 }
 
+/* Menu dropdown */
+#_menuPanel {
+  position:fixed;top:58px;right:12px;z-index:2010;
+  background:rgba(10,14,26,0.97);backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  border:1px solid rgba(148,163,184,0.2);border-radius:12px;
+  padding:8px;min-width:200px;
+  font-family:'Inter',sans-serif;font-size:12px;color:#cbd5e1;
+  box-shadow:0 4px 24px rgba(0,0,0,0.6);
+}
+#_menuPanel ._menuTitle {
+  font-size:10px;font-weight:700;color:#64748b;
+  text-transform:uppercase;letter-spacing:0.5px;
+  padding:2px 6px 6px;border-bottom:1px solid rgba(148,163,184,0.12);
+  margin-bottom:4px;
+}
+#_menuPanel label {
+  display:flex;align-items:center;gap:8px;
+  padding:5px 8px;border-radius:7px;cursor:pointer;
+  transition:background 0.15s;white-space:nowrap;
+}
+#_menuPanel label:hover { background:rgba(148,163,184,0.08); }
+#_menuPanel input[type=checkbox] { accent-color:#06b6d4;cursor:pointer; }
+
+/* Top bar responsive */
+.top-bar { max-width:calc(100vw - 24px);overflow-x:auto;-webkit-overflow-scrolling:touch; }
+
 /* Responsive */
 @media (max-width: 768px) {
   .info-panel { display: none; }
@@ -536,7 +563,7 @@ body {
   .control-panel { flex-wrap: wrap; padding: 10px 16px; gap: 10px; }
   #timeSlider { width: 140px; }
   .sun-indicator { display: none; }
-  .map-mode-btns { display: none; }
+  .map-mode-btns { display: flex; }
 }
 </style>
 </head>
@@ -549,17 +576,13 @@ body {
 </div>
 
 <!-- Top bar -->
-<div class="top-bar">
+<div class="top-bar" id="topBar">
   <h1>🎣 Lac Osborn</h1>
   <div class="separator"></div>
   <span class="badge">Mastigouche</span>
   <div class="separator"></div>
-  <div class="unit-toggle" onclick="toggleUnit()" style="cursor:pointer; background:rgba(255,255,255,0.1); padding:4px 10px; border-radius:15px; font-weight:bold; font-size:12px; display:inline-block; border:1px solid rgba(255,255,255,0.2);">
-    <span id="unitM" style="color:var(--accent);">M</span> | <span id="unitPi" style="color:#aaa;">Pi</span>
-  </div>
-  <div class="unit-toggle" onclick="toggleTempUnit()" style="cursor:pointer; background:rgba(255,255,255,0.1); padding:4px 10px; border-radius:15px; font-weight:bold; font-size:12px; margin-right:15px; display:inline-block; border:1px solid rgba(255,255,255,0.2);">
-    <span id="unitC" style="color:var(--accent);">°C</span> | <span id="unitF" style="color:#aaa;">°F</span>
-  </div>
+  <span class="unit-toggle" onclick="toggleUnit()" title="Basculer m / pi" style="cursor:pointer"><span id="unitM" style="color:var(--accent)">M</span> | <span id="unitPi" style="color:#aaa">Pi</span></span>
+  <span class="unit-toggle" onclick="toggleTempUnit()" title="Basculer °C / °F" style="cursor:pointer"><span id="unitC" style="color:var(--accent)">°C</span> | <span id="unitF" style="color:#aaa">°F</span></span>
   <div class="separator"></div>
   <select id="speciesSelect" class="species-select" onchange="setSpecies(this.value)" title="Espèce cible">
     <option value="omble">🐟 Omble de fontaine</option>
@@ -570,22 +593,21 @@ body {
   </select>
   <div class="separator"></div>
   <div class="map-mode-btns">
-  <button class="map-mode-btn active" onclick="setMapMode('satellite')" id="btnSat">🛰️ Carte</button>
-  <button class="map-mode-btn" onclick="setMapMode('thermal')" id="btnThermal">🌡️ Thermique</button>
-</div>
-<div class="separator"></div>
-<span class="unit-toggle" onclick="toggleUnit()" title="Basculer m / pi"><span id="unitM" style="color:var(--accent)">M</span> | <span id="unitPi">Pi</span></span>
-<span class="unit-toggle" onclick="toggleTempUnit()" title="Basculer °C / °F" style="margin-left:4px"><span id="unitC" style="color:var(--accent)">°C</span> | <span id="unitF">°F</span></span>
-<div class="separator"></div>
-<select id="speciesSelect" class="species-select" onchange="setSpecies(this.value)">
-  <option value="omble">🐟 Omble de fontaine</option>
-  <option value="touladi">🐟 Touladi</option>
-  <option value="brochet">🐟 Grand Brochet</option>
-  <option value="dore">🐟 Doré jaune</option>
-  <option value="perchaude">🐟 Perchaude</option>
-</select>
+    <button class="map-mode-btn active" onclick="setMapMode('satellite')" id="btnSat">🗺️ Bathy</button>
+    <button class="map-mode-btn" onclick="setMapMode('thermal')" id="btnThermal">🌡️ Thermique</button>
+  </div>
   <div class="separator"></div>
-  <span style="font-size:11px;color:var(--text-dim)">46.7949°N, 73.3666°W</span>
+  <button id="btnMenu" class="map-mode-btn" onclick="_menuToggle()" title="Menu" style="font-size:16px;padding:3px 10px;letter-spacing:2px;flex-shrink:0">≡</button>
+</div>
+
+<!-- Hamburger menu dropdown -->
+<div id="_menuPanel" style="display:none">
+  <div class="_menuTitle">Affichage</div>
+  <label><input type="checkbox" id="_chkSun" checked> ☀️ Soleil &amp; température</label>
+  <label><input type="checkbox" id="_chkSim" checked> 📊 Simulateur</label>
+  <label><input type="checkbox" id="_chkSpots" checked> 🎣 Spots &amp; info</label>
+  <label><input type="checkbox" id="_chkDates" checked> 📅 Sélecteur dates</label>
+  <label><input type="checkbox" id="_chkWeather" checked> 🌦️ Météo widget</label>
 </div>
 
 <!-- Sun / water temp indicator -->
@@ -661,19 +683,26 @@ body {
 
 <!-- Control panel -->
 <div class="control-panel">
-  <div class="control-group">
-    <label>Date</label>
+  <div class="control-group" id="dateGroup">
+    <label style="display:flex;align-items:center;gap:5px">
+      Date
+      <button id="btnCollapseDate" onclick="_toggleDates()" title="Masquer les dates" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:13px;padding:0;line-height:1;transition:transform .2s">▾</button>
+      <span id="dateChip" style="display:none;font-size:10px;font-weight:700;color:#93c5fd;background:rgba(59,130,246,.2);padding:1px 6px;border-radius:10px;border:1px solid rgba(59,130,246,.3)"></span>
+    </label>
     <div class="date-btns" id="dateBtns">
       <!-- populated dynamically from Montreal time -->
     </div>
   </div>
-  <div class="control-group" style="flex:1;min-width:200px">
+  <div class="control-group" style="flex:1;min-width:180px">
     <label>Heure de pêche</label>
     <input type="range" id="timeSlider" min="5" max="21" step="0.5" value="6">
   </div>
   <div class="control-group">
     <label>Heure</label>
-    <div class="time-display" id="timeDisplay">06:00</div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <div class="time-display" id="timeDisplay">06:00</div>
+      <div id="inlineTempChip" style="font-size:11px;font-weight:700;color:#06b6d4;background:rgba(6,182,212,.12);padding:2px 7px;border-radius:12px;border:1px solid rgba(6,182,212,.3);white-space:nowrap;display:none">~?°C</div>
+    </div>
   </div>
   <div class="weather-widget" id="weatherWidget">
     <div class="weather-icon" id="weatherIcon">🌦️</div>
@@ -1755,7 +1784,7 @@ setMapMode('satellite');
   panel.id = '_debugPanel';
   panel.innerHTML = `
     <div id="_debugToggle" onclick="_dbToggle()">
-      <span>🔧 Simulateur météo</span><span id="_dbArrow">▲</span>
+      <span>📊 Simulateur</span><span id="_dbArrow">▲</span>
     </div>
     <div id="_debugBody">
 
@@ -1827,6 +1856,14 @@ setMapMode('satellite');
         </div>
         <div id="_dbComfort" style="margin-top:5px;font-size:10px;font-weight:600;
           text-align:center;padding:3px 6px;border-radius:5px;"></div>
+      </div>
+
+      <div class="_dbSection" id="_gpsSimSection">
+        <div class="_dbLabel">📍 Simulation GPS</div>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:#94a3b8;margin-top:2px">
+          <input type="checkbox" id="_gpsSimChk" style="accent-color:#f59e0b">
+          Clic sur carte = position GPS
+        </label>
       </div>
 
     </div>
@@ -1962,6 +1999,131 @@ setMapMode('satellite');
 })();
 // END DEBUG PANEL
 
+// ── Hamburger menu ───────────────────────────────────────────────
+window._menuToggle = function() {
+  var p = document.getElementById('_menuPanel');
+  if (!p) return;
+  p.style.display = p.style.display === 'none' ? '' : 'none';
+};
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#_menuPanel') && !e.target.closest('#btnMenu')) {
+    var p = document.getElementById('_menuPanel');
+    if (p) p.style.display = 'none';
+  }
+});
+(function _wireMenu() {
+  function _setVisible(id, v) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = v ? '' : 'none';
+  }
+  var chkSun = document.getElementById('_chkSun');
+  if (chkSun) chkSun.addEventListener('change', function() {
+    _setVisible('sunIndicator', this.checked);
+    _setVisible('btnSunToggle', this.checked);
+  });
+  var chkSim = document.getElementById('_chkSim');
+  if (chkSim) chkSim.addEventListener('change', function() {
+    _setVisible('_debugPanel', this.checked);
+    _setVisible('btnSimToggle', this.checked);
+  });
+  var chkSpots = document.getElementById('_chkSpots');
+  if (chkSpots) chkSpots.addEventListener('change', function() {
+    _setVisible('infoPanel', this.checked);
+    _setVisible('togglePanel', this.checked);
+  });
+  var chkDates = document.getElementById('_chkDates');
+  if (chkDates) chkDates.addEventListener('change', function() {
+    _setVisible('dateGroup', this.checked);
+  });
+  var chkWeather = document.getElementById('_chkWeather');
+  if (chkWeather) chkWeather.addEventListener('change', function() {
+    _setVisible('weatherWidget', this.checked);
+  });
+})();
+
+// ── Date collapse ────────────────────────────────────────────────
+window._toggleDates = function() {
+  var db = document.getElementById('dateBtns');
+  var btn = document.getElementById('btnCollapseDate');
+  var chip = document.getElementById('dateChip');
+  var hidden = db.style.display === 'none';
+  db.style.display = hidden ? '' : 'none';
+  btn.style.transform = hidden ? '' : 'rotate(-90deg)';
+  if (chip) chip.style.display = hidden ? 'none' : 'inline-block';
+};
+// Update date chip label when day changes
+(function _patchDateChip() {
+  var orig = window._dbSetDay;
+  var origSetDay = window._dbSetDay;
+  function _updateChip(d) {
+    var labels = ['Auj', 'Dem', 'J+2'];
+    var chip = document.getElementById('dateChip');
+    if (chip) chip.textContent = labels[d] || '';
+  }
+  if (typeof origSetDay === 'function') {
+    window._dbSetDay = function(d) { origSetDay(d); _updateChip(d); };
+  }
+  // Also hook the main date buttons in the control panel
+  setTimeout(function() {
+    var dateBtns = document.getElementById('dateBtns');
+    if (dateBtns) dateBtns.addEventListener('click', function(e) {
+      var btn = e.target.closest('button[data-day]');
+      if (btn) _updateChip(parseInt(btn.dataset.day) || 0);
+    });
+  }, 800);
+})();
+
+// ── Inline temperature chip ───────────────────────────────────────
+(function _inlineTemp() {
+  var chip = document.getElementById('inlineTempChip');
+  if (!chip) return;
+  function _sync() {
+    var wt = document.getElementById('waterTempText');
+    if (wt) { chip.textContent = wt.textContent || '~?'; chip.style.display = ''; }
+  }
+  // Watch waterTempText changes
+  var el = document.getElementById('waterTempText');
+  if (el) {
+    _sync();
+    new MutationObserver(_sync).observe(el, { childList:true, characterData:true, subtree:true });
+  }
+  // Also sync from debug panel water temp
+  var dbWt = document.getElementById('_dbWaterTemp');
+  if (dbWt) new MutationObserver(function() {
+    chip.textContent = dbWt.textContent || '~?';
+    chip.style.display = '';
+  }).observe(dbWt, { childList:true, characterData:true, subtree:true });
+  setTimeout(_sync, 1000);
+})();
+
+// ── GPS sim wiring (panel checkbox already in HTML) ───────────────
+(function _wireGpsSim() {
+  // The checkbox is now in the HTML — just wire the map click event
+  setTimeout(function() {
+    var chk = document.getElementById('_gpsSimChk');
+    if (!chk || chk.dataset.wired) return;
+    chk.dataset.wired = '1';
+    var _simActive = false, _simMk = null;
+    chk.addEventListener('change', function() {
+      _simActive = this.checked;
+      if (typeof map !== 'undefined') map.getContainer().style.cursor = _simActive ? 'crosshair' : '';
+      if (!_simActive && _simMk) { map.removeLayer(_simMk); _simMk = null; }
+    });
+    if (typeof map !== 'undefined') map.on('click', function(e) {
+      if (!_simActive) return;
+      var ll = [e.latlng.lat, e.latlng.lng];
+      if (_simMk) map.removeLayer(_simMk);
+      _simMk = L.marker(ll, {icon: L.divIcon({className:'',
+        html:'<div style="width:16px;height:16px;background:#f59e0b;border-radius:50%;border:3px dashed #fff;box-shadow:0 0 8px rgba(245,158,11,.6)"></div>',
+        iconSize:[16,16], iconAnchor:[8,8]}), zIndexOffset:999, title:'Position simulée'}).addTo(map);
+      // Use existing _placeGps if available
+      if (typeof window._placeGps === 'function') window._placeGps(ll, 8);
+      var b = document.getElementById('btnGps'); if (b) b.className = 'gps-ctrl-btn gps-on';
+    });
+  }, 700);
+})();
+
+
 </script>
 <style>
 /* GPS PWA v3 */
@@ -2034,6 +2196,7 @@ setMapMode('satellite');
       map.panTo(ll);
     }else{_mk.setLatLng(ll);_ci.setLatLng(ll).setRadius(acc);}
   }
+  window._placeGps = _placeGps;
 
   /* ── Recenter on lake name click ─────────────────────────────── */
   var h1=document.querySelector('.top-bar h1');
@@ -2046,33 +2209,7 @@ setMapMode('satellite');
     });
   }
 
-  /* ── GPS simulation via debug panel ─────────────────────────── */
-  var _simActive=false;
-  function _addSimRow(){
-    var dp=document.getElementById('_debugPanel');
-    if(!dp||document.getElementById('_gpsSimChk'))return;
-    var row=document.createElement('div');
-    row.style.cssText='margin-top:8px;padding-top:6px;border-top:1px solid rgba(148,163,184,.15)';
-    row.innerHTML='<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:#94a3b8">'
-      +'<input type="checkbox" id="_gpsSimChk" style="accent-color:#f59e0b"> 📍 Simuler GPS (clic sur carte)</label>';
-    dp.appendChild(row);
-    document.getElementById('_gpsSimChk').addEventListener('change',function(){
-      _simActive=this.checked;
-      map.getContainer().style.cursor=_simActive?'crosshair':'';
-      if(!_simActive&&_simMk){map.removeLayer(_simMk);_simMk=null;}
-    });
-    map.on('click',function(e){
-      if(!_simActive)return;
-      var ll=[e.latlng.lat,e.latlng.lng];
-      if(_simMk)map.removeLayer(_simMk);
-      _simMk=L.marker(ll,{icon:L.divIcon({className:'',
-        html:'<div style="width:16px;height:16px;background:#f59e0b;border-radius:50%;border:3px dashed #fff;box-shadow:0 0 8px rgba(245,158,11,.6)"></div>',
-        iconSize:[16,16],iconAnchor:[8,8]}),zIndexOffset:999,title:'Position simulée'}).addTo(map);
-      _placeGps(ll,8);
-      var b=document.getElementById('btnGps');if(b)b.className='gps-ctrl-btn gps-on';
-    });
-  }
-  setTimeout(_addSimRow,600);
+  /* ── GPS simulation — checkbox in Simulateur panel, wired by _wireGpsSim() ─── */
 
   /* ── Sun indicator toggle on mobile ─────────────────────────── */
   var sunEl=document.getElementById('sunIndicator');
