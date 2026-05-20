@@ -947,6 +947,10 @@ body {
   font-size: 8px; color: var(--text-dim); margin-top: 3px;
 }
 
+/* Temp scale bar — full width row in control panel */
+#tempScaleBar { overflow: visible; }
+.control-panel { overflow: visible; }
+
 @media (max-width: 768px) {
   .info-panel { display: none; }
   .toggle-panel { display: flex; }
@@ -1092,6 +1096,19 @@ body {
       <div class="weather-temp" id="weatherTemp">10–21°C</div>
       <div class="weather-desc" id="weatherDesc">Bruine légère</div>
     </div>
+  </div>
+  <!-- Permanent temperature scale bar -->
+  <div id="tempScaleBar" style="width:100%;flex-basis:100%;padding-top:6px;border-top:1px solid rgba(148,163,184,.15);margin-top:4px">
+    <div style="font-size:9px;font-weight:700;color:#64748b;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px;display:flex;justify-content:space-between">
+      <span>Confort thermique</span>
+      <span id="tsbSpeciesName" style="color:#06b6d4">Omble</span>
+    </div>
+    <div style="position:relative;height:10px;border-radius:5px;overflow:visible;background:linear-gradient(to right,#1e3a8a 0%,#3b82f6 20%,#06b6d4 35%,#10b981 50%,#fde047 65%,#f59e0b 80%,#ef4444 100%)">
+      <div id="tsbComfort" style="position:absolute;top:0;height:100%;border-radius:3px;background:rgba(255,255,255,.28);border:1.5px solid rgba(255,255,255,.65);box-sizing:border-box;pointer-events:none;transition:left .4s,width .4s;left:40%;width:13%"></div>
+      <div id="tsbNeedle" style="position:absolute;top:-4px;width:3px;height:18px;background:#fff;border-radius:2px;transform:translateX(-50%);pointer-events:none;transition:left .4s;box-shadow:0 0 6px rgba(0,0,0,.7);left:40%"></div>
+      <div id="tsbFish" style="position:absolute;top:-20px;font-size:13px;transform:translateX(-50%);pointer-events:none;transition:left .4s;left:47%">🐟</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:8px;color:#475569;margin-top:3px"><span>0°</span><span>10°</span><span>20°</span><span>30°</span></div>
   </div>
 </div>
 
@@ -1490,14 +1507,24 @@ var thermalLabelMarkers = [];
 function buildThermalLabels() {
   thermalLabelMarkers.forEach(function(m) { m.remove(); });
   thermalLabelMarkers.length = 0;
-  LABEL_POSITIONS.forEach(function(lp) {
+  // Sort by depth so stagger is consistent
+  var sorted = LABEL_POSITIONS.slice().sort(function(a,b){return a.depth_m-b.depth_m;});
+  sorted.forEach(function(lp, idx) {
     var t = getPolygonTemp(lp.depth_m, currentTime);
     var col = getThermalColor(t);
+    // Check if previous label is very close — stagger y offset to avoid overlap
+    var yOff = 0;
+    if (idx > 0) {
+      var prev = sorted[idx-1];
+      var dLat = Math.abs(lp.lat - prev.lat) * 111000; // approx metres
+      var dLon = Math.abs(lp.lon - prev.lon) * 111000 * Math.cos(lp.lat * Math.PI/180);
+      if (Math.sqrt(dLat*dLat + dLon*dLon) < 30) yOff = 18; // stagger 18px down
+    }
     var m = L.marker([lp.lat, lp.lon], {
       icon: L.divIcon({
         className: 'dlabel-icon',
-        html: '<span class="tlabel-txt" style="background:' + col + 'cc;" data-d="' + lp.depth_m + '">' + tempDisp(t) + ' · ' + depthVal(lp.depth_m) + '</span>',
-        iconSize: [88, 20], iconAnchor: [44, 10]
+        html: '<span class="tlabel-txt" style="background:' + col + 'cc;margin-top:' + yOff + 'px;display:inline-block" data-d="' + lp.depth_m + '">' + tempDisp(t) + ' · ' + depthVal(lp.depth_m) + '</span>',
+        iconSize: [80, yOff+18], iconAnchor: [40, yOff/2+9]
       }), interactive: false, zIndexOffset: -100
     });
     m.addTo(layerThermal);
@@ -1581,7 +1608,9 @@ function styleFunction(feature) {
     if (t >= 10 && t <= 14) { weight = 3; color = '#34d399'; fillOpacity = 0.9; dashArray = '5, 5'; }
     else if (!(typeof thermalOn !== 'undefined' && thermalOn)) { fillOpacity = 0.2; }
   }
-  return { fillColor: color, fillOpacity, color: showHotzones ? color : '#0288d1', weight, opacity: 0.8, dashArray };
+  return { fillColor: color, fillOpacity,
+    color: thermalOn ? 'rgba(255,255,255,0.55)' : (showHotzones ? color : '#0288d1'),
+    weight: thermalOn ? 1.5 : weight, opacity: 0.9, dashArray };
 }
 
 // ============================================================
@@ -1931,6 +1960,53 @@ function setMapMode(m) {}
 
 // Ensure layerBathy is always on map
 if (!map.hasLayer(layerBathy)) layerBathy.addTo(map);
+
+// ── Permanent temperature scale bar ─────────────────────────
+(function() {
+  function _pct(tempC) { return Math.max(0, Math.min(100, (tempC / 30) * 100)); }
+
+  function _updateTempScaleBar(surfaceTemp, speciesKey) {
+    var sp = (typeof SPECIES_DATA !== 'undefined') && SPECIES_DATA[speciesKey || currentSpecies];
+    if (!sp) return;
+    var needle = document.getElementById('tsbNeedle');
+    if (needle) needle.style.left = _pct(surfaceTemp) + '%';
+    var comfort = document.getElementById('tsbComfort');
+    if (comfort) {
+      var l = _pct(sp.tempOpt1), r = _pct(sp.tempOpt2);
+      comfort.style.left = l + '%';
+      comfort.style.width = (r - l) + '%';
+    }
+    var fish = document.getElementById('tsbFish');
+    if (fish) fish.style.left = _pct((sp.tempOpt1 + sp.tempOpt2) / 2) + '%';
+    var nameEl = document.getElementById('tsbSpeciesName');
+    var nm = sp.name.split(' ');
+    if (nameEl) nameEl.textContent = nm[nm.length - 1];
+  }
+  window._updateTempScaleBar = _updateTempScaleBar;
+
+  // Hook into setSpecies
+  var _origSetSpecies = window.setSpecies;
+  window.setSpecies = function(key) {
+    if (_origSetSpecies) _origSetSpecies(key);
+    var wt = parseFloat(((document.getElementById('waterTempText')||{}).textContent||'15').match(/[\d.]+/)||['15']);
+    _updateTempScaleBar(isNaN(wt) ? 15 : wt, key);
+  };
+
+  // Initial render after map data loaded
+  setTimeout(function() {
+    var wt = parseFloat(((document.getElementById('waterTempText')||{}).textContent||'15').match(/[\d.]+/)||['15']);
+    _updateTempScaleBar(isNaN(wt) ? 15 : wt);
+  }, 800);
+
+  // Observe waterTempText changes to keep needle in sync
+  var el = document.getElementById('waterTempText');
+  if (el) {
+    new MutationObserver(function() {
+      var wt = parseFloat((el.textContent.match(/[\d.]+/) || ['15'])[0]);
+      if (!isNaN(wt)) _updateTempScaleBar(wt);
+    }).observe(el, { characterData: true, childList: true, subtree: true });
+  }
+})();
 
 // Observe waterTempText — update thermal colors live when time slider moves
 const _wtEl = document.getElementById('waterTempText');
@@ -2351,11 +2427,11 @@ if (_wtEl) {
           +'font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;'
           +'backdrop-filter:blur(6px);box-shadow:0 2px 8px rgba(0,0,0,.45)';
         sb.addEventListener('click',function(){
-          var b=document.getElementById('_debugBody');
-          if(!b)return;
-          var wasOpen=b.style.display!=='none';
-          if(typeof window._dbToggle==='function')window._dbToggle();
-          sb.style.borderColor=wasOpen?'rgba(148,163,184,.25)':'#f59e0b';
+          var p=document.getElementById('_debugPanel');
+          if(!p)return;
+          var visible=p.style.display!=='none';
+          p.style.display=visible?'none':'';
+          sb.style.borderColor=visible?'rgba(148,163,184,.25)':'#f59e0b';
         });
         document.body.appendChild(sb);
       }

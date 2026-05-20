@@ -2527,11 +2527,11 @@ def _inject_pwa(html: str) -> str:
         sb.id='btnSimToggle';sb.title='Simulateur météo';sb.textContent='🔧';
         sb.style.cssText='position:fixed;bottom:144px;left:8px;z-index:1001;width:36px;height:36px;background:rgba(10,14,26,.92);border:1.5px solid rgba(148,163,184,.25);border-radius:8px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);box-shadow:0 2px 8px rgba(0,0,0,.45)';
         sb.addEventListener('click',function(){
-          var b=document.getElementById('_debugBody');
-          if(!b)return;
-          var wasOpen=b.style.display!=='none';
-          if(typeof window._dbToggle==='function')window._dbToggle();
-          sb.style.borderColor=wasOpen?'rgba(148,163,184,.25)':'#f59e0b';
+          var p=document.getElementById('_debugPanel');
+          if(!p)return;
+          var visible=p.style.display!=='none';
+          p.style.display=visible?'none':'';
+          sb.style.borderColor=visible?'rgba(148,163,184,.25)':'#f59e0b';
         });
         document.body.appendChild(sb);
       }
