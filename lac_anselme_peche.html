@@ -1683,7 +1683,26 @@ document.getElementById('timeSlider').addEventListener('input', function(e) {
 });
 
 function setDate(btn) {
+  var container = document.getElementById('dateBtns');
+  var ctrl = document.querySelector('.control-panel');
+  if (container.classList.contains('date-collapsed') && btn.classList.contains('active')) {
+    container.classList.remove('date-collapsed');
+    btn.closest('.control-group').classList.remove('date-group-compact');
+    if (ctrl) ctrl.classList.remove('ctrl-date-picked');
+    return;
+  }
   document.querySelectorAll('.date-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  currentDate = btn.dataset.date;
+  currentDayIdx = parseInt(btn.dataset.idx || 0);
+  update();
+  setTimeout(function() {
+    container.classList.add('date-collapsed');
+    var grp = btn.closest('.control-group');
+    if (grp) grp.classList.add('date-group-compact');
+    if (ctrl) ctrl.classList.add('ctrl-date-picked');
+  }, 200);
+});
   btn.classList.add('active');
   currentDate = btn.dataset.date;
   currentDayIdx = parseInt(btn.dataset.idx || 0);
@@ -1708,6 +1727,14 @@ function setDate(btn) {
 
 document.getElementById('timeSlider').value = currentTime;
 update();
+
+// v4: weather mini toggle
+(function(){
+  var wx=document.getElementById('weatherWidget');
+  if(wx)wx.addEventListener('click',function(){wx.classList.toggle('wx-mini');});
+})();
+// v4: refresh labels/markers after zoom
+map.on('zoomend',function(){if(typeof update==='function')update();});
 
 // Popup styles
 const popupStyle = document.createElement('style');
@@ -1737,6 +1764,21 @@ fetchWeatherForecast().then(function(data) {
 
 
 </script>
+<style>
+/* v4: weather mini, compact date chip, compact time */
+#weatherWidget{cursor:pointer}
+.weather-widget.wx-compact .weather-temp,.weather-widget.wx-compact .weather-desc{display:none}
+.weather-widget.wx-compact{padding:4px 8px;gap:4px}
+.weather-widget.wx-mini{background:transparent!important;border-color:transparent!important;padding:2px 4px!important;box-shadow:none!important}
+.weather-widget.wx-mini .weather-info{display:none}
+.weather-widget.wx-mini .weather-icon{font-size:22px;opacity:.8}
+#dateBtns.date-collapsed .date-btn:not(.active){display:none}
+#dateBtns.date-collapsed .date-btn.active{padding:3px 8px;font-size:10px;border-radius:6px}
+.date-group-compact>label{font-size:9px;letter-spacing:.3px}
+.ctrl-date-picked .time-display{font-size:13px!important;min-width:28px!important}
+.ctrl-date-picked .control-group>label{font-size:7.5px!important;letter-spacing:0!important}
+.ctrl-date-picked #timeSlider{width:80px!important}
+</style>
 <style>
 /* GPS PWA v3 */
 .gps-ctrl-btn{width:36px;height:36px;background:rgba(10,14,26,.92);border:1.5px solid rgba(148,163,184,.25);border-radius:8px;color:#f1f5f9;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);box-shadow:0 2px 8px rgba(0,0,0,.45);transition:border-color .2s,color .2s}
@@ -1865,16 +1907,15 @@ fetchWeatherForecast().then(function(data) {
     document.body.appendChild(sunBtn);
   }
 
-  /* ── Mobile: auto-collapse sim + 🔧 toggle button ────────────── */
-  (function _mobileSetup(){
-    if(!window.matchMedia('(max-width:768px)').matches)return;
+    /* ── Auto-collapse sim + 🔧 toggle button (all screens) ── */
+  (function _simSetup(){
     setTimeout(function(){
-      /* Auto-collapse the debug panel if it started open */
-      var body=document.getElementById('_debugBody');
-      if(body&&body.style.display!=='none'&&typeof window._dbToggle==='function'){
-        window._dbToggle();
+      if(window.matchMedia('(max-width:768px)').matches){
+        var body=document.getElementById('_debugBody');
+        if(body&&body.style.display!=='none'&&typeof window._dbToggle==='function'){
+          window._dbToggle();
+        }
       }
-      /* Add 🔧 simulator toggle button */
       if(!document.getElementById('btnSimToggle')){
         var sb=document.createElement('button');
         sb.id='btnSimToggle';sb.title='Simulateur météo';sb.textContent='🔧';
@@ -1883,11 +1924,20 @@ fetchWeatherForecast().then(function(data) {
           +'font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;'
           +'backdrop-filter:blur(6px);box-shadow:0 2px 8px rgba(0,0,0,.45)';
         sb.addEventListener('click',function(){
-          var b=document.getElementById('_debugBody');
-          if(!b)return;
-          var wasOpen=b.style.display!=='none';
-          if(typeof window._dbToggle==='function')window._dbToggle();
-          sb.style.borderColor=wasOpen?'rgba(148,163,184,.25)':'#f59e0b';
+          var p=document.getElementById('_debugPanel');
+          if(!p)return;
+          if(p.parentElement&&p.parentElement.id==='sunIndicator'){
+            document.body.appendChild(p);
+            p.style.cssText='position:fixed;bottom:80px;left:8px;right:8px;z-index:1002;'
+              +'background:rgba(10,14,26,.97);border:1px solid rgba(148,163,184,.25);'
+              +'border-radius:10px;padding:8px;backdrop-filter:blur(16px);'
+              +'-webkit-backdrop-filter:blur(16px);display:block;';
+            sb.style.borderColor='#f59e0b';
+            return;
+          }
+          var visible=p.style.display!=='none';
+          p.style.display=visible?'none':'';
+          sb.style.borderColor=visible?'rgba(148,163,184,.25)':'#f59e0b';
         });
         document.body.appendChild(sb);
       }
