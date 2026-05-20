@@ -2,6 +2,12 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#06b6d4">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FishMap">
+  <link rel="apple-touch-icon" href="./icon-192.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lac Verso — Pêche Mastigouche</title>
 <meta name="description" content="Carte de pêche interactive — Lac Verso, Réserve faunique Mastigouche.">
@@ -1012,7 +1018,7 @@ body {
   </div>
   <div id="spotsContainer"></div>
 
-                                  <h3>📊 Stats Lac Verso</h3>
+                                      <h3>📊 Stats Lac Verso</h3>
   <div class="stat-row"><span class="stat-label">Superficie</span><span class="stat-value">14.0 ha</span></div>
   <div class="stat-row"><span class="stat-label">Succès 2025</span><span class="stat-value">5.0 omble/j</span></div>
   <div class="stat-row"><span class="stat-label">Masse moy.</span><span class="stat-value">253 g</span></div>
@@ -1716,6 +1722,80 @@ fetchWeatherForecast().then(function(data) {
 
 
 
+
+
+
+
+</script>
+<style>
+/* GPS PWA */
+.gps-ctrl-btn{width:36px;height:36px;background:rgba(10,14,26,.92);border:1.5px solid rgba(148,163,184,.25);
+  border-radius:8px;color:#f1f5f9;font-size:18px;cursor:pointer;display:flex;align-items:center;
+  justify-content:center;backdrop-filter:blur(6px);box-shadow:0 2px 8px rgba(0,0,0,.45);transition:border-color .2s,color .2s}
+.gps-ctrl-btn.gps-on{border-color:#06b6d4;color:#06b6d4}
+.gps-ctrl-btn.gps-err{border-color:#ef4444;color:#ef4444}
+.gps-pulse-wrap{width:18px;height:18px;position:relative}
+.gps-pulse-dot{position:absolute;top:2px;left:2px;width:14px;height:14px;background:#06b6d4;
+  border-radius:50%;border:2px solid #fff;
+  animation:gpsRing 1.6s ease-out infinite}
+@keyframes gpsRing{
+  0%{box-shadow:0 0 0 0 rgba(6,182,212,.7)}
+  70%{box-shadow:0 0 0 10px rgba(6,182,212,0)}
+  100%{box-shadow:0 0 0 0 rgba(6,182,212,0)}}
+</style>
+<script>
+/* ── GPS tracker ────────────────────────────────────────────────── */
+(function(){
+  if (typeof L === 'undefined' || typeof map === 'undefined') return;
+  var _wid=null, _mk=null, _ci=null;
+
+  var ctrl = L.control({position:'bottomright'});
+  ctrl.onAdd = function(){
+    var d = L.DomUtil.create('div','leaflet-bar');
+    d.style.cssText='margin-bottom:8px';
+    d.innerHTML='<button id="btnGps" class="gps-ctrl-btn" title="Ma position GPS">📍</button>';
+    L.DomEvent.disableClickPropagation(d);
+    return d;
+  };
+  ctrl.addTo(map);
+
+  document.getElementById('btnGps').addEventListener('click',function(){
+    var btn=this;
+    if(_wid!==null){
+      navigator.geolocation.clearWatch(_wid); _wid=null;
+      if(_mk){map.removeLayer(_mk);_mk=null;}
+      if(_ci){map.removeLayer(_ci);_ci=null;}
+      btn.className='gps-ctrl-btn'; btn.textContent='📍';
+    } else {
+      btn.textContent='⌛';
+      _wid=navigator.geolocation.watchPosition(function(p){
+        var ll=[p.coords.latitude,p.coords.longitude];
+        btn.className='gps-ctrl-btn gps-on'; btn.textContent='📍';
+        if(!_mk){
+          _mk=L.marker(ll,{icon:L.divIcon({className:'',
+            html:'<div class="gps-pulse-wrap"><div class="gps-pulse-dot"></div></div>',
+            iconSize:[18,18],iconAnchor:[9,9]}),zIndexOffset:1000}).addTo(map);
+          _ci=L.circle(ll,{radius:p.coords.accuracy,
+            color:'#06b6d4',fillColor:'#06b6d4',fillOpacity:.1,weight:1}).addTo(map);
+          map.panTo(ll);
+        } else {
+          _mk.setLatLng(ll);
+          _ci.setLatLng(ll).setRadius(p.coords.accuracy);
+        }
+      },function(){
+        btn.className='gps-ctrl-btn gps-err'; btn.textContent='📍';
+        setTimeout(function(){btn.className='gps-ctrl-btn';},3500);
+        _wid=null;
+      },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+    }
+  });
+})();
+</script>
+<script>
+if('serviceWorker'in navigator){
+  navigator.serviceWorker.register('./sw.js',{scope:'./'})
+    .catch(function(){});
+}
 
 
 

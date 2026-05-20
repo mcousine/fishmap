@@ -1,0 +1,16 @@
+{
+  "name": "FishMap Mastigouche",
+  "short_name": "FishMap",
+  "description": "Guides de pêche IA — 63 lacs de la Réserve Mastigouche",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0a0e1a",
+  "theme_color": "#06b6d4",
+  "orientation": "any",
+  "lang": "fr",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

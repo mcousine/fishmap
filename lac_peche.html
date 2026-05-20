@@ -9,8 +9,8 @@
   <meta name="apple-mobile-web-app-title" content="FishMap">
   <link rel="apple-touch-icon" href="./icon-192.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lac du Brasier — Pêche Mastigouche</title>
-<meta name="description" content="Carte de pêche interactive — Lac du Brasier, Réserve faunique Mastigouche.">
+<title>Lac Lac — Pêche Mastigouche</title>
+<meta name="description" content="Carte de pêche interactive — Lac Lac, Réserve faunique Mastigouche.">
 <style>
 /* Leaflet CSS */
 /* required styles */
@@ -956,14 +956,15 @@ body {
 
 <!-- Top bar -->
 <div class="top-bar">
-  <h1>🎣 Lac Romeo</h1>
+  <h1>🎣 Lac Lac</h1>
   <div class="separator"></div>
   <span class="badge">Mastigouche</span>
   <div class="separator"></div>
   <span class="badge-nosdb">SANS BATHYMÉTRIE</span>
   <div class="separator"></div>
   <div class="map-mode-btns">
-  <button class="map-mode-btn" onclick="toggleThermal()" id="btnThermal">🌡️ Thermique</button>
+  <button class="map-mode-btn active" onclick="setMapMode('satellite')" id="btnSat">🛰️ Carte</button>
+  <button class="map-mode-btn" onclick="setMapMode('thermal')" id="btnThermal">🌡️ Thermique</button>
 </div>
 <div class="separator"></div>
 <span class="unit-toggle" onclick="toggleUnit()" title="Basculer m / pi"><span id="unitM" style="color:var(--accent)">M</span> | <span id="unitPi">Pi</span></span>
@@ -977,7 +978,7 @@ body {
   <option value="perchaude">🐟 Perchaude</option>
 </select>
   <div class="separator"></div>
-  <span style="font-size:11px;color:var(--text-dim)">46.799°N, 73.395°W</span>
+  <span style="font-size:11px;color:var(--text-dim)">46.799°N, 73.390°W</span>
 </div>
 
 <!-- Sun indicator -->
@@ -1018,12 +1019,12 @@ body {
   </div>
   <div id="spotsContainer"></div>
 
-                                  <h3>📊 Stats Lac du Brasier</h3>
-  <div class="stat-row"><span class="stat-label">Superficie</span><span class="stat-value">6.1 ha</span></div>
-  <div class="stat-row"><span class="stat-label">Succès 2025</span><span class="stat-value">6.0 omble/j</span></div>
-  <div class="stat-row"><span class="stat-label">Masse moy.</span><span class="stat-value">282 g</span></div>
-  <div class="stat-row"><span class="stat-label">Véhicule</span><span class="stat-value">Camion 4X4</span></div>
-  <div class="stat-row"><span class="stat-label">Portage</span><span class="stat-value">10 min portage</span></div>
+                        <h3>📊 Stats Lac Lac</h3>
+  <div class="stat-row"><span class="stat-label">Superficie</span><span class="stat-value">4.5 ha</span></div>
+  <div class="stat-row"><span class="stat-label">Succès 2025</span><span class="stat-value">3.0 omble/j</span></div>
+  <div class="stat-row"><span class="stat-label">Masse moy.</span><span class="stat-value">176 g</span></div>
+  <div class="stat-row"><span class="stat-label">Véhicule</span><span class="stat-value">Auto</span></div>
+  <div class="stat-row"><span class="stat-label">Portage</span><span class="stat-value">Aucun portage</span></div>
   <div class="stat-row"><span class="stat-label">Bathymétrie</span><span class="stat-value">Non disponible</span></div>
   <div class="stat-row"><span class="stat-label">Espèce cible</span><span class="stat-value">Omble de fontaine</span></div>
   <div class="stat-row"><span class="stat-label">Zone pêche</span><span class="stat-value">Zone 9</span></div>
@@ -1069,7 +1070,7 @@ body {
 
 <!-- Map legend (bottom-left) -->
 <div class="map-legend">
-  <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,0.7);border:1px solid #3b82f6;"></div>Lac Romeo (contour PDF)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,0.7);border:1px solid #3b82f6;"></div>Lac Lac (contour PDF)</div>
   <div class="legend-item"><div class="legend-line" style="background:#60a5fa;"></div>Entrée d'eau (nord)</div>
   <div class="legend-item"><div class="legend-line" style="background:#34d399;"></div>Sortie d'eau (sud)</div>
   <div class="legend-item"><div class="legend-dot" style="background:#d97706;border:2px solid #fbbf24;"></div>Site Sépaq officiel</div>
@@ -1106,83 +1107,41 @@ body {
 // ============================================================
 // DATA & CONFIG
 // ============================================================
-const LAC_NAME = "du Brasier";
-const MAP_CENTER = [46.799, -73.3947];
+const LAC_NAME = "Lac";
+const MAP_CENTER = [46.7989, -73.3896];
 const MAP_ZOOM = 15;
-const LAC_AREA_HA = 6.1;
-const SOURCE_NOTE = "Carte PDF Sépaq 2024 — Lac du Brasier (sans bathymétrie)";
+const LAC_AREA_HA = 4.5;
+const SOURCE_NOTE = "Carte PDF Sépaq 2024 — Lac Lac (sans bathymétrie)";
 const HAS_BATHY = false;
 const SPECIES = "Omble de fontaine";
-const LAT = 46.799, LON = -73.3947;
+const LAT = 46.7989, LON = -73.3896;
 
 // Lake polygon from PDF extraction (actual shoreline) — [lat, lon] Leaflet format
-const LAKE_POLYGON = [[46.799941, -73.394217], [46.799682, -73.394008], [46.799539, -73.393835], [46.799392, -73.393746], [46.799351, -73.393645], [46.799291, -73.393545], [46.79911, -73.393448], [46.798801, -73.393369], [46.798611, -73.393317], [46.798358, -73.393355], [46.79803, -73.393698], [46.797858, -73.393805], [46.797628, -73.393905], [46.797427, -73.393977], [46.797159, -73.393968], [46.797069, -73.393886], [46.796748, -73.393598], [46.796606, -73.393505], [46.796417, -73.393497], [46.796348, -73.393588], [46.796297, -73.393838], [46.796337, -73.394116], [46.796317, -73.394179], [46.796256, -73.394225], [46.795986, -73.394348], [46.796088, -73.394438], [46.796226, -73.394488], [46.796348, -73.394448], [46.796408, -73.394358], [46.796507, -73.394076], [46.796558, -73.393985], [46.796619, -73.393975], [46.796687, -73.394066], [46.796819, -73.394346], [46.796948, -73.394417], [46.797068, -73.394436], [46.79756, -73.394275], [46.797888, -73.393986], [46.798309, -73.393747], [46.798548, -73.393647], [46.798688, -73.393625], [46.798911, -73.393618], [46.79903, -73.393646], [46.799182, -73.393788], [46.799202, -73.393898], [46.7992, -73.393969], [46.79921, -73.394066], [46.799411, -73.394047], [46.799501, -73.394137], [46.799691, -73.394668], [46.799752, -73.394848], [46.799752, -73.395088], [46.799732, -73.395164], [46.79966, -73.395277], [46.799591, -73.395314], [46.799499, -73.395335], [46.79931, -73.395336], [46.799231, -73.395374], [46.799131, -73.395426], [46.799111, -73.395475], [46.799059, -73.395694], [46.799081, -73.395986], [46.799209, -73.396377], [46.799351, -73.396696], [46.799361, -73.396794], [46.79937, -73.396966], [46.799501, -73.396967], [46.799661, -73.397064], [46.79984, -73.397214], [46.79995, -73.397215], [46.800131, -73.397094], [46.801151, -73.396315], [46.802024, -73.395708], [46.802265, -73.395434], [46.802434, -73.395327], [46.802544, -73.395315], [46.802594, -73.395247], [46.802554, -73.395155], [46.802443, -73.395127], [46.802375, -73.395014], [46.802194, -73.394958], [46.801743, -73.394776], [46.801562, -73.394728], [46.801402, -73.394626], [46.801212, -73.394588], [46.801042, -73.394588], [46.800303, -73.394349]];
+const LAKE_POLYGON = [[46.79962, -73.389284], [46.799611, -73.389024], [46.799611, -73.388944], [46.799602, -73.388602], [46.79955, -73.388424], [46.799451, -73.387992], [46.799381, -73.387552], [46.799401, -73.387362], [46.799451, -73.387112], [46.799491, -73.386891], [46.799191, -73.387062], [46.798971, -73.387122], [46.79886, -73.387192], [46.79874, -73.387411], [46.798721, -73.387671], [46.798679, -73.387884], [46.79856, -73.388254], [46.79843, -73.388493], [46.79823, -73.388675], [46.79817, -73.388763], [46.798179, -73.389174], [46.798209, -73.389484], [46.79826, -73.389644], [46.79837, -73.389854], [46.798409, -73.390055], [46.7984, -73.390224], [46.798339, -73.390375], [46.798299, -73.390565], [46.79832, -73.390755], [46.798459, -73.390987], [46.79854, -73.391166], [46.798569, -73.391776], [46.79863, -73.391988], [46.798781, -73.392256], [46.79891, -73.392328], [46.79903, -73.392318], [46.79928, -73.392228], [46.79936, -73.392157], [46.799461, -73.391927], [46.799491, -73.391718], [46.799471, -73.391356], [46.79947, -73.390876], [46.799451, -73.390335], [46.79947, -73.390106], [46.799611, -73.389615]];
 
 // Waterways
 const WATERWAYS = [
-  { type: "inlet", name: "Entrée nord", lat: 46.80291, lon: -73.39518,
-    coords: [[46.803197, -73.395118], [46.803145, -73.395115], [46.803023, -73.395155], [46.802975, -73.395156], [46.802744, -73.395234], [46.802674, -73.395245], [46.802594, -73.395247]] },
-  { type: "outlet", name: "Sortie sud", lat: 46.79891, lon: -73.39008,
-    coords: [[46.799631, -73.389277], [46.799621, -73.38902], [46.79962, -73.388941], [46.799612, -73.388599], [46.799561, -73.388419], [46.79946, -73.387992], [46.79944, -73.387851], [46.79869, -73.387873], [46.79869, -73.387882], [46.79857, -73.388249], [46.798439, -73.388488], [46.79824, -73.388671], [46.798181, -73.388762], [46.798189, -73.38917], [46.798218, -73.389479], [46.798269, -73.389637], [46.798379, -73.389851], [46.798418, -73.39005], [46.798409, -73.390219], [46.79835, -73.390371], [46.79831, -73.390559], [46.798331, -73.390749], [46.798471, -73.390979], [46.79855, -73.391159], [46.79858, -73.39177], [46.798641, -73.391977], [46.798791, -73.392247], [46.79892, -73.392319], [46.799039, -73.392306], [46.799291, -73.392219], [46.799369, -73.39215], [46.79947, -73.391916], [46.7995, -73.391707], [46.79948, -73.391348], [46.799479, -73.39087], [46.79946, -73.390329], [46.799481, -73.390098], [46.79962, -73.38961]] },
-  { type: "outlet", name: "Sortie sud", lat: 46.79569, lon: -73.39435,
-    coords: [[46.795383, -73.394411], [46.795547, -73.394348], [46.795666, -73.394318], [46.795858, -73.394326], [46.795986, -73.394348]] },
-  { type: "tributary", name: "Affluent NW", lat: 46.79873, lon: -73.39933,
-    coords: [[46.79858, -73.402254], [46.79858, -73.402041], [46.79861, -73.401761], [46.79855, -73.400521], [46.798559, -73.399824], [46.79855, -73.399212], [46.79857, -73.398884], [46.798721, -73.398125], [46.798759, -73.398044], [46.79884, -73.397904], [46.798939, -73.397587], [46.799021, -73.397535], [46.799249, -73.397533]] },
-  { type: "tributary", name: "Affluent NW", lat: 46.80078, lon: -73.40254,
-    coords: [[46.800802, -73.402569], [46.800781, -73.40253], [46.800771, -73.402513]] }
+  { type: "inlet", name: "Entrée nord", lat: 46.79978, lon: -73.38615,
+    coords: [[46.799664, -73.385884], [46.799671, -73.38615], [46.799571, -73.386642], [46.799671, -73.38647], [46.799811, -73.386262], [46.799872, -73.386131], [46.799932, -73.386032], [46.799922, -73.385881], [46.79992, -73.385876]] },
+  { type: "inlet", name: "Entrée nord", lat: 46.8007, lon: -73.38664,
+    coords: [[46.800706, -73.386653], [46.800686, -73.386629]] }
 ];
 
 // Trout habitat line (omble de fontaine — trait sarcelle PDF Sépaq)
-const TROUT_LINE = [[46.799899, -73.396662], [46.799789, -73.396404], [46.799678, -73.396141], [46.799568, -73.395878]];
+const TROUT_LINE = [];
 
 // Access path to lake (sentier d'accès PDF — chemin vers mise à l'eau)
-const ACCESS_PATH = [];
+const ACCESS_PATH = [[46.797378, -73.387325], [46.797856, -73.387369], [46.798216, -73.387567], [46.79856, -73.388254]];
 
 // Boat access
-const BOAT_ACCESS = [{"lat": 46.79995, "lon": -73.397215}];
+const BOAT_ACCESS = [{"lat": 46.79856, "lon": -73.388254}];
 
 // Fishing spots — omble de fontaine (mix official + predicted)
 const FISHING_SPOTS = [
-  { id: 'official_0', lat: 46.8014, lon: -73.39711, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
-    bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
-    why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
-  { id: 'official_1', lat: 46.80129, lon: -73.39711, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
-    bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
-    why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
-  { id: 'official_2', lat: 46.80117, lon: -73.39711, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
-    bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
-    why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
-  { id: 'official_3', lat: 46.80091, lon: -73.39711, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
-    bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
-    why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
-  { id: 'official_4', lat: 46.80086, lon: -73.39711, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
-    bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
-    why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
-  { id: 'official_5', lat: 46.80082, lon: -73.39711, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
-    bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
-    why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
-  { id: 'official_6', lat: 46.8007, lon: -73.39711, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
-    bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
-    why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
-  { id: 'official_7', lat: 46.80033, lon: -73.39711, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
-    bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
-    why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
-  { id: 'official_8', lat: 46.80018, lon: -73.39711, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
-    bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
-    why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
-  { id: 'official_9', lat: 46.80001, lon: -73.39711, name: "Site Sépaq — Pêche favorable", icon: "⭐", type: "official",
-    bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 90,
-    why: "Site identifié par guides terrain Sépaq. Zone de pêche favorable validée." },
-  { id: 'inlet', lat: 46.80229, lon: -73.39525, name: "Entrée nord — Eau fraîche", icon: "🎣", type: "inlet",
+  { id: 'inlet', lat: 46.79932, lon: -73.38699, name: "Entrée nord — Eau fraîche", icon: "🎣", type: "inlet",
     bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [5, 6, 7, 18, 19], score_base: 85,
     why: "Entrée d'eau froide et oxygénée. L'Omble de fontaine affectionne ces zones de convergence thermique, surtout en mai." },
-  { id: 'outlet', lat: 46.79892, lon: -73.39342, name: "Sortie sud — Affût courant", icon: "🎣", type: "outlet",
-    bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 17, 18], score_base: 72,
-    why: "Sortie d'eau (émissaire). Les omble de fontaines se tiennent souvent à la sortie pour profiter du courant." },
-  { id: 'tributary', lat: 46.79858, lon: -73.39711, name: "Affluent — Eau fraîche", icon: "🌿", type: "tributary",
-    bestTime: [5, 6, 7, 8, 17, 18, 19, 20], peakTime: [6, 7, 18, 19], score_base: 70,
-    why: "Confluent d'un affluent. Zone de mélange thermique favorable aux salmonidés." },
-  { id: 'center', lat: 46.79897, lon: -73.39465, name: "Centre lac — Pélagique", icon: "🐟", type: "pelagic",
+  { id: 'center', lat: 46.79894, lon: -73.38962, name: "Centre lac — Pélagique", icon: "🐟", type: "pelagic",
     bestTime: [5, 6, 7, 19, 20], peakTime: [6, 19, 20], score_base: 50,
     why: "Zone de transit. Les omble de fontaines croisent le centre en début/fin de journée." }
 ];
@@ -1334,7 +1293,7 @@ function buildLakeMask() {
     fillColor: '#1d4ed8',
     fillOpacity: 0.22,
   }).addTo(map);
-  lakePoly.bindTooltip('Lac du Brasier — 6.1 ha<br>Source: PDF Sépaq 2024', {
+  lakePoly.bindTooltip('Lac Lac — 4.5 ha<br>Source: PDF Sépaq 2024', {
     direction: 'center', permanent: false, className: 'lake-tooltip'
   });
   return lakePoly;
@@ -1742,95 +1701,14 @@ fetchWeatherForecast().then(function(data) {
 });
 
 
-
-
-
-
-
-
-
-
-
-</script>
-<style>
-/* GPS PWA */
-.gps-ctrl-btn{width:36px;height:36px;background:rgba(10,14,26,.92);border:1.5px solid rgba(148,163,184,.25);
-  border-radius:8px;color:#f1f5f9;font-size:18px;cursor:pointer;display:flex;align-items:center;
-  justify-content:center;backdrop-filter:blur(6px);box-shadow:0 2px 8px rgba(0,0,0,.45);transition:border-color .2s,color .2s}
-.gps-ctrl-btn.gps-on{border-color:#06b6d4;color:#06b6d4}
-.gps-ctrl-btn.gps-err{border-color:#ef4444;color:#ef4444}
-.gps-pulse-wrap{width:18px;height:18px;position:relative}
-.gps-pulse-dot{position:absolute;top:2px;left:2px;width:14px;height:14px;background:#06b6d4;
-  border-radius:50%;border:2px solid #fff;
-  animation:gpsRing 1.6s ease-out infinite}
-@keyframes gpsRing{
-  0%{box-shadow:0 0 0 0 rgba(6,182,212,.7)}
-  70%{box-shadow:0 0 0 10px rgba(6,182,212,0)}
-  100%{box-shadow:0 0 0 0 rgba(6,182,212,0)}}
-</style>
-<script>
-/* ── GPS tracker ────────────────────────────────────────────────── */
-(function(){
-  if (typeof L === 'undefined' || typeof map === 'undefined') return;
-  var _wid=null, _mk=null, _ci=null;
-
-  var ctrl = L.control({position:'bottomright'});
-  ctrl.onAdd = function(){
-    var d = L.DomUtil.create('div','leaflet-bar');
-    d.style.cssText='margin-bottom:8px';
-    d.innerHTML='<button id="btnGps" class="gps-ctrl-btn" title="Ma position GPS">📍</button>';
-    L.DomEvent.disableClickPropagation(d);
-    return d;
-  };
-  ctrl.addTo(map);
-
-  document.getElementById('btnGps').addEventListener('click',function(){
-    var btn=this;
-    if(_wid!==null){
-      navigator.geolocation.clearWatch(_wid); _wid=null;
-      if(_mk){map.removeLayer(_mk);_mk=null;}
-      if(_ci){map.removeLayer(_ci);_ci=null;}
-      btn.className='gps-ctrl-btn'; btn.textContent='📍';
-    } else {
-      btn.textContent='⌛';
-      _wid=navigator.geolocation.watchPosition(function(p){
-        var ll=[p.coords.latitude,p.coords.longitude];
-        btn.className='gps-ctrl-btn gps-on'; btn.textContent='📍';
-        if(!_mk){
-          _mk=L.marker(ll,{icon:L.divIcon({className:'',
-            html:'<div class="gps-pulse-wrap"><div class="gps-pulse-dot"></div></div>',
-            iconSize:[18,18],iconAnchor:[9,9]}),zIndexOffset:1000}).addTo(map);
-          _ci=L.circle(ll,{radius:p.coords.accuracy,
-            color:'#06b6d4',fillColor:'#06b6d4',fillOpacity:.1,weight:1}).addTo(map);
-          map.panTo(ll);
-        } else {
-          _mk.setLatLng(ll);
-          _ci.setLatLng(ll).setRadius(p.coords.accuracy);
-        }
-      },function(){
-        btn.className='gps-ctrl-btn gps-err'; btn.textContent='📍';
-        setTimeout(function(){btn.className='gps-ctrl-btn';},3500);
-        _wid=null;
-      },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
-    }
-  });
-})();
-</script>
-<script>
-if('serviceWorker'in navigator){
-  navigator.serviceWorker.register('./sw.js',{scope:'./'})
-    .catch(function(){});
-}
-
 // ============================================================
-// LAYER CONTROLS — layerBathy always on · toggleThermal overlay
+// LAYER CONTROLS — Carte (Satellite) · Thermique
 // ============================================================
-var currentMode = 'satellite'; // kept for backward compat
-var thermalOn = false;
-if (typeof layerBathy    === 'undefined') var layerBathy    = L.layerGroup().addTo(map);
-if (typeof layerThermal  === 'undefined') var layerThermal  = L.layerGroup();
-if (typeof layerSun      === 'undefined') var layerSun      = L.layerGroup().addTo(map);
-if (typeof layerHotzones === 'undefined') var layerHotzones = L.layerGroup();
+var currentMode = 'satellite';
+const layerBathy    = L.layerGroup().addTo(map);
+const layerThermal  = L.layerGroup();
+const layerSun      = L.layerGroup().addTo(map);
+const layerHotzones = L.layerGroup();
 
 // ── Unit toggles (m ↔ pi, °C ↔ °F) ─────────────────────────
 var currentUnit = 'm';
@@ -1844,13 +1722,10 @@ function tempDisp(t_c) {
 }
 function toggleUnit() {
   currentUnit = currentUnit === 'm' ? 'ft' : 'm';
-  const mEl = document.getElementById('unitM');
-  const pEl = document.getElementById('unitPi') || document.getElementById('unitFt');
+  const mEl = document.getElementById('unitM'), pEl = document.getElementById('unitPi');
   if (mEl) mEl.style.color = currentUnit === 'm' ? 'var(--accent)' : 'var(--text-dim)';
   if (pEl) pEl.style.color = currentUnit === 'ft' ? 'var(--accent)' : 'var(--text-dim)';
   if (typeof window._onUnitChange === 'function') window._onUnitChange();
-  if (typeof updateDepthLabels === 'function') updateDepthLabels();
-  if (typeof updateThermalDepthLabels === 'function') updateThermalDepthLabels();
 }
 function toggleTempUnit() {
   tempUnit = tempUnit === 'C' ? 'F' : 'C';
@@ -1858,7 +1733,6 @@ function toggleTempUnit() {
   if (cEl) cEl.style.color = tempUnit === 'C' ? 'var(--accent)' : 'var(--text-dim)';
   if (fEl) fEl.style.color = tempUnit === 'F' ? 'var(--accent)' : 'var(--text-dim)';
   if (typeof window._onTempUnitChange === 'function') window._onTempUnitChange();
-  if (typeof updateThermalLabels === 'function') updateThermalLabels();
 }
 
 // ── Species data ─────────────────────────────────────────────
@@ -1938,36 +1812,27 @@ function scoreSpot(spot, hour) {
   s.textContent =
     '.dlabel-icon{background:transparent!important;border:none!important;box-shadow:none!important}' +
     '.dlabel-txt{font-size:11px;font-weight:700;color:rgba(255,255,255,0.92);background:rgba(0,0,0,0.58);padding:2px 5px;border-radius:4px;white-space:nowrap;pointer-events:none;display:inline-block;text-shadow:0 1px 3px rgba(0,0,0,0.9)}' +
-    '.tlabel-txt{font-size:11px;font-weight:800;color:#fff;padding:2px 6px;border-radius:5px;border:1.5px solid rgba(255,255,255,0.4);white-space:nowrap;pointer-events:none;display:inline-block;text-shadow:0 1px 3px rgba(0,0,0,0.9);box-shadow:0 1px 4px rgba(0,0,0,0.5)}' +
-    '#map.thermal-on .dlabel-txt{display:none}';
+    '.tlabel-txt{font-size:11px;font-weight:800;color:#fff;padding:2px 6px;border-radius:5px;border:1.5px solid rgba(255,255,255,0.4);white-space:nowrap;pointer-events:none;display:inline-block;text-shadow:0 1px 3px rgba(0,0,0,0.9);box-shadow:0 1px 4px rgba(0,0,0,0.5)}';
   document.head.appendChild(s);
 })();
 
-// ── Thermal toggle ────────────────────────────────────────────
-function toggleThermal() {
-  thermalOn = !thermalOn;
-  var btn = document.getElementById('btnThermal');
-  if (btn) btn.classList.toggle('active', thermalOn);
-  if (thermalOn) {
+// ── Map mode switch ───────────────────────────────────────────
+function setMapMode(mode) {
+  currentMode = mode;
+  if (typeof satTile !== 'undefined') satTile.setOpacity(1);
+  if (mode === 'thermal') {
     if (!map.hasLayer(layerThermal)) layerThermal.addTo(map);
-    // Hide depth-only labels when thermal overlay is ON
-    document.getElementById('map').classList.add('thermal-on');
+    if (map.hasLayer(layerBathy))    map.removeLayer(layerBathy);
   } else {
-    if (map.hasLayer(layerThermal)) map.removeLayer(layerThermal);
-    document.getElementById('map').classList.remove('thermal-on');
+    if (!map.hasLayer(layerBathy))   layerBathy.addTo(map);
+    if (map.hasLayer(layerThermal))  map.removeLayer(layerThermal);
   }
-  if (typeof window._updateThermalColors === 'function') {
-    var m = (document.getElementById('waterTempText') || {}).textContent;
-    var wt = m ? parseFloat(m.match(/[\d.]+/)) : 15;
-    window._updateThermalColors(wt);
-  }
+  ['btnSat','btnThermal'].forEach(function(id) {
+    const el = document.getElementById(id); if (el) el.classList.remove('active');
+  });
+  const activeEl = document.getElementById(mode === 'thermal' ? 'btnThermal' : 'btnSat');
+  if (activeEl) activeEl.classList.add('active');
 }
-
-// No-op alias for curated-map backward compatibility
-function setMapMode(m) {}
-
-// Ensure layerBathy is always on map
-if (!map.hasLayer(layerBathy)) layerBathy.addTo(map);
 
 // Observe waterTempText — update thermal colors live when time slider moves
 const _wtEl = document.getElementById('waterTempText');
@@ -1979,6 +1844,7 @@ if (_wtEl) {
   }).observe(_wtEl, { childList: true, characterData: true, subtree: true });
 }
 
+setMapMode('satellite');
 // END LAYER CONTROLS
 
 
@@ -1990,15 +1856,16 @@ if (_wtEl) {
 
   const style = document.createElement('style');
   style.textContent = `
-    #_debugPanel { margin-top:8px;font-family:'Inter',sans-serif;font-size:11px;user-select:none; }
+    #_debugPanel { position:fixed;right:16px;bottom:110px;z-index:2000;width:264px;
+      font-family:'Inter',sans-serif;font-size:11px;user-select:none; }
     #_debugToggle { cursor:pointer;background:rgba(15,23,42,0.88);backdrop-filter:blur(10px);
       -webkit-backdrop-filter:blur(10px);border:1px solid rgba(148,163,184,0.25);
-      border-radius:8px;padding:6px 10px;display:flex;
+      border-radius:10px 10px 0 0;padding:6px 10px;display:flex;
       justify-content:space-between;align-items:center;
       color:#94a3b8;font-weight:700;letter-spacing:0.3px; }
     #_debugBody { background:rgba(10,14,26,0.93);backdrop-filter:blur(14px);
       -webkit-backdrop-filter:blur(14px);border:1px solid rgba(148,163,184,0.2);
-      border-radius:0 0 8px 8px;padding:10px;color:#cbd5e1;margin-top:2px; }
+      border-top:none;border-radius:0 0 10px 10px;padding:10px;color:#cbd5e1; }
     ._dbSection { border-top:1px solid rgba(148,163,184,0.12);padding-top:8px;margin-top:6px; }
     ._dbLabel { color:#64748b;font-size:10px;margin-bottom:5px;
       text-transform:uppercase;letter-spacing:0.5px; }
@@ -2021,9 +1888,9 @@ if (_wtEl) {
   panel.id = '_debugPanel';
   panel.innerHTML = `
     <div id="_debugToggle" onclick="_dbToggle()">
-      <span>🔧 Simulateur météo</span><span id="_dbArrow">▼</span>
+      <span>🔧 Simulateur météo</span><span id="_dbArrow">▲</span>
     </div>
-    <div id="_debugBody" style="display:none;">
+    <div id="_debugBody">
 
       <div style="display:flex;gap:4px;margin-bottom:8px;">
         <button class="_dayBtn active" data-d="0" onclick="_dbSetDay(0)">Auj</button>
@@ -2097,20 +1964,7 @@ if (_wtEl) {
 
     </div>
   `;
-  // Insert into sunIndicator right after temp-bar-wrap div
-  (function() {
-    var sunEl = document.getElementById('sunIndicator');
-    if (sunEl) {
-      var tbw = sunEl.querySelector('.temp-bar-wrap');
-      if (tbw && tbw.parentNode) {
-        tbw.parentNode.insertBefore(panel, tbw.nextSibling);
-      } else {
-        sunEl.appendChild(panel);
-      }
-    } else {
-      document.body.appendChild(panel);
-    }
-  })();
+  document.body.appendChild(panel);
 
   // ── State ───────────────────────────────────────────────────
   const PRESETS = {
@@ -2121,7 +1975,7 @@ if (_wtEl) {
     fall:   { max:9,  min:2,  cloud:0.6, icon:'🍂', desc:'Automne frais' },
   };
 
-  var _dbOpen = false;
+  var _dbOpen = true;
 
   window._dbToggle = function() {
     _dbOpen = !_dbOpen;
@@ -2241,6 +2095,76 @@ if (_wtEl) {
 })();
 // END DEBUG PANEL
 
+</script>
+<style>
+/* GPS PWA */
+.gps-ctrl-btn{width:36px;height:36px;background:rgba(10,14,26,.92);border:1.5px solid rgba(148,163,184,.25);
+  border-radius:8px;color:#f1f5f9;font-size:18px;cursor:pointer;display:flex;align-items:center;
+  justify-content:center;backdrop-filter:blur(6px);box-shadow:0 2px 8px rgba(0,0,0,.45);transition:border-color .2s,color .2s}
+.gps-ctrl-btn.gps-on{border-color:#06b6d4;color:#06b6d4}
+.gps-ctrl-btn.gps-err{border-color:#ef4444;color:#ef4444}
+.gps-pulse-wrap{width:18px;height:18px;position:relative}
+.gps-pulse-dot{position:absolute;top:2px;left:2px;width:14px;height:14px;background:#06b6d4;
+  border-radius:50%;border:2px solid #fff;
+  animation:gpsRing 1.6s ease-out infinite}
+@keyframes gpsRing{
+  0%{box-shadow:0 0 0 0 rgba(6,182,212,.7)}
+  70%{box-shadow:0 0 0 10px rgba(6,182,212,0)}
+  100%{box-shadow:0 0 0 0 rgba(6,182,212,0)}}
+</style>
+<script>
+/* ── GPS tracker ────────────────────────────────────────────────── */
+(function(){
+  if (typeof L === 'undefined' || typeof map === 'undefined') return;
+  var _wid=null, _mk=null, _ci=null;
+
+  var ctrl = L.control({position:'bottomright'});
+  ctrl.onAdd = function(){
+    var d = L.DomUtil.create('div','leaflet-bar');
+    d.style.cssText='margin-bottom:8px';
+    d.innerHTML='<button id="btnGps" class="gps-ctrl-btn" title="Ma position GPS">📍</button>';
+    L.DomEvent.disableClickPropagation(d);
+    return d;
+  };
+  ctrl.addTo(map);
+
+  document.getElementById('btnGps').addEventListener('click',function(){
+    var btn=this;
+    if(_wid!==null){
+      navigator.geolocation.clearWatch(_wid); _wid=null;
+      if(_mk){map.removeLayer(_mk);_mk=null;}
+      if(_ci){map.removeLayer(_ci);_ci=null;}
+      btn.className='gps-ctrl-btn'; btn.textContent='📍';
+    } else {
+      btn.textContent='⌛';
+      _wid=navigator.geolocation.watchPosition(function(p){
+        var ll=[p.coords.latitude,p.coords.longitude];
+        btn.className='gps-ctrl-btn gps-on'; btn.textContent='📍';
+        if(!_mk){
+          _mk=L.marker(ll,{icon:L.divIcon({className:'',
+            html:'<div class="gps-pulse-wrap"><div class="gps-pulse-dot"></div></div>',
+            iconSize:[18,18],iconAnchor:[9,9]}),zIndexOffset:1000}).addTo(map);
+          _ci=L.circle(ll,{radius:p.coords.accuracy,
+            color:'#06b6d4',fillColor:'#06b6d4',fillOpacity:.1,weight:1}).addTo(map);
+          map.panTo(ll);
+        } else {
+          _mk.setLatLng(ll);
+          _ci.setLatLng(ll).setRadius(p.coords.accuracy);
+        }
+      },function(){
+        btn.className='gps-ctrl-btn gps-err'; btn.textContent='📍';
+        setTimeout(function(){btn.className='gps-ctrl-btn';},3500);
+        _wid=null;
+      },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+    }
+  });
+})();
+</script>
+<script>
+if('serviceWorker'in navigator){
+  navigator.serviceWorker.register('./sw.js',{scope:'./'})
+    .catch(function(){});
+}
 </script>
 </body>
 </html>
