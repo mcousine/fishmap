@@ -56,39 +56,52 @@ body {
   z-index: 1000;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 20px;
+  gap: 10px;
+  padding: 7px 16px;
   background: var(--bg-glass);
   backdrop-filter: blur(20px) saturate(1.8);
   -webkit-backdrop-filter: blur(20px) saturate(1.8);
   border: 1px solid var(--border);
   border-radius: 50px;
   box-shadow: var(--shadow), 0 0 40px var(--accent-glow);
+  max-width: calc(100vw - 16px);
+  box-sizing: border-box;
+}
+.top-bar-title {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+  flex-shrink: 0;
 }
 .top-bar h1 {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   background: linear-gradient(135deg, var(--accent), var(--accent2));
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   white-space: nowrap;
+  line-height: 1.1;
 }
 .top-bar .badge {
-  font-size: 10px;
-  font-weight: 600;
-  padding: 3px 8px;
+  font-size: 8px;
+  font-weight: 700;
+  padding: 1px 5px;
   border-radius: 20px;
   background: linear-gradient(135deg, var(--accent), var(--accent2));
   color: #fff;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
+  display: inline-block;
 }
 .top-bar .separator {
   width: 1px;
   height: 20px;
   background: var(--border);
+  flex-shrink: 0;
 }
+.top-bar-controls {
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+}
+.btn-label { font-size: 10px; }
 
 /* Control panel */
 .control-panel {
@@ -530,11 +543,11 @@ body {
 
 /* Menu dropdown */
 #_menuPanel {
-  position:fixed;top:58px;right:12px;z-index:2010;
+  position:fixed;top:62px;right:12px;z-index:2010;
   background:rgba(10,14,26,0.97);backdrop-filter:blur(16px);
   -webkit-backdrop-filter:blur(16px);
   border:1px solid rgba(148,163,184,0.2);border-radius:12px;
-  padding:8px;min-width:200px;
+  padding:8px;min-width:190px;
   font-family:'Inter',sans-serif;font-size:12px;color:#cbd5e1;
   box-shadow:0 4px 24px rgba(0,0,0,0.6);
 }
@@ -552,9 +565,6 @@ body {
 #_menuPanel label:hover { background:rgba(148,163,184,0.08); }
 #_menuPanel input[type=checkbox] { accent-color:#06b6d4;cursor:pointer; }
 
-/* Top bar responsive */
-.top-bar { max-width:calc(100vw - 24px);overflow-x:auto;-webkit-overflow-scrolling:touch; }
-
 /* Responsive */
 @media (max-width: 768px) {
   .info-panel { display: none; }
@@ -564,6 +574,15 @@ body {
   #timeSlider { width: 140px; }
   .sun-indicator { display: none; }
   .map-mode-btns { display: flex; }
+}
+@media (max-width: 600px) {
+  .top-bar { gap: 6px; padding: 6px 10px; }
+  .top-bar .separator { display: none; }
+  .top-bar-controls .species-select { display: none; }
+  .top-bar-controls { gap: 5px; }
+  .btn-label { display: none; }
+  .map-mode-btn { padding: 5px 8px; font-size: 14px; }
+  #_menuSpecies { display: block !important; }
 }
 </style>
 </head>
@@ -577,27 +596,28 @@ body {
 
 <!-- Top bar -->
 <div class="top-bar" id="topBar">
-  <h1>🎣 Lac Osborn</h1>
-  <div class="separator"></div>
-  <span class="badge">Mastigouche</span>
-  <div class="separator"></div>
-  <span class="unit-toggle" onclick="toggleUnit()" title="Basculer m / pi" style="cursor:pointer"><span id="unitM" style="color:var(--accent)">M</span> | <span id="unitPi" style="color:#aaa">Pi</span></span>
-  <span class="unit-toggle" onclick="toggleTempUnit()" title="Basculer °C / °F" style="cursor:pointer"><span id="unitC" style="color:var(--accent)">°C</span> | <span id="unitF" style="color:#aaa">°F</span></span>
-  <div class="separator"></div>
-  <select id="speciesSelect" class="species-select" onchange="setSpecies(this.value)" title="Espèce cible">
-    <option value="omble">🐟 Omble de fontaine</option>
-    <option value="touladi">🐟 Touladi</option>
-    <option value="brochet">🐟 Grand Brochet</option>
-    <option value="dore">🐟 Doré jaune</option>
-    <option value="perchaude">🐟 Perchaude</option>
-  </select>
-  <div class="separator"></div>
-  <div class="map-mode-btns">
-    <button class="map-mode-btn active" onclick="setMapMode('satellite')" id="btnSat">🗺️ Bathy</button>
-    <button class="map-mode-btn" onclick="setMapMode('thermal')" id="btnThermal">🌡️ Thermique</button>
+  <div class="top-bar-title">
+    <h1>🎣 Lac Osborn</h1>
+    <span class="badge">Mastigouche</span>
   </div>
   <div class="separator"></div>
-  <button id="btnMenu" class="map-mode-btn" onclick="_menuToggle()" title="Menu" style="font-size:16px;padding:3px 10px;letter-spacing:2px;flex-shrink:0">≡</button>
+  <div class="top-bar-controls">
+    <span class="unit-toggle" onclick="toggleUnit()" title="Basculer m / pi" style="cursor:pointer;font-size:11px;white-space:nowrap"><span id="unitM" style="color:var(--accent)">M</span><span style="color:#555">|</span><span id="unitPi" style="color:#aaa">Pi</span></span>
+    <span class="unit-toggle" onclick="toggleTempUnit()" title="Basculer °C / °F" style="cursor:pointer;font-size:11px;white-space:nowrap"><span id="unitC" style="color:var(--accent)">°C</span><span style="color:#555">|</span><span id="unitF" style="color:#aaa">°F</span></span>
+    <select id="speciesSelect" class="species-select" onchange="setSpecies(this.value)" title="Espèce cible">
+      <option value="omble">🐟 Omble de fontaine</option>
+      <option value="touladi">🐟 Touladi</option>
+      <option value="brochet">🐟 Grand Brochet</option>
+      <option value="dore">🐟 Doré jaune</option>
+      <option value="perchaude">🐟 Perchaude</option>
+    </select>
+  </div>
+  <div class="separator"></div>
+  <div class="map-mode-btns">
+    <button class="map-mode-btn active" onclick="setMapMode('satellite')" id="btnSat">🗺️<span class="btn-label"> Bathy</span></button>
+    <button class="map-mode-btn" onclick="setMapMode('thermal')" id="btnThermal">🌡️<span class="btn-label"> Therm.</span></button>
+  </div>
+  <button id="btnMenu" class="map-mode-btn" onclick="_menuToggle()" title="Menu" style="font-size:16px;padding:4px 9px;letter-spacing:2px;flex-shrink:0;margin-left:auto">≡</button>
 </div>
 
 <!-- Hamburger menu dropdown -->
@@ -608,6 +628,16 @@ body {
   <label><input type="checkbox" id="_chkSpots" checked> 🎣 Spots &amp; info</label>
   <label><input type="checkbox" id="_chkDates" checked> 📅 Sélecteur dates</label>
   <label><input type="checkbox" id="_chkWeather" checked> 🌦️ Météo widget</label>
+  <div id="_menuSpecies" style="display:none;padding:6px 8px 2px;border-top:1px solid rgba(148,163,184,.12);margin-top:4px">
+    <div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Espèce cible</div>
+    <select id="speciesSelectMenu" style="width:100%;background:rgba(30,41,59,.9);border:1px solid rgba(148,163,184,.25);border-radius:8px;color:#cbd5e1;font-size:12px;padding:4px 8px;outline:none;cursor:pointer" onchange="setSpecies(this.value);var s=document.getElementById('speciesSelect');if(s)s.value=this.value;">
+      <option value="omble">🐟 Omble de fontaine</option>
+      <option value="touladi">🐟 Touladi</option>
+      <option value="brochet">🐟 Grand Brochet</option>
+      <option value="dore">🐟 Doré jaune</option>
+      <option value="perchaude">🐟 Perchaude</option>
+    </select>
+  </div>
 </div>
 
 <!-- Sun / water temp indicator -->
@@ -2039,6 +2069,13 @@ document.addEventListener('click', function(e) {
   if (chkWeather) chkWeather.addEventListener('change', function() {
     _setVisible('weatherWidget', this.checked);
   });
+  // Sync menu species select with top-bar one
+  var smenu = document.getElementById('speciesSelectMenu');
+  var smain = document.getElementById('speciesSelect');
+  if (smenu && smain) {
+    smenu.value = smain.value;
+    smain.addEventListener('change', function() { smenu.value = this.value; });
+  }
 })();
 
 // ── Date collapse ────────────────────────────────────────────────
