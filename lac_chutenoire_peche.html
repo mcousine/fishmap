@@ -791,7 +791,7 @@ body {
 }
 #timeSlider::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.2); }
 
-.date-btns { display: flex; gap: 4px; }
+.date-btns { display: flex; gap: 4px; transition: all .3s; }
 .date-btn {
   padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px;
   background: transparent; color: var(--text-dim); font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -802,11 +802,15 @@ body {
   color: #fff; border-color: transparent; box-shadow: 0 0 16px var(--accent-glow);
 }
 .date-btn:hover:not(.active) { border-color: var(--accent); color: var(--text); }
+/* Compact date: only active button, small */
+#dateBtns.date-collapsed .date-btn:not(.active) { display: none; }
+#dateBtns.date-collapsed .date-btn.active { padding: 3px 8px; font-size: 10px; border-radius: 6px; }
+.date-group-compact > label { font-size: 9px; letter-spacing: 0.3px; }
 
 .weather-widget {
   display: flex; align-items: center; gap: 8px; padding: 6px 12px;
   border-radius: 10px; background: rgba(6, 182, 212, 0.08);
-  border: 1px solid rgba(6, 182, 212, 0.2);
+  border: 1px solid rgba(6, 182, 212, 0.2); transition: all .3s;
 }
 .weather-icon { font-size: 20px; }
 .weather-info { display: flex; flex-direction: column; gap: 1px; }
@@ -991,6 +995,14 @@ body {
   .map-mode-btn { padding: 5px 8px; font-size: 14px; }
   #_menuSpecies { display: block !important; }
   .top-bar-coords { display: none; }
+  /* Compact controls on mobile */
+  .time-display { font-size: 20px !important; min-width: 52px; }
+  .control-group label { font-size: 9px; }
+  .weather-widget { padding: 4px 8px; gap: 5px; }
+  .weather-icon { font-size: 16px; }
+  .weather-temp { font-size: 12px; }
+  .weather-desc { font-size: 10px; }
+  #timeSlider { width: 120px; }
 }
 </style>
 </head>
@@ -1163,8 +1175,8 @@ body {
     </div>
     <div style="position:relative;height:10px;border-radius:5px;overflow:visible;background:linear-gradient(to right,#1e3a8a 0%,#3b82f6 20%,#06b6d4 35%,#10b981 50%,#fde047 65%,#f59e0b 80%,#ef4444 100%)">
       <div id="tsbComfort" style="position:absolute;top:0;height:100%;border-radius:3px;background:rgba(255,255,255,.28);border:1.5px solid rgba(255,255,255,.65);box-sizing:border-box;pointer-events:none;transition:left .4s,width .4s;left:40%;width:13%"></div>
-      <div id="tsbNeedle" style="position:absolute;top:-4px;width:3px;height:18px;background:#fff;border-radius:2px;transform:translateX(-50%);pointer-events:none;transition:left .4s;box-shadow:0 0 6px rgba(0,0,0,.7);left:40%"></div>
-      <div id="tsbFish" style="position:absolute;top:-20px;font-size:13px;transform:translateX(-50%);pointer-events:none;transition:left .4s;left:47%">🐟</div>
+      <div id="tsbNeedle" style="position:absolute;top:-3px;width:2px;height:16px;background:#fff;border-radius:2px;transform:translateX(-50%);pointer-events:none;transition:left .4s;box-shadow:0 0 5px rgba(0,0,0,.8);left:40%"></div>
+      <div id="tsbFish" style="position:absolute;top:50%;font-size:9px;line-height:1;transform:translate(-50%,-50%);pointer-events:none;transition:left .4s;left:47%">🐟</div>
     </div>
     <div style="display:flex;justify-content:space-between;font-size:8px;color:#475569;margin-top:3px"><span>0°</span><span>10°</span><span>20°</span><span>30°</span></div>
   </div>
@@ -1829,11 +1841,24 @@ document.getElementById('timeSlider').addEventListener('input', (e) => {
 });
 
 function setDate(btn) {
-  document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+  var container = document.getElementById('dateBtns');
+  // If already collapsed and clicking active = expand back
+  if (container.classList.contains('date-collapsed') && btn.classList.contains('active')) {
+    container.classList.remove('date-collapsed');
+    btn.closest('.control-group').classList.remove('date-group-compact');
+    return;
+  }
+  document.querySelectorAll('.date-btn').forEach(function(b) { b.classList.remove('active'); });
   btn.classList.add('active');
   currentDate = btn.dataset.date;
   currentDayIdx = parseInt(btn.dataset.idx || 0);
   update();
+  // Collapse to compact chip after short delay
+  setTimeout(function() {
+    container.classList.add('date-collapsed');
+    var grp = btn.closest('.control-group');
+    if (grp) grp.classList.add('date-group-compact');
+  }, 200);
 }
 
 // Date buttons: hardcoded trip dates 20–22 mai 2026
