@@ -818,12 +818,25 @@ body {
 .weather-desc { font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
 
 .info-panel {
-  position: fixed; top: 70px; right: 16px; z-index: 1000;
-  width: 300px; max-height: calc(100vh - 160px); overflow-y: auto;
+  position: fixed; top: 50%; left: 50%; z-index: 2000;
+  transform: translate(-50%, -50%);
+  width: min(92vw, 400px); max-height: 82vh; overflow-y: auto;
   background: var(--bg-glass); backdrop-filter: blur(20px) saturate(1.8);
   -webkit-backdrop-filter: blur(20px) saturate(1.8);
   border: 1px solid var(--border); border-radius: var(--radius);
-  box-shadow: var(--shadow); padding: 16px;
+  box-shadow: var(--shadow); padding: 16px; display: none;
+}
+.info-panel.visible { display: block; }
+#infoOverlay {
+  position: fixed; inset: 0; z-index: 1999;
+  background: rgba(0,0,0,0.58); display: none; cursor: pointer;
+}
+#infoOverlay.visible { display: block; }
+#infoPanelClose {
+  float: right; width: 28px; height: 28px; margin: -4px -4px 6px 8px;
+  background: rgba(255,255,255,0.1); border: 1px solid rgba(148,163,184,0.3);
+  border-radius: 50%; color: #f1f5f9; font-size: 15px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .info-panel::-webkit-scrollbar { width: 4px; }
 .info-panel::-webkit-scrollbar-track { background: transparent; }
@@ -880,7 +893,7 @@ body {
 .water-temp-label { font-size: 9px; color: var(--text-dim); text-transform: uppercase; }
 
 .toggle-panel {
-  position: fixed; top: 70px; right: 16px; z-index: 1001; display: none;
+  position: fixed; top: 70px; right: 16px; z-index: 1001; display: flex;
   width: 36px; height: 36px; border-radius: 50%; background: var(--bg-glass);
   backdrop-filter: blur(10px); border: 1px solid var(--border);
   color: var(--text); font-size: 18px; cursor: pointer; align-items: center; justify-content: center;
@@ -978,9 +991,6 @@ body {
 .control-panel { overflow: visible; }
 
 @media (max-width: 768px) {
-  .info-panel { display: none; }
-  .toggle-panel { display: flex; }
-  .info-panel.visible { display: block; width: calc(100vw - 32px); }
   .control-panel { flex-wrap: wrap; padding: 10px 16px; gap: 10px; }
   #timeSlider { width: 140px; }
   .sun-indicator { display: none; }
@@ -1089,8 +1099,12 @@ body {
   </div>
 </div>
 
-<!-- Info panel -->
+<!-- Modal overlay -->
+<div id="infoOverlay" onclick="window._closeInfoModal()"></div>
+
+<!-- Info panel (modal) -->
 <div class="info-panel" id="infoPanel">
+  <button id="infoPanelClose" onclick="window._closeInfoModal()" title="Fermer">✕</button>
   <!-- Weather summary at top of panel -->
   <div id="wxInPanel" style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:rgba(255,255,255,.05);border-radius:8px;margin-bottom:10px;border:1px solid rgba(148,163,184,.12)">
     <span id="wxInPanelIcon" style="font-size:20px">🌦️</span>
@@ -1144,7 +1158,7 @@ body {
   </p>
 </div>
 
-<button class="toggle-panel" id="togglePanel" onclick="document.getElementById('infoPanel').classList.toggle('visible')">☰</button>
+<button class="toggle-panel" id="togglePanel" onclick="window._openInfoModal()" title="Spots de pêche">📍</button>
 
 <!-- Control panel -->
 <div class="control-panel">
@@ -1805,7 +1819,7 @@ function update() {
     const isTop3 = i < 3;
     const scoreColor = spot.score >= 80 ? sp.color : spot.score >= 60 ? '#f59e0b' : '#94a3b8';
     return `<div class="spot-card ${spot.score >= 80 ? 'top-pick' : ''}" data-spot="${spot.id}"
-      onclick="map.setView([${spot.lat}, ${spot.lon}], 17); spotMarkers['${spot.id}'].openPopup();">
+      onclick="window._closeInfoModal(); setTimeout(function(){ map.setView([${spot.lat}, ${spot.lon}], 17); spotMarkers['${spot.id}'].openPopup(); }, 180);">
       <span class="spot-score" style="-webkit-text-fill-color:${scoreColor};color:${scoreColor};">${spot.score}</span>
       <div class="spot-name">${isTop3 ? '⭐ ' : ''}${spot.name}</div>
       <div class="spot-detail">${spot.type} · ${spot.depth}<br>${spot.why.substring(0,60)}${spot.why.length>60?'…':''}</div>
@@ -2101,6 +2115,16 @@ if (_wtEl) {
   }).observe(_wtEl, { childList: true, characterData: true, subtree: true });
 }
 
+// ── Info modal open/close ─────────────────────────────────────
+window._openInfoModal = function() {
+  document.getElementById('infoPanel').classList.add('visible');
+  document.getElementById('infoOverlay').classList.add('visible');
+};
+window._closeInfoModal = function() {
+  document.getElementById('infoPanel').classList.remove('visible');
+  document.getElementById('infoOverlay').classList.remove('visible');
+};
+
 // ── Hamburger menu ───────────────────────────────────────────
 window._menuToggle = function() {
   var p = document.getElementById('_menuPanel');
@@ -2120,7 +2144,10 @@ document.addEventListener('click', function(e) {
   var chkSim = document.getElementById('_chkSim');
   if (chkSim) chkSim.addEventListener('change', function() { _setVisible('_debugPanel', this.checked); _setVisible('btnSimToggle', this.checked); });
   var chkSpots = document.getElementById('_chkSpots');
-  if (chkSpots) chkSpots.addEventListener('change', function() { _setVisible('infoPanel', this.checked); _setVisible('togglePanel', this.checked); });
+  if (chkSpots) chkSpots.addEventListener('change', function() {
+    if (!this.checked) window._closeInfoModal();
+    _setVisible('togglePanel', this.checked);
+  });
   var chkWeather = document.getElementById('_chkWeather');
   if (chkWeather) chkWeather.addEventListener('change', function() { _setVisible('weatherWidget', this.checked); });
   // Sync menu species select
@@ -2555,16 +2582,17 @@ document.addEventListener('click', function(e) {
     document.body.appendChild(sunBtn);
   }
 
-  /* ── Mobile: auto-collapse sim + 🔧 toggle button ────────────── */
-  (function _mobileSetup(){
-    if(!window.matchMedia('(max-width:768px)').matches)return;
+  /* ── Auto-collapse sim panel + 🔧 toggle button (all screens) ── */
+  (function _simSetup(){
     setTimeout(function(){
-      /* Auto-collapse the debug panel if it started open */
-      var body=document.getElementById('_debugBody');
-      if(body&&body.style.display!=='none'&&typeof window._dbToggle==='function'){
-        window._dbToggle();
+      /* Auto-collapse the debug panel if mobile and it started open */
+      if(window.matchMedia('(max-width:768px)').matches){
+        var body=document.getElementById('_debugBody');
+        if(body&&body.style.display!=='none'&&typeof window._dbToggle==='function'){
+          window._dbToggle();
+        }
       }
-      /* Add 🔧 simulator toggle button */
+      /* Add 🔧 simulator toggle button on all screens */
       if(!document.getElementById('btnSimToggle')){
         var sb=document.createElement('button');
         sb.id='btnSimToggle';sb.title='Simulateur météo';sb.textContent='🔧';
