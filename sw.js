@@ -1,7 +1,9 @@
-// FishMap PWA Service Worker — cache-first pour app shell, réseau pour tuiles
-const CACHE_V = 'fishmap-v1';
+// FishMap PWA Service Worker
+const CACHE_V      = 'fishmap-v1';
+const TILE_CACHE_V = 'fishmap-tiles-v1';
+const TILE_MAX     = 2000; // ~60-100 MB max de tuiles satellite
 
-// App shell: tout ce qui peut être préchargé ou mis en cache à la visite
+// App shell préchargé à l'installation
 const STATIC_SHELL = [
   './index.html',
   './manifest.json',
@@ -90,35 +92,59 @@ self.addEventListener('install', event => {
   );
 });
 
-// ── Activation: purge les vieux caches ───────────────────────────────────
+// ── Activation: purge les vieux caches (conserve CACHE_V et TILE_CACHE_V) ─
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE_V).map(k => caches.delete(k))))
+      .then(keys => Promise.all(
+        keys.filter(k => k !== CACHE_V && k !== TILE_CACHE_V).map(k => caches.delete(k))
+      ))
       .then(() => self.clients.claim())
   );
 });
 
-// ── Fetch: cache-first pour HTML/assets, réseau pour tuiles satellite ────
+// ── Fetch ─────────────────────────────────────────────────────────────────
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
 
-  // Tuiles satellite/OSM: réseau uniquement — trop volumineuses à cacher
-  const isTile = url.hostname.includes('tile') ||
+  // Tuiles satellite (ArcGIS, Mapbox, OSM…) → cache séparé, cache-first
+  const isTile = url.hostname.includes('arcgis') ||
                  url.hostname.includes('mapbox') ||
-                 url.hostname.includes('arcgis') ||
-                 url.pathname.match(/\/(tiles|arcgis)\//);
-  if (isTile) return;
+                 url.hostname.includes('tile') ||
+                 url.pathname.match(/\/(tiles|arcgis|tile)\//);
 
-  // Pages HTML et assets: cache-first, mise à jour en arrière-plan
+  if (isTile) {
+    event.respondWith(
+      caches.open(TILE_CACHE_V).then(async tileCache => {
+        const cached = await tileCache.match(event.request);
+        if (cached) return cached;                   // cache-hit → immédiat
+
+        return fetch(event.request).then(res => {
+          if (res && res.ok) {
+            // Élagage si la limite est atteinte (supprime les 10% les plus vieux)
+            tileCache.keys().then(keys => {
+              if (keys.length >= TILE_MAX) {
+                const toDelete = Math.floor(TILE_MAX * 0.1);
+                keys.slice(0, toDelete).forEach(k => tileCache.delete(k));
+              }
+            });
+            tileCache.put(event.request, res.clone());
+          }
+          return res;
+        }).catch(() => cached || new Response('', { status: 503 }));
+      })
+    );
+    return;
+  }
+
+  // Pages HTML et assets: cache-first, mise à jour réseau en arrière-plan
   event.respondWith(
     caches.open(CACHE_V).then(async cache => {
       const cached = await cache.match(event.request);
       const networkFetch = fetch(event.request)
         .then(res => { if (res && res.ok) cache.put(event.request, res.clone()); return res; })
         .catch(() => null);
-      // Cache-first: retourne le cache immédiatement si disponible, sinon attend le réseau
       return cached || networkFetch;
     })
   );
