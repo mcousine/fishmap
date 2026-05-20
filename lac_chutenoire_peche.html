@@ -990,6 +990,15 @@ body {
 #tempScaleBar { overflow: visible; }
 .control-panel { overflow: visible; }
 
+/* Weather icon as clickable toggle */
+.weather-icon { cursor: pointer; user-select: none; }
+.weather-widget.wx-compact .weather-icon::after { content: ''; }
+
+/* Time section compacts after a date is picked */
+.ctrl-date-picked .time-display { font-size: 13px !important; min-width: 28px !important; }
+.ctrl-date-picked .control-group > label { font-size: 7.5px !important; letter-spacing: 0 !important; }
+.ctrl-date-picked #timeSlider { width: 80px !important; }
+
 @media (max-width: 768px) {
   .control-panel { flex-wrap: wrap; padding: 10px 16px; gap: 10px; }
   #timeSlider { width: 140px; }
@@ -1856,10 +1865,12 @@ document.getElementById('timeSlider').addEventListener('input', (e) => {
 
 function setDate(btn) {
   var container = document.getElementById('dateBtns');
+  var ctrl = document.querySelector('.control-panel');
   // If already collapsed and clicking active = expand back
   if (container.classList.contains('date-collapsed') && btn.classList.contains('active')) {
     container.classList.remove('date-collapsed');
     btn.closest('.control-group').classList.remove('date-group-compact');
+    if (ctrl) ctrl.classList.remove('ctrl-date-picked');
     return;
   }
   document.querySelectorAll('.date-btn').forEach(function(b) { b.classList.remove('active'); });
@@ -1867,11 +1878,12 @@ function setDate(btn) {
   currentDate = btn.dataset.date;
   currentDayIdx = parseInt(btn.dataset.idx || 0);
   update();
-  // Collapse to compact chip after short delay
+  // Collapse to compact chip + compact time section after short delay
   setTimeout(function() {
     container.classList.add('date-collapsed');
     var grp = btn.closest('.control-group');
     if (grp) grp.classList.add('date-group-compact');
+    if (ctrl) ctrl.classList.add('ctrl-date-picked');
   }, 200);
 }
 
@@ -2153,6 +2165,15 @@ document.addEventListener('click', function(e) {
   // Sync menu species select
   var smenu = document.getElementById('speciesSelectMenu'), smain = document.getElementById('speciesSelect');
   if (smenu && smain) { smenu.value = smain.value; smain.addEventListener('change', function() { smenu.value = this.value; }); }
+})();
+
+// ── Weather icon: click to toggle compact mode ────────────────
+(function() {
+  var wxIcon = document.getElementById('weatherIcon');
+  if (wxIcon) wxIcon.addEventListener('click', function() {
+    var wx = document.getElementById('weatherWidget');
+    if (wx) wx.classList.toggle('wx-compact');
+  });
 })();
 
 // ── Weather compact after day select ─────────────────────────
