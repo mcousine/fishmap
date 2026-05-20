@@ -866,7 +866,6 @@ body {
 
 .dlabel-icon { background: transparent !important; border: none !important; }
   #map.thermal-on .dlabel-txt { display: none; }
-  #map.thermal-on .dlabel-txt { display: none; }
 .dlabel-txt {
   background: rgba(0,0,0,0.58); color: rgba(255,255,255,0.92);
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 11px; font-weight: 700;
@@ -1453,38 +1452,57 @@ const satTile = L.tileLayer(
 ).addTo(map);
 
 function setSatOpacity(val) { satTile.setOpacity(val / 100); }
-
 // ============================================================
-// DEPTH LABEL POSITIONS — Lac Fox (4 depth levels)
-// Main basin SW + NE basin
+// DYNAMIC LABEL POSITIONS — computed from BATHYMETRY_GEOJSON
+// One position per polygon ring, repulsion-dedup for no overlap
 // ============================================================
-const DEPTH_LABEL_POS = [
-  // 2m — 3 labels: SE main, NW main, NE basin
-  { depth_m: 2.0, lat: 46.82040, lon: -73.36640 },
-  { depth_m: 2.0, lat: 46.82210, lon: -73.37060 },
-  { depth_m: 2.0, lat: 46.82390, lon: -73.36740 },
-  // 4m — 2 labels: main basin, NE basin
-  { depth_m: 4.0, lat: 46.82090, lon: -73.36900 },
-  { depth_m: 4.0, lat: 46.82400, lon: -73.36750 },
-  // 6m — 2 labels (both basins)
-  { depth_m: 6.0, lat: 46.82065, lon: -73.37045 },
-  { depth_m: 6.0, lat: 46.82410, lon: -73.36730 },
-  // 8m — 1 label (main basin fosse)
-  { depth_m: 8.0, lat: 46.82088, lon: -73.37020 },
-];
+function _computeLabelPositions() {
+  var positions = [];
+  var MIN_DIST = 0.0005;
+  BATHYMETRY_GEOJSON.features.forEach(function(f) {
+    var depth = f.properties.depth_m;
+    var geom = f.geometry;
+    var polys = geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates;
+    polys.forEach(function(poly) {
+      var outer = poly[0];
+      var lat = 0, lon = 0;
+      outer.forEach(function(c) { lon += c[0]; lat += c[1]; });
+      lat /= outer.length; lon /= outer.length;
+      positions.push({depth_m: depth, lat: lat, lon: lon});
+    });
+  });
+  for (var iter = 0; iter < 8; iter++) {
+    for (var i = 0; i < positions.length; i++) {
+      for (var j = i + 1; j < positions.length; j++) {
+        var dlat = positions[j].lat - positions[i].lat;
+        var dlon = positions[j].lon - positions[i].lon;
+        var dist = Math.sqrt(dlat*dlat + dlon*dlon);
+        if (dist < MIN_DIST && dist > 0) {
+          var push = (MIN_DIST - dist) / 2;
+          var nx = dlat/dist, ny = dlon/dist;
+          positions[i].lat -= nx*push; positions[i].lon -= ny*push;
+          positions[j].lat += nx*push; positions[j].lon += ny*push;
+        }
+      }
+    }
+  }
+  return positions;
+}
+var LABEL_POSITIONS = []; // populated in initGeoJSON after BATHYMETRY_GEOJSON loads
 
-const depthLabelMarkers = [];
 function depthVal(d) {
   return currentUnit === 'm' ? d.toFixed(1) + ' m' : (d * 3.28084).toFixed(0) + ' pi';
 }
+
+var depthLabelMarkers = [];
 function buildDepthLabels() {
-  depthLabelMarkers.forEach(m => m.remove());
+  depthLabelMarkers.forEach(function(m) { m.remove(); });
   depthLabelMarkers.length = 0;
-  DEPTH_LABEL_POS.forEach(lp => {
-    const m = L.marker([lp.lat, lp.lon], {
+  LABEL_POSITIONS.forEach(function(lp) {
+    var m = L.marker([lp.lat, lp.lon], {
       icon: L.divIcon({
         className: 'dlabel-icon',
-        html: `<span class="dlabel-txt" data-d="${lp.depth_m}">${depthVal(lp.depth_m)}</span>`,
+        html: '<span class="dlabel-txt" data-d="' + lp.depth_m + '">' + depthVal(lp.depth_m) + '</span>',
         iconSize: [52, 18], iconAnchor: [26, 9]
       }), interactive: false, zIndexOffset: -100
     });
@@ -1493,64 +1511,26 @@ function buildDepthLabels() {
   });
 }
 function updateDepthLabels() {
-  depthLabelMarkers.forEach(m => {
-    const el = m.getElement();
+  depthLabelMarkers.forEach(function(m) {
+    var el = m.getElement();
     if (!el) return;
-    const span = el.querySelector('.dlabel-txt');
+    var span = el.querySelector('.dlabel-txt');
     if (span) span.textContent = depthVal(parseFloat(span.dataset.d));
   });
 }
 
-// Depth labels on thermal map (offset ~25m to avoid overlap with temp labels)
-const THERMAL_DEPTH_LABEL_POS = [
-  { depth_m: 2.0, lat: 46.82063, lon: -73.36608 },
-  { depth_m: 2.0, lat: 46.82233, lon: -73.37028 },
-  { depth_m: 2.0, lat: 46.82413, lon: -73.36708 },
-  { depth_m: 4.0, lat: 46.82067, lon: -73.36868 },
-  { depth_m: 4.0, lat: 46.82423, lon: -73.36718 },
-  { depth_m: 6.0, lat: 46.82042, lon: -73.37013 },
-  { depth_m: 6.0, lat: 46.82433, lon: -73.36698 },
-  { depth_m: 8.0, lat: 46.82065, lon: -73.36988 },
-];
-
-const thermalDepthLabelMarkers = [];
-function buildThermalDepthLabels() {
-  thermalDepthLabelMarkers.forEach(m => m.remove());
-  thermalDepthLabelMarkers.length = 0;
-  THERMAL_DEPTH_LABEL_POS.forEach(lp => {
-    const m = L.marker([lp.lat, lp.lon], {
-      icon: L.divIcon({
-        className: 'dlabel-icon',
-        html: `<span class="tdepth-lbl" data-d="${lp.depth_m}">${depthVal(lp.depth_m)}</span>`,
-        iconSize: [48, 16], iconAnchor: [24, 8]
-      }), interactive: false, zIndexOffset: -100
-    });
-    m.addTo(layerThermal);
-    thermalDepthLabelMarkers.push(m);
-  });
-}
-function updateThermalDepthLabels() {
-  thermalDepthLabelMarkers.forEach(m => {
-    const el = m.getElement();
-    if (!el) return;
-    const span = el.querySelector('.tdepth-lbl');
-    if (span) span.textContent = depthVal(parseFloat(span.dataset.d));
-  });
-}
-
-// Thermal temperature labels
-const thermalLabelMarkers = [];
+var thermalLabelMarkers = [];
 function buildThermalLabels() {
-  thermalLabelMarkers.forEach(m => m.remove());
+  thermalLabelMarkers.forEach(function(m) { m.remove(); });
   thermalLabelMarkers.length = 0;
-  DEPTH_LABEL_POS.forEach(lp => {
-    const t = getPolygonTemp(lp.depth_m, currentTime);
-    const col = getThermalColor(t);
-    const m = L.marker([lp.lat, lp.lon], {
+  LABEL_POSITIONS.forEach(function(lp) {
+    var t = getPolygonTemp(lp.depth_m, currentTime);
+    var col = getThermalColor(t);
+    var m = L.marker([lp.lat, lp.lon], {
       icon: L.divIcon({
         className: 'dlabel-icon',
-        html: `<span class="tlabel-txt" style="background:${col}cc;" data-d="${lp.depth_m}">${tempDisp(t)}</span>`,
-        iconSize: [58, 20], iconAnchor: [29, 10]
+        html: '<span class="tlabel-txt" style="background:' + col + 'cc;" data-d="' + lp.depth_m + '">' + tempDisp(t) + ' · ' + depthVal(lp.depth_m) + '</span>',
+        iconSize: [88, 20], iconAnchor: [44, 10]
       }), interactive: false, zIndexOffset: -100
     });
     m.addTo(layerThermal);
@@ -1558,15 +1538,15 @@ function buildThermalLabels() {
   });
 }
 function updateThermalLabels() {
-  thermalLabelMarkers.forEach(m => {
-    const el = m.getElement();
+  thermalLabelMarkers.forEach(function(m) {
+    var el = m.getElement();
     if (!el) return;
-    const span = el.querySelector('.tlabel-txt');
+    var span = el.querySelector('.tlabel-txt');
     if (!span) return;
-    const depth = parseFloat(span.dataset.d);
-    const t = getPolygonTemp(depth, currentTime);
-    const col = getThermalColor(t);
-    span.textContent = tempDisp(t);
+    var depth = parseFloat(span.dataset.d);
+    var t = getPolygonTemp(depth, currentTime);
+    var col = getThermalColor(t);
+    span.textContent = tempDisp(t) + ' · ' + depthVal(depth);
     span.style.background = col + 'cc';
   });
 }
@@ -1587,13 +1567,13 @@ var tempUnit      = 'C';
 var currentSpecies = 'omble';
 var currentMode   = 'satellite';
 (function initGeoJSON() {
+  LABEL_POSITIONS = _computeLabelPositions();
   geoJsonLayer = L.geoJSON(BATHYMETRY_GEOJSON, {
     style: styleFunction,
     pointToLayer: function(feature, latlng) { return null; }
   }).addTo(layerBathy);
   buildDepthLabels();
   buildThermalLabels();
-  buildThermalDepthLabels();
 })();
 
 function getPolygonTemp(depth_m, hour) {

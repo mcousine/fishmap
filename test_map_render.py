@@ -235,9 +235,11 @@ def check_map_buttons(html_path: str, screenshot_dir: str = None, timeout_ms: in
             results["screenshots"]["thermal_after_slider"] = ss
 
         results["console_errors"] = console_errors
-        all_btns_found = all(results["buttons_found"].values())
-        all_modes_ok = all(results["mode_switches"].values())
-        results["success"] = all_btns_found and all_modes_ok and results.get("thermal_update_fn_exists", False)
+        # Success: thermal button exists + thermal mode works + update fn exists
+        # (btnSat optional — new design uses single Thermique toggle)
+        thermal_btn_ok = results["buttons_found"].get("btnThermal", False)
+        thermal_mode_ok = results["mode_switches"].get("thermal", False)
+        results["success"] = thermal_btn_ok and thermal_mode_ok and results.get("thermal_update_fn_exists", False)
 
         browser.close()
 
