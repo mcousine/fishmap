@@ -716,25 +716,47 @@ body {
 
 .top-bar {
   position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
-  z-index: 1000; display: flex; align-items: center; gap: 12px;
-  padding: 8px 20px;
+  z-index: 1000; display: flex; align-items: center; gap: 10px;
+  padding: 7px 16px;
   background: var(--bg-glass); backdrop-filter: blur(20px) saturate(1.8);
   -webkit-backdrop-filter: blur(20px) saturate(1.8);
   border: 1px solid var(--border); border-radius: 50px;
   box-shadow: var(--shadow), 0 0 40px var(--accent-glow);
+  max-width: calc(100vw - 16px); box-sizing: border-box;
 }
+.top-bar-title { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; flex-shrink: 0; }
 .top-bar h1 {
-  font-size: 15px; font-weight: 700;
+  font-size: 14px; font-weight: 700; line-height: 1.1;
   background: linear-gradient(135deg, var(--accent), var(--accent2));
   -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent; white-space: nowrap;
 }
 .top-bar .badge {
-  font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 20px;
+  font-size: 8px; font-weight: 700; padding: 1px 5px; border-radius: 20px;
   background: linear-gradient(135deg, var(--accent), var(--accent2));
-  color: #fff; text-transform: uppercase; letter-spacing: 0.5px;
+  color: #fff; text-transform: uppercase; letter-spacing: 0.4px; display: inline-block;
 }
-.top-bar .separator { width: 1px; height: 20px; background: var(--border); }
+.top-bar .separator { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; }
+.top-bar-controls { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.btn-label { font-size: 10px; }
+
+/* Menu dropdown */
+#_menuPanel {
+  position:fixed;top:62px;right:12px;z-index:2010;
+  background:rgba(10,14,26,0.97);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border:1px solid rgba(148,163,184,0.2);border-radius:12px;padding:8px;min-width:190px;
+  font-family:'Inter',sans-serif;font-size:12px;color:#cbd5e1;box-shadow:0 4px 24px rgba(0,0,0,0.6);
+}
+#_menuPanel ._menuTitle { font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;padding:2px 6px 6px;border-bottom:1px solid rgba(148,163,184,0.12);margin-bottom:4px; }
+#_menuPanel label { display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:7px;cursor:pointer;transition:background 0.15s;white-space:nowrap; }
+#_menuPanel label:hover { background:rgba(148,163,184,0.08); }
+#_menuPanel input[type=checkbox] { accent-color:#06b6d4;cursor:pointer; }
+
+/* Weather compact mode */
+.weather-widget.wx-compact .weather-temp,
+.weather-widget.wx-compact .weather-desc { display: none; }
+.weather-widget.wx-compact { padding: 4px 8px; gap: 4px; }
+.weather-widget.wx-compact .weather-icon { font-size: 16px; }
 
 .control-panel {
   position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
@@ -958,7 +980,17 @@ body {
   .control-panel { flex-wrap: wrap; padding: 10px 16px; gap: 10px; }
   #timeSlider { width: 140px; }
   .sun-indicator { display: none; }
-  .map-mode-btns { display: none; }
+  .map-mode-btns { display: flex; }
+}
+@media (max-width: 600px) {
+  .top-bar { gap: 6px; padding: 6px 10px; }
+  .top-bar .separator { display: none; }
+  .top-bar-controls .species-select { display: none; }
+  .top-bar-controls { gap: 5px; }
+  .btn-label { display: none; }
+  .map-mode-btn { padding: 5px 8px; font-size: 14px; }
+  #_menuSpecies { display: block !important; }
+  .top-bar-coords { display: none; }
 }
 </style>
 </head>
@@ -971,31 +1003,48 @@ body {
 </div>
 
 <!-- Top bar -->
-<div class="top-bar">
-  <h1>🎣 Lac de la Chute Noire</h1>
-  <div class="separator"></div>
-  <span class="badge">Mastigouche</span>
-  <div class="separator"></div>
-  <div class="unit-toggle" onclick="toggleUnit()" style="cursor:pointer;background:rgba(255,255,255,0.1);padding:4px 10px;border-radius:15px;font-weight:bold;font-size:12px;display:inline-block;border:1px solid rgba(255,255,255,0.2);">
-    <span id="unitM" style="color:var(--accent);">M</span> | <span id="unitPi" style="color:#aaa;">Pi</span>
-  </div>
-  <div class="unit-toggle" onclick="toggleTempUnit()" style="cursor:pointer;background:rgba(255,255,255,0.1);padding:4px 10px;border-radius:15px;font-weight:bold;font-size:12px;margin-right:15px;display:inline-block;border:1px solid rgba(255,255,255,0.2);">
-    <span id="unitC" style="color:var(--accent);">°C</span> | <span id="unitF" style="color:#aaa;">°F</span>
+<div class="top-bar" id="topBar">
+  <div class="top-bar-title">
+    <h1>🎣 Lac de la Chute Noire</h1>
+    <span class="badge">Mastigouche</span>
   </div>
   <div class="separator"></div>
-  <select id="speciesSelect" class="species-select" onchange="setSpecies(this.value)" title="Espèce cible">
-    <option value="omble">🐟 Omble de fontaine</option>
-    <option value="touladi">🐟 Touladi</option>
-    <option value="brochet">🐟 Grand Brochet</option>
-    <option value="dore">🐟 Doré jaune</option>
-    <option value="perchaude">🐟 Perchaude</option>
-  </select>
+  <div class="top-bar-controls">
+    <span class="unit-toggle" onclick="toggleUnit()" title="Basculer m / pi" style="cursor:pointer;font-size:11px;white-space:nowrap"><span id="unitM" style="color:var(--accent)">M</span><span style="color:#555">|</span><span id="unitPi" style="color:#aaa">Pi</span></span>
+    <span class="unit-toggle" onclick="toggleTempUnit()" title="Basculer °C / °F" style="cursor:pointer;font-size:11px;white-space:nowrap"><span id="unitC" style="color:var(--accent)">°C</span><span style="color:#555">|</span><span id="unitF" style="color:#aaa">°F</span></span>
+    <select id="speciesSelect" class="species-select" onchange="setSpecies(this.value)" title="Espèce cible">
+      <option value="omble">🐟 Omble de fontaine</option>
+      <option value="touladi">🐟 Touladi</option>
+      <option value="brochet">🐟 Grand Brochet</option>
+      <option value="dore">🐟 Doré jaune</option>
+      <option value="perchaude">🐟 Perchaude</option>
+    </select>
+  </div>
   <div class="separator"></div>
   <div class="map-mode-btns">
-  <button class="map-mode-btn" onclick="toggleThermal()" id="btnThermal">🌡️ Thermique</button>
+    <button class="map-mode-btn" onclick="toggleThermal()" id="btnThermal">🌡️<span class="btn-label"> Therm.</span></button>
+  </div>
+  <span class="top-bar-coords" style="font-size:10px;color:var(--text-dim);white-space:nowrap">46.7290°N</span>
+  <button id="btnMenu" class="map-mode-btn" onclick="_menuToggle()" title="Menu" style="font-size:16px;padding:4px 9px;letter-spacing:2px;flex-shrink:0;margin-left:auto">≡</button>
 </div>
-  <div class="separator"></div>
-  <span style="font-size:11px;color:var(--text-dim)">46.7290°N, 73.3601°W</span>
+
+<!-- Menu dropdown -->
+<div id="_menuPanel" style="display:none">
+  <div class="_menuTitle">Affichage</div>
+  <label><input type="checkbox" id="_chkSun" checked> ☀️ Soleil &amp; température</label>
+  <label><input type="checkbox" id="_chkSim" checked> 🔧 Simulateur</label>
+  <label><input type="checkbox" id="_chkSpots" checked> 🎣 Spots &amp; info</label>
+  <label><input type="checkbox" id="_chkWeather" checked> 🌦️ Météo</label>
+  <div id="_menuSpecies" style="display:none;padding:6px 8px 2px;border-top:1px solid rgba(148,163,184,.12);margin-top:4px">
+    <div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Espèce cible</div>
+    <select id="speciesSelectMenu" style="width:100%;background:rgba(30,41,59,.9);border:1px solid rgba(148,163,184,.25);border-radius:8px;color:#cbd5e1;font-size:12px;padding:4px 8px;outline:none;cursor:pointer" onchange="setSpecies(this.value);var s=document.getElementById('speciesSelect');if(s)s.value=this.value;">
+      <option value="omble">🐟 Omble de fontaine</option>
+      <option value="touladi">🐟 Touladi</option>
+      <option value="brochet">🐟 Grand Brochet</option>
+      <option value="dore">🐟 Doré jaune</option>
+      <option value="perchaude">🐟 Perchaude</option>
+    </select>
+  </div>
 </div>
 
 <!-- Sun / water temp indicator -->
@@ -1030,6 +1079,15 @@ body {
 
 <!-- Info panel -->
 <div class="info-panel" id="infoPanel">
+  <!-- Weather summary at top of panel -->
+  <div id="wxInPanel" style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:rgba(255,255,255,.05);border-radius:8px;margin-bottom:10px;border:1px solid rgba(148,163,184,.12)">
+    <span id="wxInPanelIcon" style="font-size:20px">🌦️</span>
+    <div style="flex:1;min-width:0">
+      <div id="wxInPanelTemp" style="font-size:12px;font-weight:700;color:#f1f5f9">10–21°C</div>
+      <div id="wxInPanelDesc" style="font-size:10px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Bruine légère, couvert</div>
+    </div>
+    <div style="font-size:10px;font-weight:700;color:#06b6d4" id="wxInPanelWater">~10°C eau</div>
+  </div>
   <h2 id="spotsTitle">📍 Omble de fontaine — Spots</h2>
   <div id="spotsContainer"></div>
 
@@ -2017,6 +2075,69 @@ if (_wtEl) {
     if (m) window._updateThermalColors(parseFloat(m[0]));
   }).observe(_wtEl, { childList: true, characterData: true, subtree: true });
 }
+
+// ── Hamburger menu ───────────────────────────────────────────
+window._menuToggle = function() {
+  var p = document.getElementById('_menuPanel');
+  if (!p) return;
+  p.style.display = p.style.display === 'none' ? '' : 'none';
+};
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#_menuPanel') && !e.target.closest('#btnMenu')) {
+    var p = document.getElementById('_menuPanel');
+    if (p) p.style.display = 'none';
+  }
+});
+(function _wireChutMenu() {
+  function _setVisible(id, v) { var el=document.getElementById(id); if(el) el.style.display=v?'':'none'; }
+  var chkSun = document.getElementById('_chkSun');
+  if (chkSun) chkSun.addEventListener('change', function() { _setVisible('sunIndicator', this.checked); _setVisible('btnSunToggle', this.checked); });
+  var chkSim = document.getElementById('_chkSim');
+  if (chkSim) chkSim.addEventListener('change', function() { _setVisible('_debugPanel', this.checked); _setVisible('btnSimToggle', this.checked); });
+  var chkSpots = document.getElementById('_chkSpots');
+  if (chkSpots) chkSpots.addEventListener('change', function() { _setVisible('infoPanel', this.checked); _setVisible('togglePanel', this.checked); });
+  var chkWeather = document.getElementById('_chkWeather');
+  if (chkWeather) chkWeather.addEventListener('change', function() { _setVisible('weatherWidget', this.checked); });
+  // Sync menu species select
+  var smenu = document.getElementById('speciesSelectMenu'), smain = document.getElementById('speciesSelect');
+  if (smenu && smain) { smenu.value = smain.value; smain.addEventListener('change', function() { smenu.value = this.value; }); }
+})();
+
+// ── Weather compact after day select ─────────────────────────
+(function() {
+  function _syncWxPanel() {
+    var icon = document.getElementById('weatherIcon'), temp = document.getElementById('weatherTemp'),
+        desc = document.getElementById('weatherDesc'), wt = document.getElementById('waterTempText');
+    var pi = document.getElementById('wxInPanelIcon'), pt = document.getElementById('wxInPanelTemp'),
+        pd = document.getElementById('wxInPanelDesc'), pw = document.getElementById('wxInPanelWater');
+    if (pi && icon) pi.textContent = icon.textContent;
+    if (pt && temp) pt.textContent = temp.textContent;
+    if (pd && desc) pd.textContent = desc.textContent;
+    if (pw && wt) pw.textContent = wt.textContent + ' eau';
+  }
+  // Hook day buttons to add compact mode + sync panel
+  setTimeout(function() {
+    var dateBtns = document.getElementById('dateBtns');
+    if (dateBtns) dateBtns.addEventListener('click', function(e) {
+      var btn = e.target.closest('button[data-day]');
+      if (!btn) return;
+      var wx = document.getElementById('weatherWidget');
+      if (wx) wx.classList.add('wx-compact');
+      setTimeout(_syncWxPanel, 100);
+    });
+    // Also hook simulator day buttons
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('_dayBtn')) {
+        setTimeout(_syncWxPanel, 200);
+      }
+    });
+    // Initial sync
+    setTimeout(_syncWxPanel, 1000);
+    // Observe weather changes to keep panel in sync
+    var wt = document.getElementById('waterTempText');
+    if (wt) new MutationObserver(function() { setTimeout(_syncWxPanel, 50); }).observe(wt, {childList:true,characterData:true,subtree:true});
+  }, 800);
+})();
 
 // END LAYER CONTROLS
 
